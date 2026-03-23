@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+opencv-contrib-python
+numpy
+python-multipart
+bcrypt
+pyjwt
+pydantic[email]
+
