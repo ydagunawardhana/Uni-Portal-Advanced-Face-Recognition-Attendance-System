@@ -34,9 +34,7 @@ from face_recognition_engine import FaceResult, recognize_faces
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
 
 
-# ──────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────
+#  Helpers 
 
 def _decode_image(raw: bytes) -> np.ndarray:
     """Decode raw bytes (JPEG / PNG / BMP / WebP) into a BGR NumPy array."""
@@ -61,9 +59,7 @@ def _make_index_number(user_id: int) -> str:
     return f"STU-{user_id:03d}"
 
 
-# ══════════════════════════════════════════════
-# POST /api/attendance
-# ══════════════════════════════════════════════
+#  POST /api/attendance 
 
 @router.post(
     "",
@@ -100,7 +96,7 @@ async def process_attendance_frame(
     raw   = await file.read()
     frame = _decode_image(raw)
 
-    # ── Face detection + recognition ─────────────────────────
+    #  Face detection + recognition 
     face_results: list[FaceResult] = recognize_faces(frame)
 
     logs_created: list = []
@@ -118,12 +114,12 @@ async def process_attendance_frame(
         )
 
         if not result.is_known:
-            continue  # skip unknown faces — nothing to log
+            continue  
 
-        # ── Build a stable index_number from the model's user_id ──
+        #  Build a stable index_number from the model's user_id 
         index_number = _make_index_number(result.user_id)
 
-        # ── Write to DB (with debounce) ───────────────────────
+        #  Write to DB (with debounce) 
         log_entry, created = crud.log_attendance_for_recognised_face(
             db           = db,
             index_number = index_number,
@@ -155,9 +151,7 @@ async def process_attendance_frame(
     )
 
 
-# ══════════════════════════════════════════════
-# GET /api/attendance/history
-# ══════════════════════════════════════════════
+#  GET /api/attendance/history 
 
 @router.get(
     "/history",
@@ -185,9 +179,7 @@ def get_attendance_history(
     return schemas.AttendanceHistoryResponse(total=total, records=records)
 
 
-# ══════════════════════════════════════════════
-# GET /api/attendance/today
-# ══════════════════════════════════════════════
+#  GET /api/attendance/today 
 
 @router.get(
     "/today",

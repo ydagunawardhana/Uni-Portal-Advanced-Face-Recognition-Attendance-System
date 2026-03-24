@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import LandingPage from "./components/LandingPage";
 import LoginScreen from "./components/LoginScreen";
@@ -25,8 +25,17 @@ type Screen =
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("landing");
-  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    return (localStorage.getItem("user_role") as UserRole) || null;
+  });
+
+  const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
+    const role = localStorage.getItem("user_role");
+    if (role === "Admin") return "admin";
+    if (role === "Lecturer") return "lecturer";
+    if (role === "Student") return "student";
+    return "landing";
+  });
 
   const handleLogin = (role: "Admin" | "Lecturer" | "Student") => {
     setUserRole(role);
@@ -40,6 +49,16 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    // Completely destroy the local session cache
+    localStorage.removeItem("token");
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("isAdminLoggedIn");
+    localStorage.removeItem("adminActiveTab");
+    localStorage.removeItem("requiresPasswordChange");
+
     setCurrentScreen("login");
     setUserRole(null);
   };
@@ -87,10 +106,7 @@ export default function App() {
         <LecturerDashboard onLogout={handleLogout} />
       )}
       {currentScreen === "reporting" && (
-        <AttendanceReporting
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-        />
+        <AttendanceReporting />
       )}
       {currentScreen === "student" && (
         <StudentDashboard onLogout={handleLogout} />

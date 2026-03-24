@@ -3,9 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL
 
-# ──────────────────────────────────────────────
 # Engine – connection pool tuned for local dev
-# ──────────────────────────────────────────────
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,   # verify connections before handing them out
@@ -19,9 +18,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# ──────────────────────────────────────────────
 # Session dependency (use in route handlers)
-# ──────────────────────────────────────────────
+
 def get_db():
     """Yield a database session and ensure it is closed after use."""
     db = SessionLocal()
@@ -31,9 +29,8 @@ def get_db():
         db.close()
 
 
-# ──────────────────────────────────────────────
 # Utility – verify the DB is reachable
-# ──────────────────────────────────────────────
+
 def check_db_connection() -> bool:
     """Return True if the database is reachable, False otherwise."""
     try:

@@ -15,7 +15,7 @@ import models
 router = APIRouter(prefix="/api", tags=["Auth"])
 
 
-# ── Request / Response schemas ────────────────────────────────────
+#  Request / Response schemas 
 class LoginRequest(BaseModel):
     email:    EmailStr
     password: str
@@ -30,7 +30,7 @@ class LoginResponse(BaseModel):
     message:      str
 
 
-# ── Route ─────────────────────────────────────────────────────────
+#  Route 
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -55,7 +55,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         .first()
     )
 
-    # Always run verify_password even on not-found to prevent timing attacks.
+    #  run verify_password even on not-found to prevent timing attacks.
     # This is a genuine bcrypt hash of "NOT_A_REAL_PASSWORD" (pre-generated).
     dummy_hash = "$2b$12$7ryRNQTK6CWEUzp5qkV6x.hCCID8yGXbTxlU12lWDUgQWY/JGDl2i"
     password_ok = verify_password(
@@ -81,7 +81,20 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail=f"This account is not registered as '{payload.role}'.",
         )
 
-    token = create_access_token({"sub": user.id, "role": user.role, "email": user.email})
+    token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email})
+
+    # Create Audit Log for Admin logins
+    if user.role.lower() == "admin":
+        try:
+            audit_log = models.AuditLog(
+                action_type="Login Activity",
+                description=f"Admin '{user.email}' logged into the portal."
+            )
+            db.add(audit_log)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Warning: Failed to log Audit Activity for login. Exception: {e}")
 
     return LoginResponse(
         access_token=token,

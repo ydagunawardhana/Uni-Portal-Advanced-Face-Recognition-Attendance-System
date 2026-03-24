@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 
-# ── Config ──────────────────────────────────────────────────────
+# Config 
 SECRET_KEY      = os.getenv("JWT_SECRET_KEY", "change-me-in-production-please")
 ALGORITHM       = "HS256"
 TOKEN_EXPIRE_H  = int(os.getenv("JWT_EXPIRE_HOURS", "12"))
@@ -28,7 +28,7 @@ TOKEN_EXPIRE_H  = int(os.getenv("JWT_EXPIRE_HOURS", "12"))
 _bearer = HTTPBearer(auto_error=False)
 
 
-# ── Password helpers ─────────────────────────────────────────────
+# Password helpers 
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
@@ -37,7 +37,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
-# ── JWT helpers ──────────────────────────────────────────────────
+# JWT helpers 
 def create_access_token(data: dict) -> str:
     payload = data.copy()
     payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRE_H)
@@ -47,11 +47,18 @@ def create_access_token(data: dict) -> str:
 def decode_access_token(token: str) -> Optional[dict]:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.PyJWTError:
+    except jwt.ExpiredSignatureError:
+        print("JWT Error: Token signature has expired.")
+        return None
+    except jwt.InvalidTokenError as e:
+        print(f"JWT Error: Invalid token - {str(e)}")
+        return None
+    except jwt.PyJWTError as e:
+        print(f"JWT Error: Generic PyJWTError - {str(e)}")
         return None
 
 
-# ── FastAPI dependency ───────────────────────────────────────────
+# FastAPI dependency 
 def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: Session = Depends(get_db),
@@ -64,7 +71,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Invalid or expired token")
     user = db.query(models.User).filter(
-        models.User.id == payload.get("sub")
+        models.User.id == int(payload.get("sub"))
     ).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,

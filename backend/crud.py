@@ -13,9 +13,7 @@ from sqlalchemy.orm import Session
 import models
 
 
-# ══════════════════════════════════════════════
 # Student helpers
-# ══════════════════════════════════════════════
 
 def get_student_by_index(db: Session, index_number: str) -> Optional[models.Student]:
     """Return a Student row by their unique index_number, or None."""
@@ -50,9 +48,7 @@ def get_or_create_student(db: Session, index_number: str, name: str) -> models.S
     return student
 
 
-# ══════════════════════════════════════════════
 # Attendance log helpers
-# ══════════════════════════════════════════════
 
 def get_latest_log_for_student(
     db: Session,
@@ -129,7 +125,7 @@ def log_attendance_for_recognised_face(
     now     = datetime.utcnow()
     student = get_or_create_student(db, index_number, name)
 
-    # ── Debounce: skip if already logged within the window ──
+    # Debounce: skip if already logged within the window 
     recent = get_latest_log_for_student(db, student.id, within_minutes=debounce_min)
     if recent:
         return recent, False          # return the existing log, flag as skipped
@@ -146,9 +142,7 @@ def log_attendance_for_recognised_face(
     return new_log, True
 
 
-# ══════════════════════════════════════════════
 # Query helpers
-# ══════════════════════════════════════════════
 
 def get_attendance_history(
     db:     Session,

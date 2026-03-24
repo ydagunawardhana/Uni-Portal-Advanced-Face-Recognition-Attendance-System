@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const API_BASE = "http://localhost:8000";
 
 export default function StudentProfileSecurity() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -8,6 +11,7 @@ export default function StudentProfileSecurity() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Mock student data
   const studentData = {
@@ -25,23 +29,67 @@ export default function StudentProfileSecurity() {
     alert('Face re-training request submitted! The admin will contact you shortly.');
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert('New passwords do not match!');
+      toast.error('New passwords do not match!');
       return;
     }
-    if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long.');
       return;
     }
-    alert('Password changed successfully!');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+
+    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    if (!token) {
+      toast.error('Authentication missing. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading('Updating password...');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/student/update-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data?.detail || "Failed to update password.", { id: toastId });
+        return;
+      }
+
+      toast.success("Password updated successfully!", { id: toastId, duration: 3000 });
+      
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // CRITICAL: Stop the persistent dashboard warning
+      localStorage.removeItem('requiresPasswordChange');
+      
+    } catch (error) {
+      toast.error('Server connection error.', { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
+    <>    
+    <style>{`
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+      display: none;
+    }
+    `}</style>
     <div className="p-8 bg-white">
       {/* Header */}
       <div className="mb-8">
@@ -249,14 +297,23 @@ export default function StudentProfileSecurity() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md"
+                disabled={isLoading}
+                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Update Password
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
     </div>
+    </>
   );
 }

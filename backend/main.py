@@ -12,11 +12,12 @@ from auth import hash_password
 from database import engine, check_db_connection, SessionLocal
 from routers import attendance as attendance_router
 from routers import auth_router
+from routers import admin as admin_router
+from routers import student as student_router
 
 
-# ──────────────────────────────────────────────
 # Admin seeder
-# ──────────────────────────────────────────────
+
 def seed_admin() -> None:
     """
     Create the default Admin account if no Admin user exists yet.
@@ -36,31 +37,29 @@ def seed_admin() -> None:
             )
             db.add(admin)
             db.commit()
-            print("[Seeder] ✅  Default Admin created  →  admin@gmail.com / admin123")
+            print("[Seeder] Default Admin created  →  admin@gmail.com / admin123")
         else:
-            print("[Seeder]    Admin account already exists — skipping.")
+            print("[Seeder] Admin account already exists — skipping.")
     finally:
         db.close()
 
 
-# ──────────────────────────────────────────────
 # Lifespan: startup & shutdown logic
-# ──────────────────────────────────────────────
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # STARTUP
-    print("🚀  Starting up Face Recognition Attendance System API...")
+    print("Starting up Face Recognition Attendance System API...")
     models.Base.metadata.create_all(bind=engine)
-    print("✅  Database tables created / verified.")
+    print("Database tables created / verified.")
     seed_admin()                          # ← auto-seed default admin
     yield
     # SHUTDOWN
-    print("🛑  Shutting down...")
+    print("Shutting down...")
 
 
-# ──────────────────────────────────────────────
 # App initialisation
-# ──────────────────────────────────────────────
+
 app = FastAPI(
     title=config.APP_TITLE,
     description=config.APP_DESCRIPTION,
@@ -70,27 +69,27 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ──────────────────────────────────────────────
+
 # CORS
-# ──────────────────────────────────────────────
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.ALLOWED_ORIGINS,   # React dev servers
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────
+
 # Routers
-# ──────────────────────────────────────────────
+
 app.include_router(auth_router.router)
 app.include_router(attendance_router.router)
+app.include_router(admin_router.router)
+app.include_router(student_router.router)
 
 
-# ══════════════════════════════════════════════
 # Routes
-# ══════════════════════════════════════════════
 
 @app.get("/", tags=["General"])
 def root():

@@ -10,9 +10,9 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# ──────────────────────────────────────────────
+
 # Student
-# ──────────────────────────────────────────────
+
 class StudentBase(BaseModel):
     index_number: str
     name: str
@@ -28,9 +28,9 @@ class StudentOut(StudentBase):
     model_config = {"from_attributes": True}
 
 
-# ──────────────────────────────────────────────
+
 # Attendance Log
-# ──────────────────────────────────────────────
+
 class AttendanceLogOut(BaseModel):
     id:         int
     student_id: int
@@ -41,9 +41,9 @@ class AttendanceLogOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ──────────────────────────────────────────────
+
 # Attendance endpoint — response shapes
-# ──────────────────────────────────────────────
+
 class FaceDetectionResult(BaseModel):
     """Per-face result returned inside the attendance response."""
     label:      str
@@ -66,9 +66,9 @@ class AttendanceResponse(BaseModel):
     timestamp:        str
 
 
-# ──────────────────────────────────────────────
+
 # History endpoint
-# ──────────────────────────────────────────────
+
 class AttendanceHistoryResponse(BaseModel):
     total:   int
     records: list[AttendanceLogOut]

@@ -26,17 +26,17 @@ from typing import Optional
 import cv2
 import numpy as np
 
-# ──────────────────────────────────────────────────────────────
+
 # Paths  (all relative to this file so the module is portable)
-# ──────────────────────────────────────────────────────────────
+
 _BASE_DIR   = Path(__file__).parent
 CASCADE_PATH = str(_BASE_DIR / "haarcascade_frontalface_default.xml")
 TRAINER_PATH = str(_BASE_DIR / "trainer.yml")
 NAMES_PATH   = str(_BASE_DIR / "names.txt")
 
-# ──────────────────────────────────────────────────────────────
+
 # Tuning knobs
-# ──────────────────────────────────────────────────────────────
+
 # LBPH: confidence < threshold  → face is recognised
 # Typical range: 50 (very strict) … 100 (lenient)
 CONFIDENCE_THRESHOLD: float = float(os.getenv("FR_CONFIDENCE_THRESHOLD", "70"))
@@ -47,9 +47,9 @@ MIN_NEIGHBORS:  int   = 5
 MIN_FACE_SIZE:  tuple = (30, 30)   # ignore tiny detections
 
 
-# ──────────────────────────────────────────────────────────────
+
 # Result dataclass
-# ──────────────────────────────────────────────────────────────
+
 @dataclass
 class FaceResult:
     label:      str
@@ -68,9 +68,9 @@ class FaceResult:
         }
 
 
-# ──────────────────────────────────────────────────────────────
+
 # Module-level singletons (loaded once, reused for every call)
-# ──────────────────────────────────────────────────────────────
+
 def _load_name_map(path: str) -> dict[int, str]:
     """
     Parse names.txt into {numeric_id: name}.
@@ -101,10 +101,10 @@ def _load_cascade(path: str) -> cv2.CascadeClassifier:
     cascade = cv2.CascadeClassifier(path)
     if cascade.empty():
         raise RuntimeError(
-            f"[FaceEngine] ❌  Failed to load Haar Cascade from: {path}\n"
+            f"[FaceEngine]  Failed to load Haar Cascade from: {path}\n"
             "Make sure haarcascade_frontalface_default.xml is in the backend folder."
         )
-    print(f"[FaceEngine] ✅  Haar Cascade loaded from: {path}")
+    print(f"[FaceEngine]  Haar Cascade loaded from: {path}")
     return cascade
 
 
@@ -112,11 +112,11 @@ def _load_recognizer(path: str) -> cv2.face.LBPHFaceRecognizer:
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     if not os.path.isfile(path):
         raise RuntimeError(
-            f"[FaceEngine] ❌  Trainer file not found: {path}\n"
+            f"[FaceEngine]  Trainer file not found: {path}\n"
             "Train the model first and place trainer.yml in the backend folder."
         )
     recognizer.read(path)
-    print(f"[FaceEngine] ✅  LBPH recognizer loaded from: {path}")
+    print(f"[FaceEngine]  LBPH recognizer loaded from: {path}")
     return recognizer
 
 
@@ -136,9 +136,9 @@ def _get_resources():
     return _cascade, _recognizer, _name_map
 
 
-# ──────────────────────────────────────────────────────────────
+
 # Core helpers
-# ──────────────────────────────────────────────────────────────
+
 def _preprocess(frame: np.ndarray) -> np.ndarray:
     """Convert BGR frame to equalised grayscale for better detection."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -160,9 +160,9 @@ def _detect_faces(cascade: cv2.CascadeClassifier,
     return [(int(x), int(y), int(w), int(h)) for x, y, w, h in faces]
 
 
-# ──────────────────────────────────────────────────────────────
+
 # Public API
-# ──────────────────────────────────────────────────────────────
+
 def recognize_faces(frame: np.ndarray) -> list[FaceResult]:
     """
     Detect and identify all faces in a single camera frame.

@@ -38,3 +38,8 @@ env/
 # Large Machine Learning Models
 backend/trainer.yml
 backend/shape_predictor_68_face_landmarks.dat
+
+# Face Dataset & Uploads
+dataset/
+*.jpg
+*.png

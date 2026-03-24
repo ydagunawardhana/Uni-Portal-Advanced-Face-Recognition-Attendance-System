@@ -32,8 +32,12 @@ export default function LoginScreen({
 
     setLoading(true);
 
+    const toastId = toast.loading("Authenticating...");
+
     try {
-      const res = await fetch(`${API_BASE}/api/login`, {
+      const endpoint = selectedRole === "Student" ? `${API_BASE}/api/student/login` : `${API_BASE}/api/login`;
+
+      const res = await fetch(endpoint, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ email, password, role: selectedRole }),
@@ -42,36 +46,32 @@ export default function LoginScreen({
       const data = await res.json();
 
       if (!res.ok) {
-        // Use the server's error detail if available
-        const msg: string =
-          data?.detail ?? "Login failed. Please try again.";
-        toast.error(msg, { duration: 4000 });
+        const msg: string = data?.detail ?? "Invalid credentials or server error";
+        toast.error(msg, { id: toastId, duration: 4000 });
         return;
       }
 
-      // Persist token for authenticated API calls later
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("user_role",    data.role);
-      localStorage.setItem("user_email",   data.email);
+      // Persist tokens
+      if (selectedRole === "Student") {
+        localStorage.setItem("studentToken", data.token);
+        localStorage.setItem("requiresPasswordChange", String(data.requires_password_change));
+      } else {
+        localStorage.setItem("access_token", data.access_token);
+      }
+      
+      localStorage.setItem("user_role",  data.role || selectedRole);
+      localStorage.setItem("user_email", email);
 
-      toast.success(`🎉 Login Successful! Welcome back.`, {
-        duration: 3000,
-        style: {
-          background: "#1d4ed8",
-          color:       "#fff",
-          fontWeight:  "600",
-          padding:     "14px 20px",
-          borderRadius: "10px",
-        },
-        iconTheme: { primary: "#fff", secondary: "#1d4ed8" },
-      });
+      toast.success("Login Successful!", { id: toastId, duration: 3000 });
 
       // Brief pause so the toast is visible before navigation
       await new Promise((r) => setTimeout(r, 900));
-      onLogin(data.role as "Admin" | "Lecturer" | "Student");
+      onLogin(selectedRole);
 
-    } catch {
-      toast.error("Server error. Please make sure the backend is running.", {
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || "Server connection error";
+      toast.error(msg, {
+        id: toastId,
         duration: 5000,
       });
     } finally {

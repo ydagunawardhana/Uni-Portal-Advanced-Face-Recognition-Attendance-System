@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import StudentSidebar from './StudentSidebar';
 import DashboardOverview from './DashboardOverview';
 import StudentTimetable from './StudentTimetable';
@@ -9,11 +10,23 @@ import { Bell, LogOut } from 'lucide-react';
 
 interface StudentDashboardProps {
   onLogout: () => void;
+  onNavigate?: (screen: any) => void;
 }
 
-export default function StudentDashboard({ onLogout }: StudentDashboardProps) {
+export default function StudentDashboard({ onLogout, onNavigate }: StudentDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [notificationCount] = useState(3);
+
+  useEffect(() => {
+    const requiresPassChange = localStorage.getItem('requiresPasswordChange') === 'true';
+    if (requiresPassChange) {
+      toast("⚠️ Security Alert: Please go to your Profile to change your auto-generated temporary password.", {
+        duration: 10000,
+        style: { background: "#fff3cd", color: "#856404", fontWeight: 500, border: "1px solid #ffeeba" },
+        id: "password-warning-toast",
+      });
+    }
+  }, []);
 
   const studentInfo = {
     name: 'Alex Thompson',
@@ -29,7 +42,7 @@ export default function StudentDashboard({ onLogout }: StudentDashboardProps) {
       case 'timetable':
         return <StudentTimetable />;
       case 'request-correction':
-        return <AttendanceCorrectionRequest />;
+        return <AttendanceCorrectionRequest onLogout={onLogout} onNavigate={onNavigate || (() => {})} />;
       case 'profile':
         return <StudentProfileSecurity />;
       case 'help':

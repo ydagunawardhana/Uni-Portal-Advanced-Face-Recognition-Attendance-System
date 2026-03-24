@@ -1,8 +1,7 @@
 import os
 
-# ──────────────────────────────────────────────
 # Database
-# ──────────────────────────────────────────────
+
 DB_USER     = os.getenv("DB_USER",     "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "root")
 DB_HOST     = os.getenv("DB_HOST",     "localhost")
@@ -13,23 +12,20 @@ DATABASE_URL = (
     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
-# ──────────────────────────────────────────────
 # App
-# ──────────────────────────────────────────────
+
 APP_TITLE       = "Face Recognition Attendance System API"
 APP_DESCRIPTION = "Backend API for managing student attendance via face recognition."
 APP_VERSION     = "1.0.0"
 
-# ──────────────────────────────────────────────
 # CORS – origins allowed to call this API
-# ──────────────────────────────────────────────
+
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
     "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
 ).split(",")
 
-# In development, allow all origins so error responses (401/403) always carry CORS headers.
-# Remove the wildcard in production and set ALLOWED_ORIGINS env var explicitly.
+
 if os.getenv("ENV", "development") == "development":
     ALLOWED_ORIGINS = ["*"]
 
