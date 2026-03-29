@@ -1,16 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { LogOut, Camera, User, CheckCircle, Wifi, WifiOff, Loader2 } from "lucide-react";
+import {
+  LogOut,
+  Camera,
+  User,
+  CheckCircle,
+  Wifi,
+  WifiOff,
+  Loader2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "./Sidebar";
 import DashboardHome from "./DashboardHome";
 import SettingsScreen from "./SettingsScreen";
 import ManageLecturers from "./ManageLecturers";
+import ManageStudents from "./ManageStudents";
 import AttendanceReports from "./AttendanceReports";
 import SystemAuditLogs from "./SystemAuditLogs";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
-const FRAME_INTERVAL_MS = 300; 
+const FRAME_INTERVAL_MS = 300;
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -21,36 +30,43 @@ export default function AdminDashboard({
   onLogout,
   onNavigate,
 }: AdminDashboardProps) {
-  //  UI state 
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("adminActiveTab") || "dashboard");
+  //  UI state
+  const [activeTab, setActiveTab] = useState(
+    () => localStorage.getItem("adminActiveTab") || "dashboard",
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  //  Form fields 
-  const [studentName, setStudentName]       = useState("");
-  const [studentId, setStudentId]           = useState("");
-  const [email, setEmail]                   = useState("");
-  const [mobileNumber, setMobileNumber]     = useState("");
-  const [department, setDepartment]         = useState("");
+  //  Form fields
+  const [studentName, setStudentName] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [department, setDepartment] = useState("");
   const [academicYearText, setAcademicYearText] = useState("");
-  const [intake, setIntake]                 = useState("");
-  const [nicNumber, setNicNumber]           = useState("");
-  const [gender, setGender]                 = useState("");
+  const [intake, setIntake] = useState("");
+  const [nicNumber, setNicNumber] = useState("");
+  const [gender, setGender] = useState("");
   const [autoGeneratePassword, setAutoGeneratePassword] = useState(false);
 
-  //  Webcam / capture state 
-  const videoRef      = useRef<HTMLVideoElement>(null);
-  const canvasRef     = useRef<HTMLCanvasElement>(null);
-  const streamRef     = useRef<MediaStream | null>(null);
+  //  Webcam / capture state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const captureTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [camActive, setCamActive]         = useState(false);
+  const [camActive, setCamActive] = useState(false);
   const [imagesCaptured, setImagesCaptured] = useState(0);
   const [capturedFrames, setCapturedFrames] = useState<string[]>([]);
-  const [faceStatus, setFaceStatus]       = useState<{ isError: boolean; message: string } | null>(null);
-  const [capturing, setCapturing]         = useState(false);
-  const [registering, setRegistering]     = useState(false);
+  const [faceStatus, setFaceStatus] = useState<{
+    isError: boolean;
+    message: string;
+  } | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
+    [],
+  );
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
   const captureActiveRef = useRef(false);
@@ -72,11 +88,11 @@ export default function AdminDashboard({
     getCameras();
   }, [selectedCameraId]);
 
-  //  Derived 
+  //  Derived
   const captureComplete = imagesCaptured >= TOTAL_FRAMES;
-  const cameraStatus    = camActive ? "Online" : "Offline";
+  const cameraStatus = camActive ? "Online" : "Offline";
 
-  //  Tab change 
+  //  Tab change
   const handleTabChange = (tab: string) => {
     // Stop camera when leaving the students tab
     if (tab !== "students") stopCamera();
@@ -86,26 +102,32 @@ export default function AdminDashboard({
     window.scrollTo({ top: 0, behavior: "instant" });
   };
 
-  //  Camera helpers 
-  const startCamera = useCallback(async (deviceIdToUse?: string) => {
-    const targetDeviceId = typeof deviceIdToUse === "string" ? deviceIdToUse : selectedCameraId;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: targetDeviceId 
-               ? { deviceId: { exact: targetDeviceId }, width: 640, height: 480 }
-               : { width: 640, height: 480, facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+  //  Camera helpers
+  const startCamera = useCallback(
+    async (deviceIdToUse?: string) => {
+      const targetDeviceId =
+        typeof deviceIdToUse === "string" ? deviceIdToUse : selectedCameraId;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: targetDeviceId
+            ? { deviceId: { exact: targetDeviceId }, width: 640, height: 480 }
+            : { width: 640, height: 480, facingMode: "user" },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+        setCamActive(true);
+      } catch {
+        toast.error(
+          "Could not access webcam. Please allow camera permissions.",
+        );
       }
-      setCamActive(true);
-    } catch {
-      toast.error("Could not access webcam. Please allow camera permissions.");
-    }
-  }, [selectedCameraId]);
+    },
+    [selectedCameraId],
+  );
 
   const stopCamera = useCallback(() => {
     captureActiveRef.current = false;
@@ -130,13 +152,13 @@ export default function AdminDashboard({
     }
   };
 
-  //  Capture a single frame 
+  //  Capture a single frame
   const captureFrame = useCallback((): string | null => {
     if (!videoRef.current || !canvasRef.current) return null;
 
-    const video  = videoRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width  = video.videoWidth  || 640;
+    canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
@@ -144,11 +166,11 @@ export default function AdminDashboard({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Strip the data-URL prefix → raw base64 string
-    const dataUrl  = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     return dataUrl.split(",")[1];
   }, []);
 
-  //  Kick off the 50-frame capture sequence 
+  //  Kick off the 50-frame capture sequence
   const handleCaptureImages = useCallback(() => {
     if (!camActive) {
       toast.error("Please start the camera first before capturing.");
@@ -165,7 +187,7 @@ export default function AdminDashboard({
     setCapturedFrames([]);
     setFaceStatus(null);
     captureActiveRef.current = true;
-    
+
     let currentFrames: string[] = [];
     const toastId = toast.loading("Capturing face images… (0/50)");
 
@@ -185,7 +207,10 @@ export default function AdminDashboard({
               currentFrames.push(b64);
               setImagesCaptured(currentFrames.length);
               setFaceStatus({ isError: false, message: "Face Detected" });
-              toast.loading(`Capturing face images… (${currentFrames.length}/${TOTAL_FRAMES})`, { id: toastId });
+              toast.loading(
+                `Capturing face images… (${currentFrames.length}/${TOTAL_FRAMES})`,
+                { id: toastId },
+              );
             } else {
               setFaceStatus({ isError: true, message: `${data.reason}` });
             }
@@ -200,7 +225,10 @@ export default function AdminDashboard({
         setCapturedFrames(currentFrames);
         setCapturing(false);
         captureActiveRef.current = false;
-        toast.success("All 50 images captured!", { id: toastId, duration: 3000 });
+        toast.success("All 50 images captured!", {
+          id: toastId,
+          duration: 3000,
+        });
       } else {
         toast.dismiss(toastId);
         setCapturing(false);
@@ -210,11 +238,20 @@ export default function AdminDashboard({
     captureLoop();
   }, [capturing, captureComplete, captureFrame, studentId, camActive]);
 
-  //  Register student 
+  //  Register student
   const handleRegisterStudent = useCallback(async () => {
     // Basic validation
-    if (!studentName || !studentId || !email || !mobileNumber ||
-        !department || !nicNumber || !gender || !academicYearText || !intake) {
+    if (
+      !studentName ||
+      !studentId ||
+      !email ||
+      !mobileNumber ||
+      !department ||
+      !nicNumber ||
+      !gender ||
+      !academicYearText ||
+      !intake
+    ) {
       toast.error("Please fill in all required fields before registering.");
       return;
     }
@@ -232,21 +269,21 @@ export default function AdminDashboard({
 
     try {
       const res = await fetch(`${API_BASE}/api/admin/register-student`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name:              studentName,
-          index_number:      studentId,
+          name: studentName,
+          index_number: studentId,
           email,
-          mobile:            mobileNumber,
+          mobile: mobileNumber,
           department,
-          nic_number:        nicNumber,
+          nic_number: nicNumber,
           gender,
-          academic_year:     academicYearText,
+          academic_year: academicYearText,
           intake,
-          face_frames:       capturedFrames,
+          face_frames: capturedFrames,
           auto_gen_password: autoGeneratePassword,
-          password:          undefined,
+          password: undefined,
         }),
       });
 
@@ -254,7 +291,8 @@ export default function AdminDashboard({
 
       if (!res.ok) {
         toast.error(data?.detail ?? "Registration failed. Please try again.", {
-          id: toastId, duration: 5000,
+          id: toastId,
+          duration: 5000,
         });
         return;
       }
@@ -274,7 +312,7 @@ export default function AdminDashboard({
           padding: "14px 20px",
           borderRadius: "10px",
           whiteSpace: "pre-line",
-          lineHeight: "1",      
+          lineHeight: "1",
           minWidth: "380px",
         },
       });
@@ -282,18 +320,28 @@ export default function AdminDashboard({
       handleClearForm();
     } catch {
       toast.error("Server error. Please check the backend.", {
-        id: toastId, duration: 5000,
+        id: toastId,
+        duration: 5000,
       });
     } finally {
       setRegistering(false);
     }
   }, [
-    studentName, studentId, email, mobileNumber, department,
-    nicNumber, gender, academicYearText, intake,
-    autoGeneratePassword, captureComplete, capturedFrames,
+    studentName,
+    studentId,
+    email,
+    mobileNumber,
+    department,
+    nicNumber,
+    gender,
+    academicYearText,
+    intake,
+    autoGeneratePassword,
+    captureComplete,
+    capturedFrames,
   ]);
 
-  //  Clear form 
+  //  Clear form
   const handleClearForm = () => {
     setStudentName("");
     setStudentId("");
@@ -313,32 +361,60 @@ export default function AdminDashboard({
     if (captureTimerRef.current) clearInterval(captureTimerRef.current);
   };
 
-  //  Header helpers 
+  //  Header helpers
   const getHeaderTitle = () => {
     switch (activeTab) {
-      case "dashboard": return "Admin Dashboard";
-      case "students":  return "Student Registration";
-      case "lecturers": return "Manage Lecturers";
-      case "settings":  return "System Settings";
-      case "reports":   return "Attendance Reports";
-      case "audit":     return "System Audit Logs";
-      default:          return "Admin Dashboard";
+      case "dashboard":
+        return "Admin Dashboard";
+      case "students":
+        return "Student Registration";
+      case "manage_students":
+        return "Manage Students";
+      case "lecturers":
+        return "Manage Lecturers";
+      case "settings":
+        return "System Settings";
+      case "reports":
+        return "Attendance Reports";
+      case "audit":
+        return "System Audit Logs";
+      default:
+        return "Admin Dashboard";
     }
   };
 
   const getHeaderDescription = () => {
     switch (activeTab) {
-      case "dashboard": return "Manage your university attendance system";
-      case "students":  return "Register new students and capture face data";
-      case "lecturers": return "View and manage academic staff";
-      case "settings":  return "Configure system preferences and parameters";
-      case "reports":   return "Generate and export class attendance records";
-      case "audit":     return "View system audit logs";
-      default:          return "Manage your university attendance system";
+      case "dashboard":
+        return "Manage your university attendance system";
+      case "students":
+        return "Register new students and capture face data";
+      case "manage_students":
+        return "View all registered students and process re-training requests";
+      case "lecturers":
+        return "View and manage academic staff";
+      case "settings":
+        return "Configure system preferences and parameters";
+      case "reports":
+        return "Generate and export class attendance records";
+      case "audit":
+        return "View system audit logs";
+      default:
+        return "Manage your university attendance system";
     }
   };
 
-  //  Render 
+  const handleLogoutClick = () => {
+    toast.success("Logged out successfully!", {
+      icon: "👋",
+      duration: 2500,
+    });
+    setTimeout(() => {
+      onLogout();
+    }, 500);
+  };
+
+  //  Render
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
@@ -375,8 +451,8 @@ export default function AdminDashboard({
                   cameraStatus === "Online"
                     ? "bg-green-50 border-green-200 text-green-700"
                     : cameraStatus === "Offline"
-                    ? "bg-red-50 border-red-200 text-red-600"
-                    : "bg-gray-100 border-gray-200 text-gray-500"
+                      ? "bg-red-50 border-red-200 text-red-600"
+                      : "bg-gray-100 border-gray-200 text-gray-500"
                 }`}
               >
                 {cameraStatus === "Online" ? (
@@ -408,10 +484,12 @@ export default function AdminDashboard({
 
               <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
                 <User className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">Admin User</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Admin User
+                </span>
               </div>
               <button
-                onClick={onLogout}
+                onClick={handleLogoutClick}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -426,10 +504,13 @@ export default function AdminDashboard({
           {activeTab === "dashboard" && (
             <DashboardHome onTabChange={handleTabChange} />
           )}
-          {activeTab === "settings"  && <SettingsScreen />}
+          {activeTab === "settings" && <SettingsScreen />}
           {activeTab === "lecturers" && <ManageLecturers />}
-          {activeTab === "reports"   && <AttendanceReports />}
-          {activeTab === "audit"     && <SystemAuditLogs />}
+          {activeTab === "manage_students" && (
+            <ManageStudents onRegisterNew={() => handleTabChange("students")} />
+          )}
+          {activeTab === "reports" && <AttendanceReports />}
+          {activeTab === "audit" && <SystemAuditLogs />}
 
           {/*  Student Registration  */}
           {activeTab === "students" && (
@@ -447,11 +528,16 @@ export default function AdminDashboard({
                   <form className="space-y-5">
                     {/* Full Name */}
                     <div>
-                      <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="studentName"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Full Name <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="text" id="studentName" value={studentName}
+                        type="text"
+                        id="studentName"
+                        value={studentName}
                         onChange={(e) => setStudentName(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="Enter student full name"
@@ -460,11 +546,16 @@ export default function AdminDashboard({
 
                     {/* Index Number */}
                     <div>
-                      <label htmlFor="studentId" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="studentId"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Index Number <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="text" id="studentId" value={studentId}
+                        type="text"
+                        id="studentId"
+                        value={studentId}
                         onChange={(e) => setStudentId(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="e.g. CS202601"
@@ -473,48 +564,76 @@ export default function AdminDashboard({
 
                     {/* Email */}
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="email"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="email" id="email" value={email}
+                        type="email"
+                        id="email"
+                        value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="student@university.edu"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Essential for attendance reports</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Essential for attendance reports
+                      </p>
                     </div>
 
                     {/* Mobile */}
                     <div>
-                      <label htmlFor="mobileNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="mobileNumber"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Mobile Number <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="tel" id="mobileNumber" value={mobileNumber}
+                        type="tel"
+                        id="mobileNumber"
+                        value={mobileNumber}
                         onChange={(e) => setMobileNumber(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="+94 77 123 4567"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Essential for SMS alerts</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Essential for SMS alerts
+                      </p>
                     </div>
 
                     {/* Department */}
                     <div>
-                      <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="department"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Department <span className="text-red-500">*</span>
                       </label>
                       <select
-                        id="department" value={department}
+                        id="department"
+                        value={department}
                         onChange={(e) => setDepartment(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       >
                         <option value="">Select department</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Electrical Engineering">Electrical Engineering</option>
-                        <option value="Mechanical Engineering">Mechanical Engineering</option>
-                        <option value="Civil Engineering">Civil Engineering</option>
-                        <option value="Business Administration">Business Administration</option>
+                        <option value="Computer Science">
+                          Computer Science
+                        </option>
+                        <option value="Electrical Engineering">
+                          Electrical Engineering
+                        </option>
+                        <option value="Mechanical Engineering">
+                          Mechanical Engineering
+                        </option>
+                        <option value="Civil Engineering">
+                          Civil Engineering
+                        </option>
+                        <option value="Business Administration">
+                          Business Administration
+                        </option>
                         <option value="Architecture">Architecture</option>
                       </select>
                     </div>
@@ -522,22 +641,31 @@ export default function AdminDashboard({
                     {/* NIC + Gender side-by-side */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="nicNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="nicNumber"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           NIC Number <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="text" id="nicNumber" value={nicNumber}
+                          type="text"
+                          id="nicNumber"
+                          value={nicNumber}
                           onChange={(e) => setNicNumber(e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                           placeholder="e.g. 200012345678"
                         />
                       </div>
                       <div>
-                        <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="gender"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           Gender <span className="text-red-500">*</span>
                         </label>
                         <select
-                          id="gender" value={gender}
+                          id="gender"
+                          value={gender}
                           onChange={(e) => setGender(e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         >
@@ -551,22 +679,32 @@ export default function AdminDashboard({
                     {/* Academic Year + Intake side-by-side */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="academicYearText" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="academicYearText"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           Academic Year <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="text" id="academicYearText" value={academicYearText}
+                          type="text"
+                          id="academicYearText"
+                          value={academicYearText}
                           onChange={(e) => setAcademicYearText(e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                           placeholder="e.g. 2026"
                         />
                       </div>
                       <div>
-                        <label htmlFor="intake" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label
+                          htmlFor="intake"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
                           Intake / Batch <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="text" id="intake" value={intake}
+                          type="text"
+                          id="intake"
+                          value={intake}
                           onChange={(e) => setIntake(e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                           placeholder="e.g. 26.1"
@@ -578,13 +716,21 @@ export default function AdminDashboard({
                     <div>
                       <div className="flex items-start">
                         <input
-                          type="checkbox" id="autoGeneratePassword"
+                          type="checkbox"
+                          id="autoGeneratePassword"
                           checked={autoGeneratePassword}
-                          onChange={(e) => setAutoGeneratePassword(e.target.checked)}
+                          onChange={(e) =>
+                            setAutoGeneratePassword(e.target.checked)
+                          }
                           className="w-4 h-4 mt-0.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
                         />
-                        <label htmlFor="autoGeneratePassword" className="ml-3 text-sm font-semibold text-gray-700 cursor-pointer">
-                          Auto-generate password and send login credentials via email to the student.<span className="text-red-500">*</span>
+                        <label
+                          htmlFor="autoGeneratePassword"
+                          className="ml-3 text-sm font-semibold text-gray-700 cursor-pointer"
+                        >
+                          Auto-generate password and send login credentials via
+                          email to the student.
+                          <span className="text-red-500">*</span>
                         </label>
                       </div>
                     </div>
@@ -639,8 +785,9 @@ export default function AdminDashboard({
                         </p>
                         <div className="max-w-md mx-auto">
                           <p className="text-sm text-gray-400 leading-relaxed">
-                            Click Start Camera below, then click Capture and slowly turn your head.
-                            The system will automatically take 50 snapshots.
+                            Click Start Camera below, then click Capture and
+                            slowly turn your head. The system will automatically
+                            take 50 snapshots.
                           </p>
                         </div>
                       </div>
@@ -650,19 +797,21 @@ export default function AdminDashboard({
                     {camActive && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                         {/* Target border guide with darkened surroundings via massive box-shadow */}
-                        <div 
+                        <div
                           className="w-[260px] h-[340px] z-10  rounded-[30px] border-2 border-green-500/20 relative flex items-center justify-center transition-all duration-300"
-                          style={{ boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.1)" }}
+                          style={{
+                            boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.1)",
+                          }}
                         >
-                           {/* Green Viewfinder Corner Accents */}
-                           <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-green-500 rounded-tl-[30px]"></div>
-                           <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-green-500 rounded-tr-[30px]"></div>
-                           <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-green-500 rounded-bl-[30px]"></div>
-                           <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-green-500 rounded-br-[30px]"></div>
+                          {/* Green Viewfinder Corner Accents */}
+                          <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-green-500 rounded-tl-[30px]"></div>
+                          <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-green-500 rounded-tr-[30px]"></div>
+                          <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-green-500 rounded-bl-[30px]"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-green-500 rounded-br-[30px]"></div>
 
-                           <span className="absolute -bottom-14 text-white text-sm font-medium bg-black/60 px-5 py-2 rounded-full whitespace-nowrap tracking-wide ">
-                             Align face within frame
-                           </span>
+                          <span className="absolute -bottom-14 text-white text-sm font-medium bg-black/60 px-5 py-2 rounded-full whitespace-nowrap tracking-wide ">
+                            Align face within frame
+                          </span>
                         </div>
                       </div>
                     )}
@@ -698,7 +847,9 @@ export default function AdminDashboard({
                     }`}
                   >
                     <Camera className="w-5 h-5" />
-                    <span>{camActive ? "Turn Off Camera" : "Start Camera"}</span>
+                    <span>
+                      {camActive ? "Turn Off Camera" : "Start Camera"}
+                    </span>
                   </button>
 
                   {/* Capture button */}
@@ -712,9 +863,15 @@ export default function AdminDashboard({
                     } text-white`}
                   >
                     {capturing ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /><span>Capturing…</span></>
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Capturing…</span>
+                      </>
                     ) : (
-                      <><Camera className="w-5 h-5" /><span>Capture Images</span></>
+                      <>
+                        <Camera className="w-5 h-5" />
+                        <span>Capture Images</span>
+                      </>
                     )}
                   </button>
 
@@ -724,9 +881,11 @@ export default function AdminDashboard({
                       <label className="text-sm font-medium text-gray-700">
                         Images Captured: {imagesCaptured}/{TOTAL_FRAMES}
                       </label>
-                      
+
                       {faceStatus && (
-                        <span className={`text-sm font-semibold truncate max-w-[50%] text-right ${faceStatus.isError ? "text-red-500" : "text-green-600"}`}>
+                        <span
+                          className={`text-sm font-semibold truncate max-w-[50%] text-right ${faceStatus.isError ? "text-red-500" : "text-green-600"}`}
+                        >
                           {faceStatus.message}
                         </span>
                       )}
@@ -740,7 +899,9 @@ export default function AdminDashboard({
                         className={`h-full transition-all duration-300 rounded-full ${
                           captureComplete ? "bg-green-500" : "bg-blue-600"
                         }`}
-                        style={{ width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%` }}
+                        style={{
+                          width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,
+                        }}
                       />
                     </div>
                     {captureComplete && (

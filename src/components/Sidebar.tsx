@@ -44,6 +44,11 @@ export default function Sidebar({
       icon: Users,
     },
     {
+      id: "manage_students",
+      label: "Manage Students",
+      icon: GraduationCap,
+    },
+    {
       id: "lecturers",
       label: "Manage Lecturers",
       icon: UserCog,

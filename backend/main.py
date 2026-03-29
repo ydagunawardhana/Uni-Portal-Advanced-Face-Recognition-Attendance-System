@@ -4,6 +4,8 @@ from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 from sqlalchemy.orm import Session
 
 import config
@@ -68,6 +70,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Ensure uploads directory exists
+os.makedirs("uploads/profiles", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # CORS

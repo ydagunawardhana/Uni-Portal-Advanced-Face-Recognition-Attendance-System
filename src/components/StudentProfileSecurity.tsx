@@ -1,8 +1,23 @@
-import { useState } from 'react';
-import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2, Camera, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const API_BASE = "http://localhost:8000";
+
+interface StudentData {
+  name: string;
+  index_number: string;
+  email: string;
+  mobile: string;
+  department: string;
+  nic_number: string;
+  gender: string;
+  academic_year: string;
+  intake: string;
+  profile_picture?: string | null;
+  retrain_requested: boolean;
+  last_trained_date?: string | null;
+}
 
 export default function StudentProfileSecurity() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -12,21 +27,135 @@ export default function StudentProfileSecurity() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mock student data
-  const studentData = {
-    name: 'John Michael Anderson',
-    indexNumber: 'CS/2021/045',
-    email: 'john.anderson@university.edu',
-    batch: '2021',
-    department: 'Computer Science',
-    profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    faceModelStatus: 'Active',
-    lastTrained: '2025-01-15',
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [isRetraining, setIsRetraining] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [imageTimestamp, setImageTimestamp] = useState(Date.now());
+  
+  // Dynamic profile image resolution with Cache Busting
+  const profileImage = studentData?.profile_picture 
+    ? `${API_BASE}${studentData.profile_picture}?t=${imageTimestamp}` 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(studentData?.name || 'Student')}&background=random&size=200`;
+
+  const lastTrained = studentData?.last_trained_date || 'Not available';
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/student/profile`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStudentData(data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    if (!token) {
+      toast.error('Authentication missing.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setIsUploading(true);
+    const toastId = toast.loading('Uploading profile picture...');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/student/upload-profile-picture`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Profile picture updated successfully!', { id: toastId });
+        setStudentData(prev => prev ? { ...prev, profile_picture: data.profile_picture } : null);
+        setImageTimestamp(Date.now());
+      } else {
+        toast.error(data.detail || 'Failed to upload image.', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('Network error during upload.', { id: toastId });
+    } finally {
+      setIsUploading(false);
+      // Reset input so they can select the same file again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
-  const handleRequestRetraining = () => {
-    alert('Face re-training request submitted! The admin will contact you shortly.');
+  const handleRequestRetraining = async () => {
+    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    if (!token) {
+      toast.error('Authentication missing. Please log in again.');
+      return;
+    }
+    
+    setIsRetraining(true);
+    const toastId = toast.loading("Submitting request...");
+    try {
+      const res = await fetch(`${API_BASE}/api/student/request-retrain`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Request submitted successfully!", { id: toastId });
+        setStudentData(prev => prev ? { ...prev, retrain_requested: true } : null);
+      } else {
+        toast.error(data.detail || "Failed to submit request.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Network error. Try again.", { id: toastId });
+    } finally {
+      setIsRetraining(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    if (!token) return;
+
+    const toastId = toast.loading("Cancelling request...");
+    try {
+      const res = await fetch(`${API_BASE}/api/student/retrain-request`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Request cancelled successfully!", { id: toastId });
+        setStudentData(prev => prev ? { ...prev, retrain_requested: false } : null);
+      } else {
+        toast.error(data.detail || "Failed to cancel request.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Network error. Try again.", { id: toastId });
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -106,18 +235,42 @@ export default function StudentProfileSecurity() {
             <h2 className="text-xl font-bold text-gray-900">Student Profile</h2>
           </div>
 
+          
+
           {/* Profile Picture */}
           <div className="flex flex-col items-center mb-6">
-            <div className="relative">
-              <img
-                src={studentData.profileImage}
-                alt="Profile"
-                className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 shadow-lg"
+            <div 
+              className="relative group cursor-pointer w-32 h-32 rounded-full ring-4 ring-gray-100 shadow-lg" 
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                className="hidden" 
+                accept="image/*" 
               />
-              <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-white" />
+              
+              {/* Aththa Image Eka */}
+              <img
+                key={imageTimestamp}
+                src={profileImage}
+                alt="Profile"
+                className={`w-full h-full rounded-full object-cover ${isUploading ? 'opacity-50' : ''}`}
+              />
+              
+              {/* Verified check badge - FIXED POSITION */}
+              <div className="absolute bottom-0 right-0 w-7 h-7 bg-green-500 rounded-full border-1 border-white flex items-center justify-center shadow-sm z-10">
+                <CheckCircle className="w-4 h-4 text-white" />
               </div>
             </div>
+            
+            <p 
+              className="text-sm text-gray-500 mt-4 hover:text-red-600 transition-colors cursor-pointer font-medium" 
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Change Avatar
+            </p>
           </div>
 
           {/* Student Information */}
@@ -126,21 +279,21 @@ export default function StudentProfileSecurity() {
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                 Full Name
               </label>
-              <p className="text-lg font-bold text-gray-900">{studentData.name}</p>
+              <p className="text-lg font-bold text-gray-900">{studentData?.name || '...'}</p>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                 Index Number
               </label>
-              <p className="text-lg font-bold text-red-600">{studentData.indexNumber}</p>
+              <p className="text-lg font-bold text-red-600">{studentData?.index_number || '...'}</p>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                 Email Address
               </label>
-              <p className="text-base text-gray-700">{studentData.email}</p>
+              <p className="text-base text-gray-700">{studentData?.email || '...'}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -148,13 +301,37 @@ export default function StudentProfileSecurity() {
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Department
                 </label>
-                <p className="text-base text-gray-700">{studentData.department}</p>
+                <p className="text-base text-gray-700">{studentData?.department || '...'}</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Batch
                 </label>
-                <p className="text-base text-gray-700">{studentData.batch}</p>
+                <p className="text-base text-gray-700">{studentData?.academic_year || '...'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  Mobile
+                </label>
+                <p className="text-base text-gray-700">{studentData?.mobile || '...'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  NIC Number
+                </label>
+                <p className="text-base text-gray-700">{studentData?.nic_number || '...'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  Gender
+                </label>
+                <p className="text-base text-gray-700">{studentData?.gender || '...'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  Intake
+                </label>
+                <p className="text-base text-gray-700">{studentData?.intake || '...'}</p>
               </div>
             </div>
           </div>
@@ -186,7 +363,7 @@ export default function StudentProfileSecurity() {
             <div className="flex items-center gap-2 text-gray-700">
               <Calendar className="w-5 h-5 text-gray-500" />
               <span className="text-sm font-medium">Last updated:</span>
-              <span className="text-sm font-bold text-gray-900">{studentData.lastTrained}</span>
+              <span className="text-sm font-bold text-gray-900">{lastTrained}</span>
             </div>
           </div>
 
@@ -194,10 +371,35 @@ export default function StudentProfileSecurity() {
           <div className="mb-8">
             <button
               onClick={handleRequestRetraining}
-              className="w-full px-6 py-3 bg-white border-2 border-red-600 text-red-600 rounded-lg font-bold hover:bg-red-50 transition-all shadow-sm"
+              disabled={isRetraining || studentData?.retrain_requested}
+              className={`w-full px-6 py-3 border-2 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
+                studentData?.retrain_requested
+                  ? 'bg-yellow-50 border-yellow-500 text-yellow-600'
+                  : 'bg-white border-red-600 text-red-600 hover:bg-red-50'
+              }`}
             >
-              Request Face Re-training
+              {isRetraining ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Submitting Request...
+                </>
+              ) : studentData?.retrain_requested ? (
+                <>
+                  <Clock className="w-5 h-5" />
+                  Request Pending Admin Approval
+                </>
+              ) : (
+                "Request Face Re-training"
+              )}
             </button>
+            {studentData?.retrain_requested && (
+              <button 
+                onClick={handleCancelRequest} 
+                className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium underline-offset-2 hover:underline w-full text-center"
+              >
+                Cancel Request
+              </button>
+            )}
             <p className="text-xs text-gray-500 mt-2 text-center">
               Use this if your appearance has changed significantly
             </p>

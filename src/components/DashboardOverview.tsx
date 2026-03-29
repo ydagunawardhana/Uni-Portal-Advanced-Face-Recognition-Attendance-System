@@ -1,25 +1,50 @@
+import { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
 export default function DashboardOverview() {
   // Sample Data
   const attendancePercentage = 85;
+  const [animatedChartData, setAnimatedChartData] = useState([
+    { name: 'Present', value: 0 }, 
+    { name: 'Absent', value: 100 }
+  ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatedChartData([
+        { name: 'Present', value: 85 },
+        { name: 'Absent', value: 15 }
+      ]);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
   const studentInfo = {
     name: 'Alex Thompson',
     indexNumber: 'CS/2021/045',
     batch: '2021',
     department: 'Computer Science',
   };
-  const chartData = [
+  const attendanceData = [
     { name: 'Present', value: 85 },
-    { name: 'Absent', value: 15 },
+    { name: 'Absent', value: 15 }
   ];
-  const COLORS = ['#10b981', '#ef4444'];
+  const COLORS = ['#10b981', '#ef4444']; 
   const classHistory = [
     {
       id: 1,
@@ -88,48 +113,51 @@ export default function DashboardOverview() {
           <h2 className="text-xl font-bold text-gray-900 mb-6">
             Attendance Summary
           </h2>
-          <div className="relative w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+          {/* Attendance Donut Chart Container */}
+          <div className="flex flex-col items-center justify-center py-6 w-full">
+
+            {/* Chart & Center Text Wrapper */}
+            <div className="relative w-[220px] h-[220px] flex items-center justify-center">
+              
+              {/* Bulletproof fixed-size PieChart */}
+              <PieChart width={230} height={230}>
                 <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  paddingAngle={5}
+                  data={animatedChartData}
+                  cx={115} // Exactly half of width
+                  cy={115} // Exactly half of height
+                  innerRadius={75}
+                  outerRadius={105}
+                  paddingAngle={2}
                   dataKey="value"
+                  stroke="none"
+                  isAnimationActive={true}
+                  animationDuration={1500}
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index]}
-                    />
-                  ))}
+                  <Cell fill="#10b77fff" /> {/* Tailwind emerald-500 */}
+                  <Cell fill="#ef4444" /> {/* Tailwind red-500 */}
                 </Pie>
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
               </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <p className="text-gray-600 text-sm mb-1">
-                  Overall
-                </p>
-                <p className="text-4xl font-bold text-gray-900">
-                  {attendancePercentage}%
-                </p>
+
+              {/* Absolute Centered Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[12px] text-gray-800 font-bold uppercase tracking-wider">Overall</span>
+                <span className="text-3xl font-bold text-gray-900 mt-1">85%</span>
               </div>
             </div>
-          </div>
-          {/* Legend */}
-          <div className="flex justify-center space-x-8 mt-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Present</span>
+
+            {/* Custom HTML Legend (Guaranteed to render beautifully) */}
+            <div className="flex items-center gap-6 mt-8">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                <span className="text-sm font-medium text-gray-600">Present</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-600"></div>
+                <span className="text-sm font-medium text-gray-600">Absent</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Absent</span>
-            </div>
+
           </div>
         </div>
       </div>

@@ -1,101 +1,194 @@
-import { useState } from "react";
-import { Search, Plus, Edit2, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Plus, Edit2, Trash2, Loader2, AlertTriangle, Trash } from "lucide-react";
+import toast from "react-hot-toast";
 import AddLecturerModal from "./AddLecturerModal";
 import EditLecturerModal from "./EditLecturerModal";
+
+const API_BASE = "http://localhost:8000";
 
 interface Lecturer {
   id: number;
   name: string;
-  employeeId: string;
+  employee_id: string;
   department: string;
   email: string;
-  status: "Active" | "On Leave";
-  avatarColor: string;
+  assigned_subjects?: string;
+  is_active: boolean;
+  avatarColor?: string; // Optional local UI state
 }
 
 export default function ManageLecturers() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("All Departments");
+  const [subjectFilter, setSubjectFilter] = useState("All Subjects");
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(
-    null
-  );
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const lecturers: Lecturer[] = [
-    {
-      id: 1,
-      name: "Dr. Michael Johnson",
-      employeeId: "LEC-001",
-      department: "Computer Science",
-      email: "m.johnson@university.edu",
-      status: "Active",
-      avatarColor: "bg-blue-500",
-    },
-    {
-      id: 2,
-      name: "Prof. Sarah Williams",
-      employeeId: "LEC-002",
-      department: "Computer Science",
-      email: "s.williams@university.edu",
-      status: "Active",
-      avatarColor: "bg-purple-500",
-    },
-    {
-      id: 3,
-      name: "Dr. James Anderson",
-      employeeId: "LEC-003",
-      department: "Mathematics",
-      email: "j.anderson@university.edu",
-      status: "On Leave",
-      avatarColor: "bg-green-500",
-    },
-    {
-      id: 4,
-      name: "Dr. Emily Brown",
-      employeeId: "LEC-004",
-      department: "Computer Science",
-      email: "e.brown@university.edu",
-      status: "Active",
-      avatarColor: "bg-orange-500",
-    },
-    {
-      id: 5,
-      name: "Prof. Robert Taylor",
-      employeeId: "LEC-005",
-      department: "Physics",
-      email: "r.taylor@university.edu",
-      status: "Active",
-      avatarColor: "bg-pink-500",
-    },
-    {
-      id: 6,
-      name: "Dr. Lisa Martinez",
-      employeeId: "LEC-006",
-      department: "Computer Science",
-      email: "l.martinez@university.edu",
-      status: "Active",
-      avatarColor: "bg-indigo-500",
-    },
-    {
-      id: 7,
-      name: "Dr. David Wilson",
-      employeeId: "LEC-007",
-      department: "Engineering",
-      email: "d.wilson@university.edu",
-      status: "On Leave",
-      avatarColor: "bg-teal-500",
-    },
-    {
-      id: 8,
-      name: "Prof. Jennifer Davis",
-      employeeId: "LEC-008",
-      department: "Mathematics",
-      email: "j.davis@university.edu",
-      status: "Active",
-      avatarColor: "bg-red-500",
-    },
-  ];
+  useEffect(() => {
+    fetchLecturers();
+  }, []);
+
+  const parseApiError = (data: any) => {
+    if (!data || !data.detail) return "An unexpected error occurred.";
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      return data.detail.map((err: any) => err.msg).join(", ");
+    }
+    return JSON.stringify(data.detail);
+  };
+
+  const fetchLecturers = async () => {
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("access_token");
+      const res = await fetch(`${API_BASE}/api/admin/lecturers`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Add random background colors for avatars since they aren't in DB
+        const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-red-500'];
+        const mappedData = data.map((l: any, i: number) => ({
+          ...l,
+          avatarColor: colors[i % colors.length]
+        }));
+        setLecturers(mappedData);
+      } else {
+        const errorText = await res.text();
+        console.error("Fetch lecturers failed:", errorText);
+        toast.error("Failed to load lecturers list.");
+      }
+    } catch (error: any) {
+      console.error("Fetch Error:", error);
+      toast.error(error.message || "Failed to fetch lecturers");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegisterLecturer = async (formData: any) => {
+    // Frontend validation guard
+    if (!formData.fullName?.trim() || !formData.employeeId?.trim() || !formData.email?.trim() || !formData.department?.trim()) {
+      toast.error("Please fill in all required fields before saving.");
+      return;
+    }
+
+    if (!formData.autoGeneratePassword) {
+      toast.error("You must check the auto-generate password option to proceed.");
+      return;
+    }
+
+    setIsSaving(true);
+    const toastId = toast.loading("Registering lecturer...");
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("access_token");
+      const payload = {
+        name: formData.fullName,
+        employee_id: formData.employeeId,
+        email: formData.email,
+        department: formData.department,
+        assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
+        auto_generate_password: formData.autoGeneratePassword
+      };
+
+      const res = await fetch(`${API_BASE}/api/admin/lecturers`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        toast.success("Lecturer registered successfully! Login credentials have been sent via email.", { 
+          id: toastId,
+          duration: 6000 
+        });
+        setIsModalOpen(false); // Move inside ok block
+        fetchLecturers();
+      } else {
+        const data = await res.json().catch(() => ({ detail: "Malformed server error" }));
+        toast.error(parseApiError(data), { id: toastId });
+      }
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+      toast.error(error.message || "Network error", { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateLecturer = async (formData: any) => {
+    if (!selectedLecturer) return;
+    setIsSaving(true);
+    const toastId = toast.loading("Updating lecturer...");
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("access_token");
+      const payload = {
+        name: formData.fullName,
+        email: formData.email,
+        department: formData.department,
+        assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
+        is_active: formData.isActive
+      };
+
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/${selectedLecturer.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        toast.success("Profile updated successfully!", { id: toastId });
+        setIsEditModalOpen(false); // Move inside ok block
+        fetchLecturers();
+      } else {
+        const data = await res.json().catch(() => ({ detail: "Malformed server error" }));
+        toast.error(parseApiError(data), { id: toastId });
+      }
+    } catch (error: any) {
+      console.error("Update Error:", error);
+      toast.error(error.message || "Network error", { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedLecturer) return;
+    setIsSaving(true);
+    const toastId = toast.loading("Deleting lecturer...");
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("access_token");
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/${selectedLecturer.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        toast.success("Lecturer deleted successfully!", { id: toastId });
+        setLecturers(prev => prev.filter(l => l.id !== selectedLecturer.id));
+        setIsDeleteModalOpen(false);
+      } else {
+        const data = await res.json().catch(() => ({ detail: "Delete operation failed" }));
+        toast.error(parseApiError(data), { id: toastId });
+      }
+    } catch (error: any) {
+      console.error("Delete Error:", error);
+      toast.error(error.message || "Network error", { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleAddLecturer = () => {
     setIsModalOpen(true);
@@ -106,15 +199,42 @@ export default function ManageLecturers() {
     setIsEditModalOpen(true);
   };
 
-  const handleDeleteLecturer = (name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
-      alert(`Deleting lecturer: ${name}`);
-    }
+  const handleDeleteLecturer = (lecturer: Lecturer) => {
+    setSelectedLecturer(lecturer);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleToggleStatus = (name: string, currentStatus: string) => {
-    const newStatus = currentStatus === "Active" ? "On Leave" : "Active";
-    alert(`Changing ${name} status to: ${newStatus}`);
+  const handleToggleStatus = (lecturer: Lecturer) => {
+    const updatedStatus = !lecturer.is_active;
+    // We can call the PUT endpoint directly for a quick toggle if needed
+    toast.promise(
+      handleUpdateLecturerStatus(lecturer.id, updatedStatus),
+      {
+        loading: 'Updating status...',
+        success: 'Status updated!',
+        error: 'Failed to update status',
+      }
+    );
+  };
+
+  const handleUpdateLecturerStatus = async (id: number, active: boolean) => {
+    const token = localStorage.getItem("adminToken") || localStorage.getItem("access_token");
+    const res = await fetch(`${API_BASE}/api/admin/lecturers/${id}`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        // We need the rest of the data, so let's find the lecturer
+        ...lecturers.find(l => l.id === id),
+        is_active: active,
+        // Map fields used by PUT payload
+        assigned_subjects: lecturers.find(l => l.id === id)?.assigned_subjects || ""
+      })
+    });
+    if (!res.ok) throw new Error("Update failed");
+    fetchLecturers();
   };
 
   const getInitials = (name: string) => {
@@ -125,6 +245,21 @@ export default function ManageLecturers() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  const filteredLecturers = lecturers.filter((lecturer) => {
+    const matchesSearch =
+      lecturer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lecturer.employee_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment =
+      departmentFilter === "All Departments" ||
+      lecturer.department === departmentFilter;
+    const matchesSubject =
+      subjectFilter === "All Subjects" ||
+      (lecturer.assigned_subjects &&
+        lecturer.assigned_subjects.includes(subjectFilter));
+
+    return matchesSearch && matchesDepartment && matchesSubject;
+  });
 
   return (
     <div className="space-y-6">
@@ -138,26 +273,49 @@ export default function ManageLecturers() {
             </div>
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by Name or ID..."
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
 
-          {/* Filter Dropdown */}
-          <div className="w-64">
+          {/* Department Filter */}
+          <div className="w-48">
             <select
               aria-label="Filter by Department"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
             >
-              <option value="all">All Departments</option>
-              <option value="cs">Computer Science</option>
-              <option value="math">Mathematics</option>
-              <option value="physics">Physics</option>
-              <option value="engineering">Engineering</option>
+              <option value="All Departments">All Departments</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Physics">Physics</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Architecture">Architecture</option>
+              <option value="Business Administration">Business Administration</option>
+            </select>
+          </div>
+
+          {/* Subject Filter */}
+          <div className="w-48">
+            <select
+              aria-label="Filter by Subject"
+              value={subjectFilter}
+              onChange={(e) => setSubjectFilter(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+            >
+              <option value="All Subjects">All Subjects</option>
+              {/* Common Subjects based on existing options */}
+              <option value="Object Oriented Programming">Programming</option>
+              <option value="Database Management Systems">Database Systems</option>
+              <option value="Software Engineering">Software Engineering</option>
+              <option value="Artificial Intelligence">AI / ML</option>
+              <option value="Computer Networks">Networking</option>
+              <option value="Cyber Security">Cyber Security</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Physics">Physics</option>
             </select>
           </div>
 
@@ -199,11 +357,32 @@ export default function ManageLecturers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {lecturers.map((lecturer) => (
-                <tr
-                  key={lecturer.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
+              {filteredLecturers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-gray-500">
+                      <Search className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="text-lg font-medium">No lecturers found matching your filters</p>
+                      <p className="text-sm">Try adjusting your search terms or filters.</p>
+                      <button 
+                        onClick={() => {
+                          setSearchTerm("");
+                          setDepartmentFilter("All Departments");
+                          setSubjectFilter("All Subjects");
+                        }}
+                        className="mt-4 text-blue-600 font-bold hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredLecturers.map((lecturer) => (
+                  <tr
+                    key={lecturer.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                   {/* Lecturer Name with Avatar */}
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
@@ -220,14 +399,14 @@ export default function ManageLecturers() {
 
                   {/* Employee ID */}
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">
-                      {lecturer.employeeId}
+                    <span className="text-sm text-gray-600 font-mono">
+                      {lecturer.employee_id}
                     </span>
                   </td>
 
                   {/* Department */}
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900">
+                    <span className="text-sm text-gray-900 font-medium">
                       {lecturer.department}
                     </span>
                   </td>
@@ -242,16 +421,14 @@ export default function ManageLecturers() {
                   {/* Status with Toggle */}
                   <td className="px-6 py-4">
                     <button
-                      onClick={() =>
-                        handleToggleStatus(lecturer.name, lecturer.status)
-                      }
-                      className={`inline-flex px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors ${
-                        lecturer.status === "Active"
+                      onClick={() => handleToggleStatus(lecturer)}
+                      className={`inline-flex px-3 py-1 text-sm font-bold rounded-full cursor-pointer transition-all ${
+                        lecturer.is_active
                           ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                          : "bg-red-100 text-red-700 hover:bg-red-200"
                       }`}
                     >
-                      {lecturer.status}
+                      {lecturer.is_active ? "Active" : "Inactive"}
                     </button>
                   </td>
 
@@ -266,7 +443,7 @@ export default function ManageLecturers() {
                         <Edit2 className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteLecturer(lecturer.name)}
+                        onClick={() => handleDeleteLecturer(lecturer)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete Lecturer"
                       >
@@ -275,7 +452,8 @@ export default function ManageLecturers() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>
@@ -283,7 +461,7 @@ export default function ManageLecturers() {
         {/* Table Footer */}
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {lecturers.length} lecturers
+            Showing {filteredLecturers.length} lecturers
           </div>
           <div className="text-sm text-gray-600">
             Total Academic Staff: {lecturers.length}
@@ -293,24 +471,69 @@ export default function ManageLecturers() {
 
       {/* Add Lecturer Modal */}
       <AddLecturerModal
+        key={isModalOpen ? 'open' : 'closed'}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={(lecturerData) => {
-          console.log("New lecturer data:", lecturerData);
-          alert(`Lecturer ${lecturerData.fullName} registered successfully!`);
-        }}
+        onSave={handleRegisterLecturer}
+        isSaving={isSaving}
       />
 
       {/* Edit Lecturer Modal */}
       <EditLecturerModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        lecturer={selectedLecturer}
-        onSave={(lecturerData) => {
-          console.log("Updated lecturer data:", lecturerData);
-          alert(`Lecturer ${lecturerData.fullName} updated successfully!`);
-        }}
+        isSaving={isSaving}
+        lecturer={selectedLecturer ? {
+          name: selectedLecturer.name,
+          employeeId: selectedLecturer.employee_id,
+          email: selectedLecturer.email,
+          department: selectedLecturer.department,
+          assigned_subjects: selectedLecturer.assigned_subjects || "",
+          status: selectedLecturer.is_active ? "Active" : "On Leave"
+        } : null}
+        onSave={handleUpdateLecturer}
       />
+
+      {/* Custom Delete Confirmation Modal */}
+      {isDeleteModalOpen && selectedLecturer && (
+        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="absolute inset-0" onClick={() => setIsDeleteModalOpen(false)}></div>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="p-8 flex flex-col items-center text-center">
+              {/* Warning Icon Cluster */}
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Remove Lecturer Access?</h3>
+              <p className="text-gray-600 mb-8 px-2">
+                Are you sure you want to delete <span className="font-bold text-gray-900">{selectedLecturer.name}</span>? 
+                This will permanently remove their academic profile and revoke all portal access rights.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 w-full text-center">
+                <button 
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isSaving}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmDelete}
+                  disabled={isSaving}
+                  className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import toast from "react-hot-toast";
 import {
   Users,
   GraduationCap,
@@ -16,7 +17,23 @@ import {
   Download,
   Settings,
   RefreshCw,
+  Power,
+  Camera,
+  AlertTriangle,
+  BookOpen,
+  ChevronRight,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const API_BASE = "http://localhost:8000";
 
@@ -24,51 +41,71 @@ interface DashboardHomeProps {
   onTabChange?: (tab: string) => void;
 }
 
-// API shapes 
+// API shapes
 interface DashboardStats {
-  total_students:          number;
-  total_lecturers:         number;
-  todays_attendance_pct:   number;
+  total_students: number;
+  total_lecturers: number;
+  todays_attendance_pct: number;
   pending_manual_requests: number;
+  pendingRetrains: number;
+  lowAttendanceAlerts: number;
+  activeModulesToday: number;
 }
 
 interface ActivityItem {
-  id:           number;
-  action_type:  string;
-  description:  string;
-  timestamp:    string;
+  id: number;
+  action_type: string;
+  description: string;
+  timestamp: string;
 }
 
 // Skeleton helper
 function Skeleton({ className }: { className?: string }) {
   return (
-    <div
-      className={`animate-pulse bg-gray-200 rounded ${className ?? ""}`}
-    />
+    <div className={`animate-pulse bg-gray-200 rounded ${className ?? ""}`} />
   );
 }
 
 // Time formatter
 function relativeTime(iso: string): string {
-  const diffMs  = Date.now() - new Date(iso).getTime();
+  const diffMs = Date.now() - new Date(iso).getTime();
   const diffMin = Math.round(diffMs / 60_000);
-  if (diffMin < 1)   return "Just now";
-  if (diffMin < 60)  return `${diffMin} min ago`;
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin} min ago`;
   const diffH = Math.round(diffMin / 60);
-  if (diffH   < 24)  return `${diffH} hour${diffH > 1 ? "s" : ""} ago`;
+  if (diffH < 24) return `${diffH} hour${diffH > 1 ? "s" : ""} ago`;
   const diffD = Math.round(diffH / 24);
   return `${diffD} day${diffD > 1 ? "s" : ""} ago`;
 }
 
 // Component
 export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
-  const [stats,         setStats]         = useState<DashboardStats | null>(null);
-  const [activity,      setActivity]      = useState<ActivityItem[]>([]);
-  const [loadingStats,  setLoadingStats]  = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [loadingActivity, setLoadingActivity] = useState(true);
-  const [isRefreshing,  setIsRefreshing]  = useState(false);
-  const [statsError,    setStatsError]    = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statsError, setStatsError] = useState(false);
   const [activityError, setActivityError] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
+  // Mock data for visualizations
+  const weeklyTrendData = [
+    { name: "Mon", attendance: 75 },
+    { name: "Tue", attendance: 82 },
+    { name: "Wed", attendance: 90 },
+    { name: "Thu", attendance: 85 },
+    { name: "Fri", attendance: 88 },
+    { name: "Sat", attendance: 65 },
+    { name: "Sun", attendance: 40 },
+  ];
+
+  const departmentData = [
+    { name: "CS", attendance: 85 },
+    { name: "Math", attendance: 78 },
+    { name: "Physics", attendance: 92 },
+    { name: "Engineering", attendance: 81 },
+  ];
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -77,7 +114,13 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
     try {
       const res = await fetch(`${API_BASE}/api/admin/dashboard-stats`);
       if (!res.ok) throw new Error("non-2xx");
-      setStats(await res.json());
+      const data = await res.json();
+      setStats({
+        ...data,
+        pendingRetrains: data.pending_retrains,
+        lowAttendanceAlerts: data.low_attendance_alerts,
+        activeModulesToday: data.active_modules_today,
+      });
     } catch {
       setStatsError(true);
     } finally {
@@ -122,24 +165,24 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
   // Derived stat cards
   const statCards = [
     {
-      title:     "Total Students",
-      value:     stats ? stats.total_students.toLocaleString() : "—",
-      icon:      Users,
-      bgColor:   "bg-blue-100",
+      title: "Total Students",
+      value: stats ? stats.total_students.toLocaleString() : "—",
+      icon: Users,
+      bgColor: "bg-blue-100",
       iconColor: "text-blue-600",
     },
     {
-      title:     "Total Lecturers",
-      value:     stats ? stats.total_lecturers.toLocaleString() : "—",
-      icon:      GraduationCap,
-      bgColor:   "bg-purple-100",
+      title: "Total Lecturers",
+      value: stats ? stats.total_lecturers.toLocaleString() : "—",
+      icon: GraduationCap,
+      bgColor: "bg-purple-100",
       iconColor: "text-purple-600",
     },
     {
-      title:     "Today's Attendance",
-      value:     stats ? `${stats.todays_attendance_pct}%` : "—",
-      icon:      CheckCircle,
-      bgColor:   "bg-green-100",
+      title: "Today's Attendance",
+      value: stats ? `${stats.todays_attendance_pct}%` : "—",
+      icon: CheckCircle,
+      bgColor: "bg-green-100",
       iconColor: "text-green-600",
     },
   ];
@@ -208,7 +251,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
     <div>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-        <p className="text-gray-600 mt-1">Welcome back! Here's what's happening today.</p>
+        <p className="text-gray-600 mt-1">
+          Welcome back! Here's what's happening today.
+        </p>
       </div>
 
       {/* Stat Cards */}
@@ -225,17 +270,136 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                   <Icon className={`w-8 h-8 ${stat.iconColor}`} />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm font-medium mb-2">{stat.title}</h3>
+              <h3 className="text-gray-600 text-sm font-medium mb-2">
+                {stat.title}
+              </h3>
               {loadingStats ? (
                 <Skeleton className="h-10 w-24 mt-1" />
               ) : statsError ? (
                 <p className="text-2xl font-bold text-red-400">Error</p>
               ) : (
-                <p className="text-4xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
               )}
             </div>
           );
         })}
+      </div>
+
+      {/* System Alerts & Insights */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 mb-6">
+        {/* Card 1: Pending Face Re-trains */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-xl flex items-center justify-center mb-4">
+            <Camera size={30} />
+          </div>
+          <p className="text-sm font-medium text-gray-500">
+            Face Re-train Requests
+          </p>
+          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+            {stats ? stats.pendingRetrains : "—"} Pending
+          </h3>
+        </div>
+
+        {/* Card 2: Low Attendance Alerts */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
+          <div className="w-16 h-16 bg-yellow-100 text-amber-600 rounded-xl flex items-center justify-center mb-4">
+            <AlertTriangle size={30} />
+          </div>
+          <p className="text-sm font-medium text-gray-500">
+            Low Attendance Alerts
+          </p>
+          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+            {stats ? stats.lowAttendanceAlerts : "—"} Students
+          </h3>
+        </div>
+
+        {/* Card 3: Active Modules Today */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+            <BookOpen size={30} />
+          </div>
+          <p className="text-sm font-medium text-gray-500">
+            Active Modules Today
+          </p>
+          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+            {stats ? stats.activeModulesToday : "—"} Sessions
+          </h3>
+        </div>
+      </div>
+
+      {/* Visual Analytics Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 mb-6">
+        {/* Chart 1: Weekly Trend */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-md flex flex-col">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
+            Weekly Attendance Trend
+          </h2>
+          <div className="flex-1 w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={weeklyTrendData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="attendance"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  fill="#3b82f6"
+                  fillOpacity={0.1}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 2: Department Stats */}
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-md flex flex-col">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
+            Attendance by Department
+          </h2>
+          <div className="flex-1 w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={departmentData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip cursor={{ fill: "#f3f4f6" }} />
+                <Bar
+                  dataKey="attendance"
+                  fill="#8b5cf6"
+                  radius={[4, 4, 0, 0]}
+                  barSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Pending Requests Alert Card */}
@@ -314,7 +478,6 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
 
       {/*Bottom Grid: Recent Activity + Quick Actions */}
       <div className="grid grid-cols-2 gap-6 mt-6 mb-8">
-
         {/* Recent Activity Card */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
@@ -326,7 +489,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-blue-600 disabled:opacity-50"
                 title="Refresh Activity"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
               </button>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full shadow-sm">
                 Live
@@ -349,7 +514,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
             ) : activityError ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <AlertCircle className="w-8 h-8 text-red-400 mb-2" />
-                <p className="text-sm text-gray-500">Could not load activity.</p>
+                <p className="text-sm text-gray-500">
+                  Could not load activity.
+                </p>
                 <button
                   onClick={fetchActivity}
                   className="mt-2 text-xs text-blue-600 underline"
@@ -360,7 +527,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
             ) : activity.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <ClipboardCheck className="w-10 h-10 text-gray-300 mb-3" />
-                <p className="text-sm font-medium text-gray-400">No recent activity logged yet.</p>
+                <p className="text-sm font-medium text-gray-400">
+                  No recent activity logged yet.
+                </p>
               </div>
             ) : (
               activity.map((item) => (
@@ -370,7 +539,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                     <p className="text-sm font-semibold text-gray-900">
                       {item.action_type}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 pr-1">{item.description}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 pr-1">
+                      {item.description}
+                    </p>
                     <div className="flex items-center mt-1.5 text-xs text-gray-400">
                       <Clock className="w-3 h-3 mr-1" />
                       <span>{relativeTime(item.timestamp)}</span>
@@ -394,34 +565,85 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
 
         {/* Quick Actions (unchanged) */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">
+            Quick Actions
+          </h3>
           <div className="space-y-3">
             <button
               onClick={() => onTabChange && onTabChange("students")}
-              className="w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              className="w-full text-left px-4 py-3  cursor-pointer bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
             >
               <p className="font-medium text-blue-900 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" /> Register New Student
               </p>
-              <p className="text-xs text-blue-600 mt-1">Add a new student to the system</p>
+              <p className="text-xs text-blue-600 mt-1">
+                Add a new student to the system
+              </p>
             </button>
             <button
               onClick={() => onTabChange && onTabChange("reports")}
-              className="w-full text-left px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              className="w-full text-left px-4 py-3  cursor-pointer bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
             >
               <p className="font-medium text-green-900 flex items-center gap-2">
                 <ClipboardCheck className="w-4 h-4" /> Generate Report
               </p>
-              <p className="text-xs text-green-600 mt-1">Create attendance reports</p>
+              <p className="text-xs text-green-600 mt-1">
+                Create attendance reports
+              </p>
             </button>
             <button
               onClick={() => onTabChange && onTabChange("lecturers")}
-              className="w-full text-left px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              className="w-full text-left px-4 py-3  cursor-pointer bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
             >
               <p className="font-medium text-purple-900 flex items-center gap-2">
                 <UserCheck className="w-4 h-4" /> Manage Lecturers
               </p>
-              <p className="text-xs text-purple-600 mt-1">Add or update lecturer information</p>
+              <p className="text-xs text-purple-600 mt-1">
+                Add or update lecturer information
+              </p>
+            </button>
+
+            {/* Action 4: Manage Students */}
+            <button
+              onClick={() => onTabChange && onTabChange("manage_students")}
+              className="w-full text-left px-4 py-3 cursor-pointer bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-100"
+            >
+              <p className="font-medium text-orange-900 flex items-center gap-2">
+                <Users size={18} className="font-bold" />
+                Manage Students
+              </p>
+
+              <p className="text-xs text-orange-600 mt-1">
+                View, edit, or remove student records
+              </p>
+            </button>
+
+            {/* Action 5: Start/Stop Camera System */}
+            <button
+              onClick={() => {
+                const newState = !isCameraActive;
+                setIsCameraActive(newState);
+                if (newState) {
+                  toast.success("Camera System Started: Face recognition is now active.");
+                } else {
+                  toast.success("Camera System Stopped.");
+                }
+              }}
+              className={`w-full text-left px-4 py-3 cursor-pointer rounded-lg transition-colors duration-300 ${
+                isCameraActive 
+                  ? "bg-red-50 hover:bg-red-100 border border-red-200" 
+                  : "bg-emerald-50 hover:bg-emerald-100 border border-emerald-100"
+              }`}
+            >
+              <div className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-emerald-900"}`}>
+                <Power size={18} className={isCameraActive ? "text-red-600 animate-pulse" : "text-emerald-600"} /> 
+                {isCameraActive ? "Stop Camera System" : "Start Camera System"}
+              </div>
+              <p className={`text-xs mt-1 ${isCameraActive ? "text-red-600" : "text-emerald-600"}`}>
+                {isCameraActive 
+                  ? "Face recognition is currently running. Click to halt." 
+                  : "Launch the face recognition module for attendance"}
+              </p>
             </button>
           </div>
         </div>

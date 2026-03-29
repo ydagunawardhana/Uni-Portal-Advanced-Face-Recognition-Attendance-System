@@ -12,12 +12,12 @@ Admin-only API endpoints powering the dashboard UI.
 
 from __future__ import annotations
 
-import base64
-import os
-import secrets
 import string
 import smtplib
 import ssl
+import shutil
+import base64
+import secrets
 from email.message import EmailMessage
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,7 +29,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from auth import hash_password
+from auth import hash_password, get_current_user
 from database import get_db, check_db_connection
 import models
 
@@ -38,27 +38,26 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 DATASET_DIR = Path(__file__).resolve().parent.parent / "dataset"
 
 
-def send_credentials_email(student_email: str, student_name: str, temp_password: str):
+def send_student_credentials_email(email: str, name: str, password: str):
     SENDER_EMAIL = "ydmaxx43@gmail.com"
     SENDER_PASSWORD = "zucytjngeujifxgl"
     
     msg = EmailMessage()
-    msg['Subject'] = "Welcome to University Portal - Your Login Credentials"
-    msg['From'] = "Uni Portal"
-    msg['To'] = student_email
+    msg['Subject'] = "Welcome to University Portal - Student Account Credentials"
+    msg['From'] = "Uni Portal Admin"
+    msg['To'] = email
     
-    content = f"""Dear {student_name},
+    content = f"""Dear {name},
 
-Welcome to the University Face Recognition Attendance Portal! 
+Welcome to the University Face Recognition Attendance Portal!
 Your student account has been successfully created, and your face data has been registered in our attendance system.
 
-You can now access the student portal to view your attendance and timetable. 
+You can now access the student portal to view your attendance and timetable.
 Here are your temporary login credentials:
 
-Username: {student_email}
-Password: {temp_password}
-
-Login Portal: [http://localhost:3000/login]
+Username: {email}
+Temporary Password: {password}
+Access Portal: [http://localhost:3000/login]
 
 ⚠️ Important Security Step:
 For your security, please log in using the temporary password above, navigate to your Profile, and update your password immediately.
@@ -66,38 +65,62 @@ For your security, please log in using the temporary password above, navigate to
 If you face any issues logging in or need to request a face re-training, please contact the IT Administration.
 
 Best Regards,
-
 University Portal Admin Team
 """
     msg.set_content(content)
     
     context = ssl.create_default_context()
-    
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            print(f"Credentials successfully emailed to {student_email}")
+            print(f"Student credentials successfully emailed to {email}")
     except Exception as e:
-        print(f"Failed to email credentials to {student_email}. Error: {e}")
+        print(f"Failed to email student credentials to {email}. Error: {e}")
 
-def generate_student_password(name: str) -> str:
-    """
-    Generate an 8-character password: 
-    - First 3 letters of the first name (Capitalized), padded with 'a' if too short.
-    - 1 random special char (!@#$%)
-    - 4 random lowercase letters or digits.
-    """
-    first_name = name.split()[0] if name.strip() else "Stu"
-    base_prefix = first_name[:3].capitalize()
-    if len(base_prefix) < 3:
-        base_prefix = base_prefix.ljust(3, "a")
+def send_lecturer_credentials_email(email: str, name: str, password: str):
+    SENDER_EMAIL = "ydmaxx43@gmail.com"
+    SENDER_PASSWORD = "zucytjngeujifxgl"
+    
+    msg = EmailMessage()
+    msg['Subject'] = "Welcome to University Portal - Lecturer Account Credentials"
+    msg['From'] = "Uni Portal Admin"
+    msg['To'] = email
+    
+    content = f"""Dear {name},
 
-    special_char = secrets.choice("!@#$%^&*")
+Welcome to the Academic Portal of the University. 
+Your Lecturer credentials have been successfully updated in our system.
+
+Username: {email}hjbn
+Temporary Password: {password}
+Access Portal: [http://localhost:3000/login]
+
+⚠️ Security Reminder:
+Please log in and change this password immediately in your Profile settings for security purposes.
+
+Best Regards,
+University Portal Admin Team
+"""
+    msg.set_content(content)
+    
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.send_message(msg)
+            print(f"Lecturer credentials successfully emailed to {email}")
+    except Exception as e:
+        print(f"Failed to email lecturer credentials to {email}. Error: {e}")
+
+def generate_temp_password(name: str) -> str:
+    """Generate an 8-character password: 3 letters + 1 special + 4 alphanumeric."""
+    prefix = name.split()[0][:3].capitalize() if name.strip() else "User"
+    if len(prefix) < 3: prefix = prefix.ljust(3, "x")
+    special = secrets.choice("!@#$%^&*")
     charset = string.ascii_lowercase + string.digits
     suffix = "".join(secrets.choice(charset) for _ in range(4))
-    
-    return f"{base_prefix}{special_char}{suffix}"
+    return f"{prefix}{special}{suffix}"
 
 
 #  Response schemas 
@@ -107,6 +130,9 @@ class DashboardStats(BaseModel):
     total_lecturers:          int
     todays_attendance_pct:    float   # 0–100
     pending_manual_requests:  int
+    pending_retrains:         int
+    low_attendance_alerts:    int
+    active_modules_today:     int
 
 
 class ActivityItem(BaseModel):
@@ -114,6 +140,20 @@ class ActivityItem(BaseModel):
     action_type:  str
     description:  str
     timestamp:    str          
+
+
+class UpdateStudentRequest(BaseModel):
+    name: str
+    mobile: Optional[str] = None
+    department: Optional[str] = None
+    academic_year: Optional[str] = None
+    intake: Optional[str] = None
+    nic_number: Optional[str] = None
+    gender: Optional[str] = None
+
+
+class RecaptureRequest(BaseModel):
+    images: List[str]
 
 
 class SystemStatus(BaseModel):
@@ -178,13 +218,25 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         if total_students > 0 else 0.0
     )
 
-    pending = 0
+    # Calculate real pending re-train requests from student records
+    pending_retrains = db.query(models.Student).filter(models.Student.retrain_requested == True).count()
+    
+    # TODO: Once ClassSession models are implemented, calculate students with < 80% attendance
+    low_attendance = 0 
+    
+    # TODO: Once Module/Schedule models are implemented, calculate active sessions today
+    active_modules = 0
+
+    pending_manual = 0
 
     return DashboardStats(
         total_students=total_students,
         total_lecturers=total_lecturers,
         todays_attendance_pct=pct,
-        pending_manual_requests=pending,
+        pending_manual_requests=pending_manual,
+        pending_retrains=pending_retrains,
+        low_attendance_alerts=low_attendance,
+        active_modules_today=active_modules,
     )
 
 
@@ -327,6 +379,22 @@ class RegisterStudentResponse(BaseModel):
     student_id:         int
     generated_password: Optional[str] = None   
 
+class LecturerCreateRequest(BaseModel):
+    name: str
+    employee_id: str
+    email: str
+    department: str
+    assigned_subjects: Optional[str] = None
+    auto_generate_password: bool = True
+    password: Optional[str] = None
+
+class LecturerUpdateRequest(BaseModel):
+    name: str
+    email: Optional[str] = None
+    department: str
+    assigned_subjects: Optional[str] = None
+    is_active: bool
+
 
 @router.post(
     "/register-student",
@@ -378,7 +446,7 @@ def register_student(
     generated_password = None
 
     if payload.auto_gen_password:
-        plain_password     = generate_student_password(payload.name)
+        plain_password     = generate_temp_password(payload.name)
         generated_password = plain_password      # returned to admin
     else:
         if not payload.password:
@@ -437,7 +505,7 @@ def register_student(
     db.refresh(student)
 
     if payload.auto_gen_password and generated_password:
-        background_tasks.add_task(send_credentials_email, payload.email, payload.name, generated_password)
+        background_tasks.add_task(send_student_credentials_email, payload.email, payload.name, generated_password)
 
     return RegisterStudentResponse(
         success            = True,
@@ -445,3 +513,263 @@ def register_student(
         student_id         = student.id,
         generated_password = generated_password,
     )
+
+@router.get("/students")
+def get_all_students(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access.")
+    students = db.query(models.Student).all()
+    return students
+
+@router.get("/pending-retrains")
+def get_pending_retrains(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access.")
+    pending = db.query(models.Student).filter(models.Student.retrain_requested == True).all()
+    return pending
+
+
+@router.put("/students/{student_id}")
+def update_student(
+    student_id: int,
+    payload: UpdateStudentRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access.")
+
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    # Update Student record
+    student.name = payload.name
+    student.mobile = payload.mobile
+    student.department = payload.department
+    student.academic_year = payload.academic_year
+    student.intake = payload.intake
+    student.nic_number = payload.nic_number
+    student.gender = payload.gender
+
+    db.commit()
+    db.refresh(student)
+    return student
+
+
+@router.delete("/students/{student_id}")
+def delete_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access.")
+
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    # Physically delete face dataset folder
+    safe_name = student.index_number.replace("/", "_").replace(" ", "_")
+    folder = DATASET_DIR / safe_name
+    if folder.exists():
+        try:
+            shutil.rmtree(folder)
+        except Exception as e:
+            print(f"Warning: Failed to delete dataset folder for student {student.index_number}: {e}")
+
+    # Delete associated child records to prevent child constraint violations (SQLAlchemy IntegrityError)
+    db.query(models.AttendanceLog).filter(models.AttendanceLog.student_id == student_id).delete()
+    db.query(models.Notification).filter(models.Notification.student_id == student_id).delete()
+
+    # Also find and delete corresponding User record to keep data synced
+    user_record = db.query(models.User).filter(models.User.email == student.email).first()
+
+    db.delete(student)
+    if user_record:
+        db.delete(user_record)
+
+    db.commit()
+    return {"success": True, "message": "Student, user account, attendance logs, and face dataset deleted successfully."}
+
+
+@router.post("/students/{student_id}/recapture")
+def recapture_face(
+    student_id: int,
+    payload: RecaptureRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access.")
+
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    if len(payload.images) != 50:
+        raise HTTPException(status_code=400, detail="Exactly 50 face frames are required.")
+
+    # Dataset path logic
+    safe_name = student.index_number.replace("/", "_").replace(" ", "_")
+    folder = DATASET_DIR / safe_name
+    
+    # Safely clear and recreate directory
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    
+    # Save new frames
+    for i, b64_frame in enumerate(payload.images):
+        filename = folder / f"img_{i:03d}.jpg"
+        try:
+            clean_b64 = b64_frame.split(",")[-1]
+            img_bytes = base64.b64decode(clean_b64)
+            filename.write_bytes(img_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Failed to save frame {i}: {e}")
+            
+    # Update student record
+    student.retrain_requested = False
+    student.last_trained_date = datetime.now().date()
+    
+    # Send Notification to Student
+    new_notif = models.Notification(
+        student_id=student.id,
+        type='success',
+        title='Face Data Updated',
+        message='Admin has successfully updated your face dataset.'
+    )
+    db.add(new_notif)
+    
+    db.commit()
+    return {"success": True, "message": "Face dataset updated successfully"}
+
+
+# --- LECTURER CRUD ---
+
+@router.get("/lecturers")
+def get_lecturers(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    return db.query(models.Lecturer).all()
+
+
+@router.post("/lecturers")
+async def create_lecturer(
+    payload: LecturerCreateRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    # Check for duplicate Employee ID
+    if db.query(models.Lecturer).filter(models.Lecturer.employee_id == payload.employee_id).first():
+        raise HTTPException(status_code=400, detail="A lecturer with this Employee ID already exists.")
+
+    # Check for duplicate Email (in Users table where they log in)
+    if db.query(models.User).filter(models.User.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="This Email Address is already registered in the system.")
+
+    # Password Logic
+    temp_pw = None
+    if payload.auto_generate_password:
+        temp_pw = generate_temp_password(payload.name)
+    else:
+        temp_pw = payload.password or "Welcome123"
+
+    hashed_pw = hash_password(temp_pw)
+
+    # Create Lecturer Record
+    new_lecturer = models.Lecturer(
+        name=payload.name,
+        employee_id=payload.employee_id,
+        email=payload.email,
+        department=payload.department,
+        assigned_subjects=payload.assigned_subjects,
+        is_active=True
+    )
+    db.add(new_lecturer)
+    db.flush()
+
+    # Create User Record
+    new_user = models.User(
+        email=payload.email,
+        hashed_password=hashed_pw,
+        role="Lecturer",
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+
+    if payload.auto_generate_password and temp_pw:
+        background_tasks.add_task(send_lecturer_credentials_email, payload.email, payload.name, temp_pw)
+        return {"success": True, "message": f"Lecturer {payload.name} registered and credentials emailed successfully."}
+
+    return {"success": True, "message": f"Lecturer {payload.name} registered successfully."}
+
+
+@router.put("/lecturers/{lecturer_id}")
+def update_lecturer(
+    lecturer_id: int,
+    payload: LecturerUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.id == lecturer_id).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer not found.")
+
+    # Update Lecturer fields
+    lecturer.name = payload.name
+    lecturer.department = payload.department
+    lecturer.assigned_subjects = payload.assigned_subjects
+    lecturer.is_active = payload.is_active
+
+    # Sync with User Account
+    user = db.query(models.User).filter(models.User.email == lecturer.email).first()
+    if user:
+        user.is_active = payload.is_active
+
+    db.commit()
+    return {"success": True, "message": "Lecturer profile updated successfully."}
+
+
+@router.delete("/lecturers/{lecturer_id}")
+def delete_lecturer(
+    lecturer_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.id == lecturer_id).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer not found.")
+
+    # Find and delete matching User login
+    user = db.query(models.User).filter(models.User.email == lecturer.email).first()
+    
+    db.delete(lecturer)
+    if user:
+        db.delete(user)
+        
+    db.commit()
+    return {"success": True, "message": "Lecturer profile and user account deleted successfully."}
+

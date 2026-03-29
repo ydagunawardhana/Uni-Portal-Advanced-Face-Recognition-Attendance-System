@@ -1,44 +1,51 @@
-import { useState } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { useState } from "react";
+import { X, ChevronDown, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface AddLecturerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (lecturerData: any) => void;
+  isSaving?: boolean;
 }
 
-export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecturerModalProps) {
-  const [fullName, setFullName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [email, setEmail] = useState('');
-  const [department, setDepartment] = useState('');
+export default function AddLecturerModal({
+  isOpen,
+  onClose,
+  onSave,
+  isSaving,
+}: AddLecturerModalProps) {
+  const [fullName, setFullName] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState("");
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
   const [autoGeneratePassword, setAutoGeneratePassword] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Available subjects list
   const availableSubjects = [
-    'Database Systems',
-    'Web Development',
-    'Data Structures',
-    'Computer Networks',
-    'Software Engineering',
-    'Operating Systems',
-    'Artificial Intelligence',
-    'Machine Learning',
-    'Mobile App Development',
-    'Cybersecurity',
-    'Cloud Computing',
-    'Algorithm Design',
-    'Object-Oriented Programming',
-    'Discrete Mathematics',
-    'Computer Architecture',
+    "Database Systems",
+    "Web Development",
+    "Data Structures",
+    "Computer Networks",
+    "Software Engineering",
+    "Operating Systems",
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Mobile App Development",
+    "Cybersecurity",
+    "Cloud Computing",
+    "Algorithm Design",
+    "Object-Oriented Programming",
+    "Discrete Mathematics",
+    "Computer Architecture",
   ];
 
   if (!isOpen) return null;
 
   const handleRemoveSubject = (subject: string) => {
-    setAssignedSubjects(assignedSubjects.filter(s => s !== subject));
+    setAssignedSubjects(assignedSubjects.filter((s) => s !== subject));
   };
 
   const handleSelectSubject = (subject: string) => {
@@ -55,7 +62,7 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
   const handleSave = () => {
     // Validate required fields
     if (!fullName || !employeeId || !email || !department) {
-      alert('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -69,33 +76,39 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
     };
 
     onSave(lecturerData);
-    handleCancel();
   };
 
   const handleCancel = () => {
     // Reset form
-    setFullName('');
-    setEmployeeId('');
-    setEmail('');
-    setDepartment('');
+    setFullName("");
+    setEmployeeId("");
+    setEmail("");
+    setDepartment("");
     setAssignedSubjects([]);
     setAutoGeneratePassword(false);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black bg-opacity-50"
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      {/* Backdrop with Blur Effect */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={handleCancel}
       ></div>
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      {/* Modal Card */}
+      <div className="relative z-[1000] bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Register New Lecturer</h2>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Register New Lecturer
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Enroll academic staff into the university portal.
+            </p>
+          </div>
           <button
             onClick={handleCancel}
             title="Close modal"
@@ -109,7 +122,10 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
         <div className="px-6 py-6 space-y-5">
           {/* Full Name */}
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="fullName"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -124,7 +140,10 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
 
           {/* Employee ID */}
           <div>
-            <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="employeeId"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Employee ID <span className="text-red-500">*</span>
             </label>
             <input
@@ -139,7 +158,10 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
 
           {/* Email Address */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -154,7 +176,10 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
 
           {/* Department */}
           <div>
-            <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="department"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Department <span className="text-red-500">*</span>
             </label>
             <select
@@ -168,76 +193,73 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
               <option value="Mathematics">Mathematics</option>
               <option value="Physics">Physics</option>
               <option value="Engineering">Engineering</option>
-              <option value="Business Administration">Business Administration</option>
+              <option value="Business Administration">
+                Business Administration
+              </option>
               <option value="Architecture">Architecture</option>
             </select>
           </div>
 
-          {/* Assigned Subjects - Multi-Select Dropdown */}
-          <div className="relative">
-            <label htmlFor="subjects" className="block text-sm font-medium text-gray-700 mb-2">
+          {/* Assigned Subjects - Badge Multi-select */}
+          <div>
+            <label
+              htmlFor="subjects"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Assigned Subjects
             </label>
-            
-            {/* Tag Input Field with Dropdown */}
-            <div 
-              className="w-full min-h-[42px] px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent cursor-pointer bg-white"
-              onClick={toggleDropdown}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2 flex-1">
-                  {/* Subject Tags Inside Input */}
-                  {assignedSubjects.length > 0 ? (
-                    assignedSubjects.map((subject, index) => (
-                      <div
-                        key={index}
-                        className="inline-flex items-center space-x-1.5 bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-sm font-medium"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span>{subject}</span>
-                        <button
-                          title={`Remove ${subject}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveSubject(subject);
-                          }}
-                          className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-sm">Select subjects from list...</span>
-                  )}
-                </div>
-                
-                {/* Chevron Icon */}
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isDropdownOpen ? 'transform rotate-180' : ''}`} />
-              </div>
+
+            {/* Selected Subjects Badges */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {assignedSubjects.map((subject, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full border border-blue-200 group transition-all hover:bg-blue-100"
+                >
+                  {subject}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSubject(subject)}
+                    className="p-0.5 hover:bg-blue-200 rounded-full transition-colors text-blue-400 hover:text-blue-600"
+                    title={`Remove ${subject}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
+              ))}
+              {assignedSubjects.length === 0 && (
+                <p className="text-sm text-gray-400 italic">
+                  No subjects selected yet.
+                </p>
+              )}
             </div>
 
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {/* Subject Selector */}
+            <div className="relative">
+              <select
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer"
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleSelectSubject(e.target.value);
+                  }
+                }}
+              >
+                <option value="" disabled>
+                  Select a subject to add...
+                </option>
                 {availableSubjects
-                  .filter(subject => !assignedSubjects.includes(subject))
+                  .filter((subject) => !assignedSubjects.includes(subject))
                   .map((subject) => (
-                    <div
-                      key={subject}
-                      className="px-4 py-2.5 cursor-pointer hover:bg-blue-50 transition-colors text-sm text-gray-700 border-b border-gray-100 last:border-b-0"
-                      onClick={() => handleSelectSubject(subject)}
-                    >
+                    <option key={subject} value={subject}>
                       {subject}
-                    </div>
+                    </option>
                   ))}
-                {availableSubjects.filter(subject => !assignedSubjects.includes(subject)).length === 0 && (
-                  <div className="px-4 py-2.5 text-sm text-gray-400 text-center">
-                    All subjects have been selected
-                  </div>
-                )}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                <ChevronDown className="w-5 h-5" />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Auto Generate Password Checkbox */}
@@ -250,8 +272,12 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
                 onChange={(e) => setAutoGeneratePassword(e.target.checked)}
                 className="w-4 h-4 mt-0.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
               />
-              <label htmlFor="autoGeneratePassword" className="ml-3 text-sm text-gray-700 cursor-pointer">
-                Auto-generate password and send login credentials via email to the lecturer.
+              <label
+                htmlFor="autoGeneratePassword"
+                className="ml-3 text-sm text-gray-700 cursor-pointer"
+              >
+                Auto-generate password and send login credentials via email to
+                the lecturer. <span className="text-red-500">*</span>
               </label>
             </div>
           </div>
@@ -267,9 +293,11 @@ export default function AddLecturerModal({ isOpen, onClose, onSave }: AddLecture
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
           >
-            Save Lecturer
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? "Saving..." : "Save Lecturer"}
           </button>
         </div>
       </div>
