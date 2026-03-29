@@ -62,7 +62,7 @@ export default function ManageStudents({
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentData | null>(
-    null
+    null,
   );
   const [editForm, setEditForm] = useState({
     name: "",
@@ -78,12 +78,12 @@ export default function ManageStudents({
 
   // Delete Modal State
   const [studentToDelete, setStudentToDelete] = useState<StudentData | null>(
-    null
+    null,
   );
 
   // Recapture Modal State
   const [studentToCapture, setStudentToCapture] = useState<StudentData | null>(
-    null
+    null,
   );
   const [camActive, setCamActive] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -128,7 +128,7 @@ export default function ManageStudents({
         console.error(
           "Fetch students failed:",
           studentsRes.status,
-          pendingRes.status
+          pendingRes.status,
         );
         toast.error("Failed to fetch student data from server.");
       }
@@ -143,7 +143,7 @@ export default function ManageStudents({
   const getImageUrl = (path?: string | null, name?: string) => {
     if (path) return `${API_BASE}${path}?t=${Date.now()}`;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      name || "Unknown"
+      name || "Unknown",
     )}&background=random`;
   };
 
@@ -242,7 +242,7 @@ export default function ManageStudents({
               setFaceStatus({ isError: false, message: "Face Detected" });
               toast.loading(
                 `Capturing face… (${currentFrames.length}/${TOTAL_FRAMES})`,
-                { id: toastId }
+                { id: toastId },
               );
             } else {
               setFaceStatus({
@@ -285,7 +285,7 @@ export default function ManageStudents({
       localStorage.getItem("access_token") ||
       localStorage.getItem("token");
     const toastId = toast.loading(
-      `Uploading dataset for ${studentToCapture.name}...`
+      `Uploading dataset for ${studentToCapture.name}...`,
     );
 
     try {
@@ -298,7 +298,7 @@ export default function ManageStudents({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ images: capturedFrames }),
-        }
+        },
       );
 
       if (res.ok) {
@@ -306,14 +306,14 @@ export default function ManageStudents({
 
         // Update states
         setPendingRetrains((prev) =>
-          prev.filter((s) => s.id !== studentToCapture.id)
+          prev.filter((s) => s.id !== studentToCapture.id),
         );
         setStudents((prev) =>
           prev.map((s) =>
             s.id === studentToCapture.id
               ? { ...s, retrain_requested: false }
-              : s
-          )
+              : s,
+          ),
         );
 
         setStudentToCapture(null);
@@ -420,7 +420,7 @@ export default function ManageStudents({
             nic_number: editForm.nic_number,
             gender: editForm.gender,
           }),
-        }
+        },
       );
 
       if (res.ok) {
@@ -429,12 +429,12 @@ export default function ManageStudents({
 
         // Update local state
         setStudents((prev) =>
-          prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+          prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)),
         );
         setPendingRetrains((prev) =>
           prev.map((s) =>
-            s.id === updatedStudent.id ? { ...s, ...updatedStudent } : s
-          )
+            s.id === updatedStudent.id ? { ...s, ...updatedStudent } : s,
+          ),
         );
 
         setIsEditModalOpen(false);
