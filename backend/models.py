@@ -78,6 +78,7 @@ class Notification(Base):
     student     = relationship("Student", back_populates="notifications")
 
 
+
 class Lecturer(Base):
     """Lecturer profile - manages subjects and attendance logs."""
     __tablename__ = "lecturers"
@@ -89,4 +90,15 @@ class Lecturer(Base):
     department        = Column(String, nullable=False)
     assigned_subjects = Column(String, nullable=True) # Comma-separated or JSON
     is_active         = Column(Boolean, default=True, nullable=False)
+
+
+class PasswordReset(Base):
+    """Stores temporary 6-digit OTPs for account recovery."""
+    __tablename__ = "password_resets"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    email      = Column(String, index=True, nullable=False)
+    otp        = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used       = Column(Boolean, default=False)
 

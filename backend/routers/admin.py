@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 
 from auth import hash_password, get_current_user
 from database import get_db, check_db_connection
+from utils.audit_logger import log_audit_action
 import models
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -47,27 +48,53 @@ def send_student_credentials_email(email: str, name: str, password: str):
     msg['From'] = "Uni Portal Admin"
     msg['To'] = email
     
-    content = f"""Dear {name},
+    # Plain text fallback
+    text_fallback = f"Dear {name},\n\nWelcome to the University Face Recognition Attendance Portal!\nYour student account has been successfully created. Here are your temporary login credentials:\n\nUsername: {email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
+    msg.set_content(text_fallback)
 
-Welcome to the University Face Recognition Attendance Portal!
-Your student account has been successfully created, and your face data has been registered in our attendance system.
+    # 2. Simple & Clean HTML Version (Dark Theme)
+    html_content = f"""
+    <html>
+      <body style="background-color: #121212; padding: 40px 10px; margin: 0; font-family: Arial, sans-serif;">
+        <div style="max-width: 550px; margin: 0 auto; background-color: #1e1e1e; padding: 30px 40px; border-radius: 8px; color: #e5e7eb;">
+          
+          <h2 style="color: #3b82f6; text-align: center; margin-top: 0; padding-bottom: 20px; border-bottom: 1px solid #333333;">Student Registration</h2>
+          
+          <p style="font-size: 16px; margin-top: 30px;">Hello <strong>{name}</strong>,</p>
+          <p style="font-size: 15px; line-height: 1.6; color: #d1d5db;">
+            Welcome to the Face Recognition Attendance Portal! Your account has been successfully created. Here are your temporary login credentials:
+          </p>
+          
+          <div style="background-color: #334155; border: 2px dashed #3b82f6; padding: 20px; text-align: center; border-radius: 8px; margin: 35px 0;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Username</p>
+            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{email}</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Temporary Password</p>
+            <p style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; letter-spacing: 2px; font-family: monospace;">{password}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="http://localhost:3000/login" style="background-color: #3b82f6; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;">Login to Portal</a>
+          </div>
 
-You can now access the student portal to view your attendance and timetable.
-Here are your temporary login credentials:
-
-Username: {email}
-Temporary Password: {password}
-Access Portal: [http://localhost:3000/login]
-
-⚠️ Important Security Step:
-For your security, please log in using the temporary password above, navigate to your Profile, and update your password immediately.
-
-If you face any issues logging in or need to request a face re-training, please contact the IT Administration.
-
-Best Regards,
-University Portal Admin Team
-"""
-    msg.set_content(content)
+          <p style="font-size: 14px; color: #fbbf24; line-height: 1.5; border-left: 3px solid #fbbf24; padding-left: 10px;">
+            <strong>Security Step:</strong> Please log in using the temporary password above and update your password immediately.
+          </p>
+          
+          <p style="font-size: 15px; margin-top: 40px; color: #d1d5db;">
+            Best Regards,<br>
+            The University Portal Team
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #333333; margin: 40px 0 20px 0;">
+          <p style="text-align: center; font-size: 12px; color: #6b7280; margin: 0;">
+            &copy; 2026 University Portal. All rights reserved.
+          </p>
+          
+        </div>
+      </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
     
     context = ssl.create_default_context()
     try:
@@ -87,22 +114,53 @@ def send_lecturer_credentials_email(email: str, name: str, password: str):
     msg['From'] = "Uni Portal Admin"
     msg['To'] = email
     
-    content = f"""Dear {name},
+    # Plain text fallback
+    text_fallback = f"Dear {name},\n\nWelcome to the Academic Portal!\nYour Lecturer credentials have been generated.\n\nUsername: {email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
+    msg.set_content(text_fallback)
 
-Welcome to the Academic Portal of the University. 
-Your Lecturer credentials have been successfully updated in our system.
+    # 2. Simple & Clean HTML Version (Dark Theme)
+    html_content = f"""
+    <html>
+      <body style="background-color: #121212; padding: 40px 10px; margin: 0; font-family: Arial, sans-serif;">
+        <div style="max-width: 550px; margin: 0 auto; background-color: #1e1e1e; padding: 30px 40px; border-radius: 8px; color: #e5e7eb;">
+          
+          <h2 style="color: #3b82f6; text-align: center; margin-top: 0; padding-bottom: 20px; border-bottom: 1px solid #333333;">Lecturer Registration</h2>
+          
+          <p style="font-size: 16px; margin-top: 30px;">Hello <strong>{name}</strong>,</p>
+          <p style="font-size: 15px; line-height: 1.6; color: #d1d5db;">
+            Welcome to the Academic Portal of the University. Your Lecturer credentials have been successfully updated in our system. Here are your temporary login credentials:
+          </p>
+          
+          <div style="background-color: #334155; border: 2px dashed #3b82f6; padding: 20px; text-align: center; border-radius: 8px; margin: 35px 0;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Username</p>
+            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{email}</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Temporary Password</p>
+            <p style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; letter-spacing: 2px; font-family: monospace;">{password}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="http://localhost:3000/login" style="background-color: #3b82f6; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;">Access Academic Portal</a>
+          </div>
 
-Username: {email}hjbn
-Temporary Password: {password}
-Access Portal: [http://localhost:3000/login]
-
-⚠️ Security Reminder:
-Please log in and change this password immediately in your Profile settings for security purposes.
-
-Best Regards,
-University Portal Admin Team
-"""
-    msg.set_content(content)
+          <p style="font-size: 14px; color: #fbbf24; line-height: 1.5; border-left: 3px solid #fbbf24; padding-left: 10px;">
+            <strong>Security Reminder:</strong> Please log in and change this temporary password immediately for security purposes.
+          </p>
+          
+          <p style="font-size: 15px; margin-top: 40px; color: #d1d5db;">
+            Best Regards,<br>
+            The University Portal Team
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #333333; margin: 40px 0 20px 0;">
+          <p style="text-align: center; font-size: 12px; color: #6b7280; margin: 0;">
+            &copy; 2026 University Portal. All rights reserved.
+          </p>
+          
+        </div>
+      </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
     
     context = ssl.create_default_context()
     try:
@@ -507,6 +565,14 @@ def register_student(
     if payload.auto_gen_password and generated_password:
         background_tasks.add_task(send_student_credentials_email, payload.email, payload.name, generated_password)
 
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Student Management",
+        description=f"Registered new student '{payload.name}'.",
+        target_id=payload.index_number,
+    )
+
     return RegisterStudentResponse(
         success            = True,
         message            = f"Student '{payload.name}' registered successfully.",
@@ -560,6 +626,16 @@ def update_student(
 
     db.commit()
     db.refresh(student)
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Student Management",
+        description=f"Updated student profile for '{payload.name}'.",
+        severity="Warning",
+        target_id=student.index_number,
+    )
+
     return student
 
 
@@ -597,6 +673,16 @@ def delete_student(
         db.delete(user_record)
 
     db.commit()
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Student Management",
+        description=f"Deleted student record '{student.name}'.",
+        severity="Critical",
+        target_id=student.index_number,
+    )
+
     return {"success": True, "message": "Student, user account, attendance logs, and face dataset deleted successfully."}
 
 
@@ -650,6 +736,15 @@ def recapture_face(
     db.add(new_notif)
     
     db.commit()
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="System Operations",
+        description=f"Recaptured face dataset for student '{student.name}'.",
+        target_id=student.index_number,
+    )
+
     return {"success": True, "message": "Face dataset updated successfully"}
 
 
@@ -714,6 +809,14 @@ async def create_lecturer(
     db.add(new_user)
     db.commit()
 
+    # Audit log – must be BEFORE any early return
+    log_audit_action(
+        db=db,
+        action_type="Lecturer Management",
+        description=f"Registered new lecturer '{payload.name}'.",
+        target_id=payload.employee_id,
+    )
+
     if payload.auto_generate_password and temp_pw:
         background_tasks.add_task(send_lecturer_credentials_email, payload.email, payload.name, temp_pw)
         return {"success": True, "message": f"Lecturer {payload.name} registered and credentials emailed successfully."}
@@ -747,6 +850,16 @@ def update_lecturer(
         user.is_active = payload.is_active
 
     db.commit()
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Lecturer Management",
+        description=f"Updated lecturer profile for '{payload.name}'.",
+        severity="Warning",
+        target_id=lecturer.employee_id,
+    )
+
     return {"success": True, "message": "Lecturer profile updated successfully."}
 
 
@@ -771,5 +884,68 @@ def delete_lecturer(
         db.delete(user)
         
     db.commit()
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Lecturer Management",
+        description=f"Deleted lecturer '{lecturer.name}' and user account.",
+        severity="Critical",
+        target_id=lecturer.employee_id,
+    )
+
     return {"success": True, "message": "Lecturer profile and user account deleted successfully."}
 
+
+# ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+@router.get("/audit-logs")
+def get_audit_logs(
+    search: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    role: Optional[str] = None,
+    action_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    query = db.query(models.AuditLog)
+
+    # Text search across description
+    if search:
+        query = query.filter(models.AuditLog.description.ilike(f"%{search}%"))
+
+    # Exact match on action_type column (avoids cross-category matches)
+    if action_type and action_type != "All":
+        query = query.filter(models.AuditLog.action_type == action_type)
+
+    # Date range filter
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(models.AuditLog.timestamp >= start_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            from datetime import timedelta
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(models.AuditLog.timestamp < end_dt)
+        except ValueError:
+            pass
+
+    logs = query.order_by(models.AuditLog.timestamp.desc()).limit(200).all()
+
+    return [
+        {
+            "id": log.id,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            "action_type": log.action_type,
+            "description": log.description,
+        }
+        for log in logs
+    ]

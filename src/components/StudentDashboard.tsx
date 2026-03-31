@@ -253,8 +253,8 @@ export default function StudentDashboard({
 
               {/* Dropdown Menu */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 transform transition-all">
-                  <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 transform transition-all flex flex-col">
+                  <div className="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
                     <h3 className="font-bold text-gray-800">Notifications</h3>
                     {unreadCount > 0 && (
                       <button
@@ -266,7 +266,7 @@ export default function StudentDashboard({
                     )}
                   </div>
 
-                  <div className="max-h-[400px] overflow-y-auto">
+                  <div className="h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
                     {notifications.length === 0 ? (
                       <div className="p-6 text-center text-gray-500">
                         <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -305,7 +305,7 @@ export default function StudentDashboard({
                       </ul>
                     )}
                   </div>
-                  <div className="p-3 border-t bg-gray-50 text-center">
+                  <div className="p-3 border-t bg-gray-50 text-center shrink-0">
                     <button className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline w-full">
                       View all notifications
                     </button>

@@ -1,15 +1,15 @@
-import { 
-  ScanFace, 
-  TrendingUp, 
-  FileText, 
+import {
+  ScanFace,
+  TrendingUp,
+  FileText,
   GraduationCap,
   ArrowRight,
   Mail,
-  Phone
-} from 'lucide-react';
+  Phone,
+} from "lucide-react";
 
 interface LandingPageProps {
-  onNavigateToLogin: () => void;
+  onNavigateToLogin: (role?: "Admin" | "Lecturer" | "Student") => void;
 }
 
 export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
@@ -24,22 +24,33 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">UniPortal</span>
+              <span className="text-2xl font-bold text-gray-900">
+                UniPortal
+              </span>
             </div>
 
             {/* Navigation Links */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              <a
+                href="#features"
+                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              >
                 Features
               </a>
-              <a href="#how-it-works" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              <a
+                href="#how-it-works"
+                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              >
                 How it Works
               </a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              <a
+                href="#contact"
+                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              >
                 Contact
               </a>
-              <button 
-                onClick={onNavigateToLogin}
+              <button
+                onClick={() => onNavigateToLogin()}
                 className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
               >
                 Login to Portal
@@ -62,29 +73,34 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
             {/* Left Content */}
             <div className="text-left">
               <div className="inline-block px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full mb-6">
-                <span className="text-blue-400 text-sm font-medium">AI-Powered Attendance System</span>
+                <span className="text-blue-400 text-sm font-medium">
+                  AI-Powered Attendance System
+                </span>
               </div>
-              
+
               <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
                 Next-Gen AI Attendance Tracking for Universities
               </h1>
-              
+
               <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                Eliminate manual registers. Track student attendance in real-time using advanced Face Recognition technology.
+                Eliminate manual registers. Track student attendance in
+                real-time using advanced Face Recognition technology.
               </p>
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={onNavigateToLogin}
+                {/* Lecturer Button */}
+                <button
+                  onClick={() => onNavigateToLogin("Lecturer")}
                   className="group px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 flex items-center justify-center space-x-2"
                 >
                   <span>Access Lecturer Portal</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
-                
-                <button 
-                  onClick={onNavigateToLogin}
+
+                {/* Admin Button */}
+                <button
+                  onClick={() => onNavigateToLogin("Admin")}
                   className="px-8 py-4 bg-transparent border-2 border-blue-500 text-blue-400 rounded-lg hover:bg-blue-600/10 transition-all font-semibold text-lg"
                 >
                   Admin Login
@@ -117,7 +133,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 </div>
-                
+
                 {/* Mockup Content */}
                 <div className="p-8 relative">
                   <div className="bg-blue-600/20 rounded-lg p-6 mb-4 border border-blue-500/30">
@@ -130,7 +146,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                     <div className="h-4 bg-gray-700 rounded w-48 mb-2"></div>
                     <div className="h-4 bg-gray-700 rounded w-36"></div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <div className="h-3 bg-gray-600 rounded w-20 mb-3"></div>
@@ -141,7 +157,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                       <div className="h-8 bg-purple-500/40 rounded w-16"></div>
                     </div>
                   </div>
-                  
+
                   <div className="h-32 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-gray-700"></div>
 
                   {/* Face Recognition HUD Overlay */}
@@ -154,19 +170,19 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                           <div className="absolute top-0 left-0 w-full h-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                           <div className="absolute top-0 left-0 w-1 h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                         </div>
-                        
+
                         {/* Top Right Corner */}
                         <div className="absolute top-0 right-0 w-12 h-12">
                           <div className="absolute top-0 right-0 w-full h-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                           <div className="absolute top-0 right-0 w-1 h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                         </div>
-                        
+
                         {/* Bottom Left Corner */}
                         <div className="absolute bottom-0 left-0 w-12 h-12">
                           <div className="absolute bottom-0 left-0 w-full h-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                           <div className="absolute bottom-0 left-0 w-1 h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
                         </div>
-                        
+
                         {/* Bottom Right Corner */}
                         <div className="absolute bottom-0 right-0 w-12 h-12">
                           <div className="absolute bottom-0 right-0 w-full h-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
@@ -175,7 +191,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
 
                         {/* Horizontal Scanning Line - Animated */}
                         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_rgba(34,211,238,1)] animate-pulse"></div>
-                        
+
                         {/* Secondary Scan Lines */}
                         <div className="absolute left-0 right-0 top-1/3 h-px bg-cyan-400/30"></div>
                         <div className="absolute left-0 right-0 top-2/3 h-px bg-cyan-400/30"></div>
@@ -184,12 +200,16 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                         {/* Top Label - Scanning */}
                         <div className="absolute -top-8 left-0 flex items-center space-x-2">
                           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
-                          <span className="text-cyan-400 text-xs font-mono tracking-wider">SCANNING...</span>
+                          <span className="text-cyan-400 text-xs font-mono tracking-wider">
+                            SCANNING...
+                          </span>
                         </div>
 
                         {/* Right Label - Match Percentage */}
                         <div className="absolute -right-4 top-1/4 bg-cyan-950/80 border border-cyan-400/50 px-3 py-1.5 rounded backdrop-blur-sm">
-                          <div className="text-cyan-400 text-xs font-mono font-bold">MATCH: 98%</div>
+                          <div className="text-cyan-400 text-xs font-mono font-bold">
+                            MATCH: 98%
+                          </div>
                           <div className="h-1 bg-gray-700 rounded-full mt-1 overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-cyan-400 to-green-400 w-[98%] shadow-[0_0_8px_rgba(34,211,238,0.6)]"></div>
                           </div>
@@ -198,20 +218,23 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                         {/* Bottom Label - ID Verified */}
                         <div className="absolute -bottom-10 right-0 flex items-center space-x-2 bg-green-950/80 border border-green-400/50 px-3 py-1.5 rounded backdrop-blur-sm">
                           <div className="w-2 h-2 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>
-                          <span className="text-green-400 text-xs font-mono font-bold">ID VERIFIED</span>
+                          <span className="text-green-400 text-xs font-mono font-bold">
+                            ID VERIFIED
+                          </span>
                         </div>
 
                         {/* Additional HUD Elements */}
                         {/* Grid Pattern Overlay */}
-                        <div className="absolute inset-0 opacity-20"
-                             style={{
-                               backgroundImage: `
+                        <div
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            backgroundImage: `
                                  linear-gradient(rgba(34,211,238,0.3) 1px, transparent 1px),
                                  linear-gradient(90deg, rgba(34,211,238,0.3) 1px, transparent 1px)
                                `,
-                               backgroundSize: '20px 20px'
-                             }}>
-                        </div>
+                            backgroundSize: "20px 20px",
+                          }}
+                        ></div>
 
                         {/* Center Crosshair */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -221,7 +244,9 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
 
                         {/* Timestamp */}
                         <div className="absolute -top-8 right-0">
-                          <span className="text-cyan-400/70 text-[10px] font-mono">2026.02.09 14:23:47</span>
+                          <span className="text-cyan-400/70 text-[10px] font-mono">
+                            2026.02.09 14:23:47
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -248,7 +273,8 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               Why Choose Our System?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Cutting-edge technology designed specifically for modern educational institutions
+              Cutting-edge technology designed specifically for modern
+              educational institutions
             </p>
           </div>
 
@@ -263,7 +289,8 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                 Face Recognition
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                99% accurate AI-based identification. Instant student verification using advanced facial recognition algorithms.
+                99% accurate AI-based identification. Instant student
+                verification using advanced facial recognition algorithms.
               </p>
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
@@ -282,7 +309,8 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                 Real-Time Analytics
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Live insights on student participation. Track attendance trends and generate actionable insights instantly.
+                Live insights on student participation. Track attendance trends
+                and generate actionable insights instantly.
               </p>
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
@@ -301,7 +329,8 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                 Paperless Reports
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Generate monthly reports instantly. Export to CSV, PDF, or integrate with existing student information systems.
+                Generate monthly reports instantly. Export to CSV, PDF, or
+                integrate with existing student information systems.
               </p>
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
@@ -331,7 +360,9 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-6">
                 1
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Student Registration</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                Student Registration
+              </h3>
               <p className="text-gray-600">
                 One-time face enrollment with student ID verification
               </p>
@@ -341,7 +372,9 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-6">
                 2
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Live Class Scanning</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                Live Class Scanning
+              </h3>
               <p className="text-gray-600">
                 Automated face detection during lectures in real-time
               </p>
@@ -351,7 +384,9 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               <div className="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-6">
                 3
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Instant Reports</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                Instant Reports
+              </h3>
               <p className="text-gray-600">
                 Attendance records auto-saved and accessible anytime
               </p>
@@ -381,10 +416,32 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
             <div>
               <h4 className="font-bold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#features" className="hover:text-blue-400 transition-colors">Features</a></li>
-                <li><a href="#how-it-works" className="hover:text-blue-400 transition-colors">How it Works</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Documentation</a></li>
+                <li>
+                  <a
+                    href="#features"
+                    className="hover:text-blue-400 transition-colors"
+                  >
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#how-it-works"
+                    className="hover:text-blue-400 transition-colors"
+                  >
+                    How it Works
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    Documentation
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -392,10 +449,26 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
             <div>
               <h4 className="font-bold mb-4">Support</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition-colors">FAQ</a></li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-blue-400 transition-colors">
+                    FAQ
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -417,7 +490,10 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
 
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8 mt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2024 UniPortal. All rights reserved. | University Smart Attendance System</p>
+            <p>
+              &copy; 2024 UniPortal. All rights reserved. | University Smart
+              Attendance System
+            </p>
           </div>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Download,
@@ -8,214 +8,211 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  User,
+  Loader2,
+  FileX,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
+import toast from "react-hot-toast";
+
+const API_BASE = "http://localhost:8000";
 
 interface AuditLog {
-  id: string;
-  timestamp: string;
-  userName: string;
-  userRole: "Admin" | "Lecturer";
-  userImage: string;
-  action: string;
-  ipAddress: string;
-  status: "Success" | "Failed";
+  id: number;
+  timestamp: string | null;
+  action_type: string;
+  description: string;
+  // Extended fields (returned by backend or derived client-side)
+  ip_address?: string;
+  severity?: "Info" | "Warning" | "Critical";
 }
 
+// ── Severity derivation ──────────────────────────────────────────────────────
+const deriveSeverity = (log: AuditLog): "Info" | "Warning" | "Critical" => {
+  if (log.severity) return log.severity;
+  const text = `${log.action_type} ${log.description}`.toLowerCase();
+  if (text.includes("delete") || text.includes("fail") || text.includes("unauthor") || text.includes("critical"))
+    return "Critical";
+  if (text.includes("update") || text.includes("warn") || text.includes("suspend") || text.includes("disable"))
+    return "Warning";
+  return "Info";
+};
+
+const severityConfig = {
+  Info:     { cls: "bg-blue-100 text-blue-700",   icon: <Info          className="w-3.5 h-3.5" /> },
+  Warning:  { cls: "bg-amber-100 text-amber-700",  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  Critical: { cls: "bg-red-100 text-red-700",     icon: <XCircle       className="w-3.5 h-3.5" /> },
+};
+
+// ── Status derivation ────────────────────────────────────────────────────────
+const deriveStatus = (description: string): "Success" | "Failed" => {
+  const lower = description.toLowerCase();
+  if (lower.includes("fail") || lower.includes("error") || lower.includes("unauthor"))
+    return "Failed";
+  return "Success";
+};
+
+// ── Role derivation ──────────────────────────────────────────────────────────
+const deriveRole = (log: AuditLog): "Admin" | "Lecturer" | "Student" | null => {
+  const actionType = log.action_type?.toLowerCase() ?? "";
+  const desc = log.description?.toLowerCase() ?? "";
+
+  // Admin panel actions are always performed by the Admin
+  if (
+    actionType.includes("student management") ||
+    actionType.includes("lecturer management") ||
+    actionType.includes("system operations")
+  ) {
+    return "Admin";
+  }
+
+  // Login activity — derive from description text
+  if (actionType.includes("login")) {
+    if (desc.includes("admin")) return "Admin";
+    if (desc.includes("lecturer")) return "Lecturer";
+    if (desc.includes("student")) return "Student";
+  }
+
+  // Fallback: keyword scan
+  if (desc.includes("admin")) return "Admin";
+  if (desc.includes("lecturer")) return "Lecturer";
+  if (desc.includes("student")) return "Student";
+  return null;
+};
+
+const getRoleBadgeColor = (role: "Admin" | "Lecturer" | "Student") => {
+  switch (role) {
+    case "Admin":    return "bg-purple-100 text-purple-700 border-purple-200";
+    case "Lecturer": return "bg-blue-100 text-blue-700 border-blue-200";
+    case "Student":  return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  }
+};
+
+// ── Timestamp formatter ──────────────────────────────────────────────────────
+const formatTimestamp = (iso: string | null) => {
+  if (!iso) return { date: "—", time: "" };
+  const d = new Date(iso);
+  return {
+    date: d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "2-digit" }),
+    time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+  };
+};
+
+// ── Performed By extractor ───────────────────────────────────────────────────
+const extractPerformedBy = (description: string): string => {
+  // Match patterns like: Admin 'user@email.com' or lecturer 'Name'
+  const quotedMatch = description.match(/'([^']+)'/);
+  if (quotedMatch) return quotedMatch[1];
+  // Fallback: try to find an email
+  const emailMatch = description.match(/[\w.-]+@[\w.-]+/);
+  if (emailMatch) return emailMatch[0];
+  return "System";
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
 export default function SystemAuditLogs() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
+  const [searchQuery, setSearchQuery]       = useState("");
+  const [startDate, setStartDate]           = useState("");
+  const [endDate, setEndDate]               = useState("");
+  const [roleFilter, setRoleFilter]         = useState("All");
   const [actionTypeFilter, setActionTypeFilter] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage]       = useState(1);
+  const [logs, setLogs]                     = useState<AuditLog[]>([]);
+  const [isLoading, setIsLoading]           = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const itemsPerPage = 10;
 
-  // Mock audit log data
-  const auditLogs: AuditLog[] = [
-    {
-      id: "1",
-      timestamp: "2026-02-07 10:30 AM",
-      userName: "Dr. Sarah Johnson",
-      userRole: "Admin",
-      userImage: "",
-      action: "Updated Student Profile - CS/2021/045",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "2",
-      timestamp: "2026-02-07 10:15 AM",
-      userName: "Prof. Michael Chen",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Started Live Attendance Session - CS301",
-      ipAddress: "192.168.1.12",
-      status: "Success",
-    },
-    {
-      id: "3",
-      timestamp: "2026-02-07 09:45 AM",
-      userName: "Dr. Sarah Johnson",
-      userRole: "Admin",
-      userImage: "",
-      action: "Deleted Class Session - EE205",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "4",
-      timestamp: "2026-02-07 09:30 AM",
-      userName: "Dr. Emily Watson",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Failed Login Attempt",
-      ipAddress: "203.94.45.78",
-      status: "Failed",
-    },
-    {
-      id: "5",
-      timestamp: "2026-02-07 09:00 AM",
-      userName: "Admin User",
-      userRole: "Admin",
-      userImage: "",
-      action: "Registered New Student - John Smith",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "6",
-      timestamp: "2026-02-07 08:45 AM",
-      userName: "Prof. Michael Chen",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Ended Live Attendance Session - CS301",
-      ipAddress: "192.168.1.12",
-      status: "Success",
-    },
-    {
-      id: "7",
-      timestamp: "2026-02-07 08:30 AM",
-      userName: "Dr. Sarah Johnson",
-      userRole: "Admin",
-      userImage: "",
-      action: "Updated System Settings - Face Recognition Threshold",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "8",
-      timestamp: "2026-02-07 08:15 AM",
-      userName: "Dr. Robert Kumar",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Approved Attendance Correction Request",
-      ipAddress: "192.168.1.18",
-      status: "Success",
-    },
-    {
-      id: "9",
-      timestamp: "2026-02-07 08:00 AM",
-      userName: "Admin User",
-      userRole: "Admin",
-      userImage: "",
-      action: "Exported Attendance Report - Department of CS",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "10",
-      timestamp: "2026-02-07 07:45 AM",
-      userName: "Prof. Michael Chen",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Failed to Delete Student Record",
-      ipAddress: "192.168.1.12",
-      status: "Failed",
-    },
-    {
-      id: "11",
-      timestamp: "2026-02-06 04:30 PM",
-      userName: "Dr. Sarah Johnson",
-      userRole: "Admin",
-      userImage: "",
-      action: "Created New Lecturer Account - Dr. Emily Watson",
-      ipAddress: "192.168.1.5",
-      status: "Success",
-    },
-    {
-      id: "12",
-      timestamp: "2026-02-06 04:00 PM",
-      userName: "Dr. Robert Kumar",
-      userRole: "Lecturer",
-      userImage: "",
-      action: "Marked Manual Attendance - CS402",
-      ipAddress: "192.168.1.18",
-      status: "Success",
-    },
-  ];
+  // ── Data fetching ──────────────────────────────────────────────────────────
+  const fetchLogs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const token =
+        localStorage.getItem("adminToken") ||
+        localStorage.getItem("access_token");
+      const params = new URLSearchParams();
+      if (searchQuery) params.append("search", searchQuery);
+      if (startDate)   params.append("start_date", startDate);
+      if (endDate)     params.append("end_date", endDate);
+      if (roleFilter && roleFilter !== "All") params.append("role", roleFilter);
+      if (actionTypeFilter && actionTypeFilter !== "All") params.append("action_type", actionTypeFilter);
 
+      const res = await fetch(`${API_BASE}/api/admin/audit-logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data: AuditLog[] = await res.json();
+        setLogs(data);
+        setCurrentPage(1);
+      } else {
+        console.error("Failed to fetch audit logs:", res.status);
+      }
+    } catch (err) {
+      console.error("Network error fetching audit logs:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, startDate, endDate, roleFilter, actionTypeFilter]);
+
+  useEffect(() => {
+    const debounce = setTimeout(() => fetchLogs(), 350);
+    return () => clearTimeout(debounce);
+  }, [fetchLogs]);
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  const totalPages   = Math.ceil(logs.length / itemsPerPage);
+  const startIndex   = (currentPage - 1) * itemsPerPage;
+  const endIndex     = startIndex + itemsPerPage;
+  const currentLogs  = logs.slice(startIndex, endIndex);
+  const totalRecords = logs.length;
+
+  // ── CSV Export ─────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
-    // In a real application, this would generate and download a CSV file
-    alert("Exporting audit logs to CSV...");
+    if (!logs || logs.length === 0) {
+      toast.error("No logs available to export.");
+      return;
+    }
+    setShowExportModal(true);
   };
 
-  // Filter logs based on search and filters
-  const filteredLogs = auditLogs.filter((log) => {
-    const matchesSearch =
-      log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchQuery.toLowerCase());
+  const executeCSVExport = () => {
+    try {
+      const headers = ["Timestamp", "Action Type", "Description", "Performed By", "Severity", "Status"];
+      const csvRows = logs.map((l) => [
+        `"${l.timestamp ?? ""}"`,
+        `"${l.action_type}"`,
+        `"${l.description.replace(/"/g, '""')}"`,
+        `"${extractPerformedBy(l.description)}"`,
+        `"${deriveSeverity(l)}"`,
+        `"${deriveStatus(l.description)}"`,
+      ].join(","));
 
-    const matchesRole = roleFilter === "All" || log.userRole === roleFilter;
+      const csvContent = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `audit_logs_${new Date().toISOString().split("T")[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-    const matchesActionType =
-      actionTypeFilter === "All" ||
-      log.action.toLowerCase().includes(actionTypeFilter.toLowerCase());
-
-    return matchesSearch && matchesRole && matchesActionType;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentLogs = filteredLogs.slice(startIndex, endIndex);
-  const totalRecords = filteredLogs.length;
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      toast.success("Audit logs exported successfully!");
+      setShowExportModal(false);
+    } catch (error) {
+      toast.error("Failed to export logs.");
     }
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const getRoleBadgeColor = (role: "Admin" | "Lecturer") => {
-    return role === "Admin"
-      ? "bg-purple-100 text-purple-700 border-purple-200"
-      : "bg-blue-100 text-blue-700 border-blue-200";
-  };
-
-  const getInitials = (name: string) => {
-    const parts = name.split(" ");
-    return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : parts[0][0];
-  };
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className="pb-20">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            System Activity Logs
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Track all system activities and user actions
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900">System Activity Logs</h2>
+          <p className="text-gray-600 mt-1">Track all system activities and user actions</p>
         </div>
         <button
           onClick={handleExportCSV}
@@ -229,67 +226,55 @@ export default function SystemAuditLogs() {
       {/* Filters Bar */}
       <div className="bg-white rounded-lg shadow-md p-5 mb-6">
         <div className="grid grid-cols-4 gap-4">
-          {/* Search User */}
+          {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search User
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or action..."
+                placeholder="Search by action or description..."
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
 
-          {/* Date Range Start */}
+          {/* Start Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                title="Select start date"
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
 
-          {/* Date Range End */}
+          {/* End Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              End Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                title="Select end date"
-                placeholder="Select end date"
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
 
-          {/* Filter by Role */}
+          {/* Role Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Role
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Role</label>
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <select
-                title="Filter by role"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
@@ -302,26 +287,19 @@ export default function SystemAuditLogs() {
           </div>
         </div>
 
-        {/* Action Type Filter - Full Width Row */}
+        {/* Action Type */}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Action Type
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Action Type</label>
           <select
-            title="Filter by action type"
             value={actionTypeFilter}
             onChange={(e) => setActionTypeFilter(e.target.value)}
             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
           >
             <option value="All">All Actions</option>
-            <option value="Login">Login Activity</option>
-            <option value="Updated">Updates</option>
-            <option value="Deleted">Deletions</option>
-            <option value="Created">Creations</option>
-            <option value="Started">Session Started</option>
-            <option value="Ended">Session Ended</option>
-            <option value="Exported">Exports</option>
-            <option value="Approved">Approvals</option>
+            <option value="Login Activity">Login Activity</option>
+            <option value="Student Management">Student Management</option>
+            <option value="Lecturer Management">Lecturer Management</option>
+            <option value="System Operations">System Operations</option>
           </select>
         </div>
       </div>
@@ -332,100 +310,91 @@ export default function SystemAuditLogs() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Timestamp
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  IP Address
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Status
-                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Timestamp</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action Type</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Performed By</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Severity</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {currentLogs.length > 0 ? (
-                currentLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Timestamp */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {log.timestamp.split(" ")[0]}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {log.timestamp.split(" ").slice(1).join(" ")}
-                      </div>
-                    </td>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-500 mb-3" />
+                    <p className="text-sm text-gray-500">Loading audit logs...</p>
+                  </td>
+                </tr>
+              ) : currentLogs.length > 0 ? (
+                currentLogs.map((log) => {
+                  const { date, time } = formatTimestamp(log.timestamp);
+                  const status   = deriveStatus(log.description);
+                  const severity = deriveSeverity(log);
+                  const role     = deriveRole(log);
+                  const sevCfg   = severityConfig[severity];
 
-                    {/* User */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                          {getInitials(log.userName)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {log.userName}
-                          </div>
-                          <span
-                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${getRoleBadgeColor(
-                              log.userRole
-                            )}`}
-                          >
-                            {log.userRole}
+                  return (
+                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                      {/* Timestamp */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{date}</div>
+                        <div className="text-xs text-gray-500">{time}</div>
+                      </td>
+
+                      {/* Action Type + Role badge */}
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900 mb-1">{log.action_type}</div>
+                        {role && (
+                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${getRoleBadgeColor(role)}`}>
+                            {role}
                           </span>
+                        )}
+                      </td>
+
+                      {/* Description */}
+                      <td className="px-6 py-4 max-w-xs">
+                        <div className="text-sm text-gray-700 break-words">{log.description}</div>
+                      </td>
+
+                      {/* Performed By */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {extractPerformedBy(log.description)}
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Action */}
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-md">
-                        {log.action}
-                      </div>
-                    </td>
-
-                    {/* IP Address */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-gray-700 bg-gray-100 px-3 py-1 rounded inline-block">
-                        {log.ipAddress}
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {log.status === "Success" ? (
-                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Success</span>
+                      {/* Severity */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sevCfg.cls}`}>
+                          {sevCfg.icon}
+                          {severity}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                          <XCircle className="w-4 h-4" />
-                          <span>Failed</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {status === "Success" ? (
+                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Success</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                            <XCircle className="w-4 h-4" />
+                            <span>Failed</span>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <div className="text-gray-400">
-                      <Filter className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">
-                        No audit logs found matching your filters
-                      </p>
-                    </div>
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <FileX className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm font-medium text-gray-500">No audit logs found matching your criteria</p>
+                    <p className="text-xs text-gray-400 mt-1">Try adjusting your filters or date range</p>
                   </td>
                 </tr>
               )}
@@ -434,19 +403,17 @@ export default function SystemAuditLogs() {
         </div>
 
         {/* Pagination */}
-        {currentLogs.length > 0 && (
+        {!isLoading && totalPages > 1 && (
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
-              <span className="font-medium">
-                {Math.min(endIndex, totalRecords)}
-              </span>{" "}
+              <span className="font-medium">{Math.min(endIndex, totalRecords)}</span>{" "}
               of <span className="font-medium">{totalRecords}</span> records
             </div>
 
             <div className="flex items-center space-x-2">
               <button
-                onClick={handlePreviousPage}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`flex items-center space-x-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 1
@@ -459,25 +426,24 @@ export default function SystemAuditLogs() {
               </button>
 
               <div className="flex items-center space-x-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                        currentPage === page
-                          ? "bg-blue-600 text-white"
-                          : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white"
+                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                {totalPages > 7 && <span className="px-2 text-gray-400">…</span>}
               </div>
 
               <button
-                onClick={handleNextPage}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className={`flex items-center space-x-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === totalPages
@@ -492,6 +458,39 @@ export default function SystemAuditLogs() {
           </div>
         )}
       </div>
+
+      {/* Export Confirmation Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <Download size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Export Audit Logs</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              You are about to export <span className="font-bold text-gray-900">{logs.length}</span> audit log records as a CSV file. This file contains sensitive system activity data. Are you sure you want to proceed?
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeCSVExport}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <Download size={16} /> Yes, Export Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default function DashboardOverview() {
         { name: 'Present', value: 85 },
         { name: 'Absent', value: 15 }
       ]);
-    }, 150);
+    }, 200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -120,21 +120,21 @@ export default function DashboardOverview() {
             <div className="relative w-[220px] h-[220px] flex items-center justify-center">
               
               {/* Bulletproof fixed-size PieChart */}
-              <PieChart width={230} height={230}>
+              <PieChart width={240} height={240}>
                 <Pie
                   data={animatedChartData}
-                  cx={115} // Exactly half of width
+                  cx={110} // Exactly half of width
                   cy={115} // Exactly half of height
-                  innerRadius={75}
+                  innerRadius={68}
                   outerRadius={105}
-                  paddingAngle={2}
+                  paddingAngle={4}
                   dataKey="value"
                   stroke="none"
                   isAnimationActive={true}
                   animationDuration={1500}
                 >
-                  <Cell fill="#10b77fff" /> {/* Tailwind emerald-500 */}
-                  <Cell fill="#ef4444" /> {/* Tailwind red-500 */}
+                  <Cell fill="#10b77fff" /> 
+                  <Cell fill="#ef4444" /> 
                 </Pie>
                 <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
               </PieChart>

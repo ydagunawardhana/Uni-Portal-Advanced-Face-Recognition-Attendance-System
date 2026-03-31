@@ -37,6 +37,8 @@ export default function App() {
     return "landing";
   });
 
+  const [loginRole, setLoginRole] = useState<"Admin" | "Lecturer" | "Student">("Admin");
+
   const handleLogin = (role: "Admin" | "Lecturer" | "Student") => {
     setUserRole(role);
     if (role === "Admin") {
@@ -87,10 +89,14 @@ export default function App() {
         }}
       />
       {currentScreen === "landing" && (
-        <LandingPage onNavigateToLogin={() => setCurrentScreen("login")} />
+        <LandingPage onNavigateToLogin={(role) => {
+          setLoginRole(role ?? "Admin");
+          setCurrentScreen("login");
+        }} />
       )}
       {currentScreen === "login" && (
         <LoginScreen
+          initialRole={loginRole}
           onLogin={handleLogin}
           onForgotPassword={handleForgotPassword}
           onBackToHome={() => setCurrentScreen("landing")}

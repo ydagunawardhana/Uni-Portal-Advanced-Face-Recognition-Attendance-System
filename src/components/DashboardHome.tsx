@@ -606,14 +606,14 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
             {/* Action 4: Manage Students */}
             <button
               onClick={() => onTabChange && onTabChange("manage_students")}
-              className="w-full text-left px-4 py-3 cursor-pointer bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-100"
+              className="w-full text-left px-4 py-3 cursor-pointer bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border-gray-100"
             >
-              <p className="font-medium text-orange-900 flex items-center gap-2">
+              <p className="font-medium text-gray-900 flex items-center gap-2">
                 <Users size={18} className="font-bold" />
                 Manage Students
               </p>
 
-              <p className="text-xs text-orange-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 View, edit, or remove student records
               </p>
             </button>
@@ -631,12 +631,12 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
               }}
               className={`w-full text-left px-4 py-3 cursor-pointer rounded-lg transition-colors duration-300 ${
                 isCameraActive 
-                  ? "bg-red-50 hover:bg-red-100 border border-red-200" 
-                  : "bg-emerald-50 hover:bg-emerald-100 border border-emerald-100"
+                  ? "bg-red-50 hover:bg-red-100 border-red-200" 
+                  : "bg-gray-50 hover:bg-gray-100 border-gray-100"
               }`}
             >
-              <div className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-emerald-900"}`}>
-                <Power size={18} className={isCameraActive ? "text-red-600 animate-pulse" : "text-emerald-600"} /> 
+              <div className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-gray-900"}`}>
+                <Power size={18} className={isCameraActive ? "text-red-600 animate-pulse" : "text-black"} /> 
                 {isCameraActive ? "Stop Camera System" : "Start Camera System"}
               </div>
               <p className={`text-xs mt-1 ${isCameraActive ? "text-red-600" : "text-emerald-600"}`}>
