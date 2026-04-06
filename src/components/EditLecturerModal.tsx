@@ -11,24 +11,46 @@ interface EditLecturerModalProps {
     name: string;
     employeeId: string;
     email: string;
+    faculty?: string;
     department: string;
     assigned_subjects?: string;
     status: "Active" | "On Leave";
   } | null;
 }
 
-const SUBJECT_OPTIONS = [
-  "Object Oriented Programming",
-  "Data Structures & Algorithms",
-  "Database Management Systems",
-  "Software Engineering",
-  "Artificial Intelligence",
-  "Machine Learning",
-  "Computer Networks",
-  "Operating Systems",
-  "Cyber Security",
-  "Cloud Computing"
-];
+const universityData: Record<string, string[]> = {
+  "Faculty of Computing": [
+    "Department of Software Engineering & Computer Security",
+    "Department of Computer and Data Science",
+    "Department of Computer Systems Engineering"
+  ],
+  "Faculty of Business": [
+    "Department of Accounting & Finance",
+    "Department of Business Management"
+  ],
+  "Faculty of Engineering": [
+    "Department of Civil Engineering",
+    "Department of Mechanical Engineering",
+    "Department of Electronic & Electrical Engineering"
+  ],
+  "Faculty of Health and Life Science": [
+    "Department of Health Sciences",
+    "Department of Life Sciences"
+  ]
+};
+
+const subjectsByDepartment: Record<string, string[]> = {
+  "Department of Software Engineering & Computer Security": ["Programming", "Database Systems", "Software Engineering", "Cyber Security"],
+  "Department of Computer and Data Science": ["Data Science", "Artificial Intelligence", "Machine Learning", "Data Mining", "Mathematics"],
+  "Department of Computer Systems Engineering": ["Computer Architecture", "Operating Systems", "Embedded Systems", "Network Design"],
+  "Department of Accounting & Finance": ["Financial Accounting", "Corporate Finance", "Taxation", "Audit"],
+  "Department of Business Management": ["Marketing", "HR Management", "Business Strategy", "Economics"],
+  "Department of Civil Engineering": ["Structural Design", "Fluid Mechanics", "Geotechnical Engineering"],
+  "Department of Mechanical Engineering": ["Thermodynamics", "Robotics", "Manufacturing Systems"],
+  "Department of Electronic & Electrical Engineering": ["Circuits", "Signal Processing", "Power Systems"],
+  "Department of Health Sciences": ["Anatomy", "Pathology", "Nursing", "Biomedical Science", "Pharmacology"],
+  "Department of Life Sciences": ["Psychology", "Biology", "Chemistry", "Genetics"],
+};
 
 export default function EditLecturerModal({
   isOpen,
@@ -39,15 +61,19 @@ export default function EditLecturerModal({
 }: EditLecturerModalProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [employeeId, setEmployeeId] = useState("");
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
+  
+  const availableSubjects = department && subjectsByDepartment[department] ? subjectsByDepartment[department] : [];
 
   useEffect(() => {
     if (isOpen && lecturer) {
       setFullName(lecturer.name);
       setEmail(lecturer.email);
+      setFaculty(lecturer.faculty || "");
       setDepartment(lecturer.department);
       setIsActive(lecturer.status === "Active");
       setEmployeeId(lecturer.employeeId);
@@ -79,6 +105,7 @@ export default function EditLecturerModal({
       fullName,
       employeeId,
       email,
+      faculty,
       department,
       isActive,
       assignedSubjects
@@ -181,30 +208,47 @@ export default function EditLecturerModal({
             </div>
           </div>
 
-          {/* Department */}
-          <div>
-            <label
-              htmlFor="department"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="department"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="">Select department</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Business Administration">
-                Business Administration
-              </option>
-              <option value="Architecture">Architecture</option>
-            </select>
+          {/* Faculty & Department Cascade Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Faculty <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={faculty}
+                onChange={(e) => {
+                  setFaculty(e.target.value);
+                  setDepartment("");
+                  setAssignedSubjects([]); // Flush mismatch constraints
+                }}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Select Faculty</option>
+                {Object.keys(universityData).map((fac) => (
+                  <option key={fac} value={fac}>{fac}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  setAssignedSubjects([]); // Flush on cascade hop
+                }}
+                disabled={!faculty}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Department</option>
+                {faculty && universityData[faculty].map((dept) => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Assigned Subjects - Badge Multi-select */}
@@ -239,8 +283,9 @@ export default function EditLecturerModal({
             {/* Subject Selector */}
             <div className="relative">
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 value=""
+                disabled={!department}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val && !assignedSubjects.includes(val)) {
@@ -248,9 +293,11 @@ export default function EditLecturerModal({
                   }
                 }}
               >
-                <option value="" disabled>Select a subject to add...</option>
-                {SUBJECT_OPTIONS
-                  .filter(subject => !assignedSubjects.includes(subject))
+                <option value="" disabled>
+                  {department ? "Select a subject to add..." : "Select a Department first"}
+                </option>
+                {availableSubjects
+                  .filter((subject) => !assignedSubjects.includes(subject))
                   .map((subject) => (
                     <option key={subject} value={subject}>
                       {subject}

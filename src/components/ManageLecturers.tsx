@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Edit2, Trash2, Loader2, AlertTriangle, Trash } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Loader2, AlertTriangle, Trash, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import AddLecturerModal from "./AddLecturerModal";
 import EditLecturerModal from "./EditLecturerModal";
@@ -11,16 +11,94 @@ interface Lecturer {
   name: string;
   employee_id: string;
   department: string;
+  faculty?: string;
   email: string;
   assigned_subjects?: string;
   is_active: boolean;
   avatarColor?: string; // Optional local UI state
 }
 
+const universityData: Record<string, string[]> = {
+  "Faculty of Computing": [
+    "Department of Software Engineering & Computer Security",
+    "Department of Computer and Data Science",
+  ],
+  "Faculty of Business": [
+    "Department of Accounting & Finance",
+    "Department of Business Management"
+  ],
+  "Faculty of Engineering": [
+    "Department of Civil Engineering",
+    "Department of Mechanical Engineering",
+    "Department of Electronic & Electrical Engineering"
+  ],
+  "Faculty of Health and Life Science": [
+    "Department of Health Sciences",
+    "Department of Life Sciences"
+  ]
+};
+
+const subjectsByDepartment: Record<string, string[]> = {
+  "Department of Software Engineering & Computer Security": [
+    "Programming",
+    "Database Systems",
+    "Software Engineering",
+    "Cyber Security",
+  ],
+  "Department of Computer and Data Science": [
+    "Data Science",
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Data Mining",
+    "Mathematics",
+  ],
+  "Department of Accounting & Finance": [
+    "Financial Accounting",
+    "Corporate Finance",
+    "Taxation",
+    "Audit",
+  ],
+  "Department of Business Management": [
+    "Marketing",
+    "HR Management",
+    "Business Strategy",
+    "Economics",
+  ],
+  "Department of Civil Engineering": [
+    "Structural Design",
+    "Fluid Mechanics",
+    "Geotechnical Engineering",
+  ],
+  "Department of Mechanical Engineering": [
+    "Thermodynamics",
+    "Robotics",
+    "Manufacturing Systems",
+  ],
+  "Department of Electronic & Electrical Engineering": [
+    "Circuits",
+    "Signal Processing",
+    "Power Systems",
+  ],
+  "Department of Health Sciences": [
+    "Anatomy",
+    "Pathology",
+    "Nursing",
+    "Biomedical Science",
+    "Pharmacology",
+  ],
+  "Department of Life Sciences": [
+    "Psychology",
+    "Biology",
+    "Chemistry",
+    "Genetics",
+  ],
+};
+
 export default function ManageLecturers() {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [facultyFilter, setFacultyFilter] = useState("All Faculties");
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
   const [subjectFilter, setSubjectFilter] = useState("All Subjects");
   
@@ -91,6 +169,7 @@ export default function ManageLecturers() {
         name: formData.fullName,
         employee_id: formData.employeeId,
         email: formData.email,
+        faculty: formData.faculty,
         department: formData.department,
         assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
         auto_generate_password: formData.autoGeneratePassword
@@ -133,6 +212,7 @@ export default function ManageLecturers() {
       const payload = {
         name: formData.fullName,
         email: formData.email,
+        faculty: formData.faculty,
         department: formData.department,
         assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
         is_active: formData.isActive
@@ -250,6 +330,9 @@ export default function ManageLecturers() {
     const matchesSearch =
       lecturer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lecturer.employee_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFaculty =
+      facultyFilter === "All Faculties" ||
+      lecturer.faculty === facultyFilter;
     const matchesDepartment =
       departmentFilter === "All Departments" ||
       lecturer.department === departmentFilter;
@@ -258,7 +341,7 @@ export default function ManageLecturers() {
       (lecturer.assigned_subjects &&
         lecturer.assigned_subjects.includes(subjectFilter));
 
-    return matchesSearch && matchesDepartment && matchesSubject;
+    return matchesSearch && matchesFaculty && matchesDepartment && matchesSubject;
   });
 
   return (
@@ -280,43 +363,76 @@ export default function ManageLecturers() {
             />
           </div>
 
+          {/* Faculty Filter */}
+          <div className="relative w-48 font-light">
+            <select
+              aria-label="Filter by Faculty"
+              value={facultyFilter}
+              onChange={(e) => {
+                setFacultyFilter(e.target.value);
+                setDepartmentFilter("All Departments"); // Reset department cascade 
+              }}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
+            >
+              <option value="All Faculties">All Faculties</option>
+              {Object.keys(universityData).map(fac => (
+                <option key={fac} value={fac}>{fac}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-800">
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
+
           {/* Department Filter */}
-          <div className="w-48">
+          <div className="relative w-48 font-light">
             <select
               aria-label="Filter by Department"
               value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+              onChange={(e) => {
+                setDepartmentFilter(e.target.value);
+                setSubjectFilter("All Subjects"); // Reset subject cascade
+              }}
+              disabled={facultyFilter !== "All Faculties" && !universityData[facultyFilter]}
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate disabled:bg-gray-100 disabled:text-gray-400 appearance-none cursor-pointer"
             >
               <option value="All Departments">All Departments</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Architecture">Architecture</option>
-              <option value="Business Administration">Business Administration</option>
+              {facultyFilter === "All Faculties" 
+                ? Object.values(universityData).flat().map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))
+                : (universityData[facultyFilter] || []).map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))
+              }
             </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-800">
+              <ChevronDown className="w-5 h-5" />
+            </div>
           </div>
 
           {/* Subject Filter */}
-          <div className="w-48">
+          <div className="relative w-48 font-light">
             <select
               aria-label="Filter by Subject"
               value={subjectFilter}
               onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+              disabled={departmentFilter !== "All Departments" && !subjectsByDepartment[departmentFilter]}
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate disabled:bg-gray-100 disabled:text-gray-400 appearance-none cursor-pointer"
             >
               <option value="All Subjects">All Subjects</option>
-              {/* Common Subjects based on existing options */}
-              <option value="Object Oriented Programming">Programming</option>
-              <option value="Database Management Systems">Database Systems</option>
-              <option value="Software Engineering">Software Engineering</option>
-              <option value="Artificial Intelligence">AI / ML</option>
-              <option value="Computer Networks">Networking</option>
-              <option value="Cyber Security">Cyber Security</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
+              {departmentFilter === "All Departments"
+                ? Array.from(new Set(Object.values(subjectsByDepartment).flat())).map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))
+                : (subjectsByDepartment[departmentFilter] || []).map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))
+              }
             </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-800">
+              <ChevronDown className="w-5 h-5" />
+            </div>
           </div>
 
           {/* Add New Lecturer Button */}
@@ -340,6 +456,9 @@ export default function ManageLecturers() {
                   Lecturer Name
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  Faculty
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Employee ID
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -359,7 +478,7 @@ export default function ManageLecturers() {
             <tbody className="divide-y divide-gray-200">
               {filteredLecturers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <Search className="w-12 h-12 mb-4 opacity-20" />
                       <p className="text-lg font-medium">No lecturers found matching your filters</p>
@@ -367,6 +486,7 @@ export default function ManageLecturers() {
                       <button 
                         onClick={() => {
                           setSearchTerm("");
+                          setFacultyFilter("All Faculties");
                           setDepartmentFilter("All Departments");
                           setSubjectFilter("All Subjects");
                         }}
@@ -395,6 +515,13 @@ export default function ManageLecturers() {
                         {lecturer.name}
                       </span>
                     </div>
+                  </td>
+
+                  {/* Faculty */}
+                  <td className="px-6 py-4">
+                    <span className="text-sm text-gray-900 font-medium whitespace-nowrap">
+                      {lecturer.faculty || "Not Assigned"}
+                    </span>
                   </td>
 
                   {/* Employee ID */}
@@ -487,6 +614,7 @@ export default function ManageLecturers() {
           name: selectedLecturer.name,
           employeeId: selectedLecturer.employee_id,
           email: selectedLecturer.email,
+          faculty: selectedLecturer.faculty || "",
           department: selectedLecturer.department,
           assigned_subjects: selectedLecturer.assigned_subjects || "",
           status: selectedLecturer.is_active ? "Active" : "On Leave"

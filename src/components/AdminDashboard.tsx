@@ -21,6 +21,95 @@ const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
 const FRAME_INTERVAL_MS = 300;
 
+const universityData: Record<string, Record<string, string[]>> = {
+  "Faculty of Computing": {
+    "Department of Software Engineering & Computer Security": [
+      "BSc (Hons) in Software Engineering",
+      "BSc (Hons) in Computer Networks",
+      "BSc (Hons) Computer Security",
+      "BSc (Hons) Technology Management",
+      "Bachelor of Information Technology (Major in Cyber Security)",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Computer and Data Science": [
+      "BSc (Hons) in Computer Science",
+      "BSc (Hons) in Data Science",
+      "BSc (Hons) Artificial Intelligence",
+      "BSc in Management Information Systems (Special)",
+    ],
+  },
+  "Faculty of Business": {
+    "Department of Management": [
+      "BM (Honors) in Business Analytics",
+      "BM (Honors) in Applied Economics",
+      "BSc in Business Management (Industrial Management) (Special)",
+      "BSc in Business Management (Project Management) (Special)",
+      "BSc in Business Management (Human Resource Management) (Special)",
+      "BSc (Hons) International Management and Business",
+      "BSc (Hons) Business Communication",
+      "BA in Business Communication",
+      "BSc in Multimedia",
+      "Bachelor of Business",
+      "Bachelor of Science in Business Administration (BSBA)",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Accounting and Finance": [
+      "BM (Hons) in Accounting and Finance",
+      "BSc (Hons) Accounting and Finance",
+    ],
+    "Department of Marketing and Tourism": [
+      "BM (Hons) in Marketing Management",
+      "BBM (Hons) Tourism, Hospitality & Events",
+      "BSc (Hons) Marketing Management",
+      "BSc (Hons) Events, Tourism and Hospitality Management",
+    ],
+    "Department of Operations and Logistics": [
+      "BSc in Business Management (Logistics Management) (Special)",
+      "BSc (Hons) Operations and Logistics Management",
+      "Bachelor of Business: Management and Innovation & Supply Chain and Logistics Management",
+    ],
+    "Department of Legal Studies": [
+      "Bachelor of Laws (Honours)",
+      "BM (Hons) in Law and Business Studies",
+      "BM (Hons.) in Law and International Trade",
+      "BM (Hons) in Law and E-Commerce",
+      "LLB (Hons) Law",
+    ],
+  },
+  "Faculty of Engineering": {
+    "Department of Electrical, Electronic & Systems Engineering": [
+      "Bachelor of Science of Engineering Honours in Electrical and Electronic Engineering",
+      "Bachelor of Science of Engineering Honours in Computer Engineering",
+      "BEng (Hons) Electrical, Electronics, and Communication Engineering",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Mechatronic and Industrial Engineering": [
+      "Bachelor of Science of Engineering Honours in Mechatronic Engineering",
+      "BEng (Hons) Mechanical and Mechatronics",
+      "BEng (Hons) Robotics and Automation Engineering",
+      "BEng (Hons) Civil and Structural Engineering",
+      "BSc (Hons) Quantity Surveying",
+      "BSc (Hons) Quantity Surveying Top-Up Degree",
+    ],
+    "Department of Design Studies": [
+      "Bachelor of Interior Design",
+      "BA (Hons) in Interior Design",
+    ],
+  },
+  "Faculty of Science": {
+    "Department of Health Sciences": [
+      "BSc (Hons) in Biomedical Science",
+      "BSc (Hons) Biomedical Science",
+      "BSc (Honours) in Pharmaceutical Science",
+      "BSc (Hons) Nutrition and Health",
+      "BSc (Hons) Nursing",
+      "BSc (Hons) Nursing – Top up",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Life Sciences": ["BSc (Hons) Psychology"],
+  },
+};
+
 interface AdminDashboardProps {
   onLogout: () => void;
   onNavigate: (screen: "admin" | "reporting") => void;
@@ -41,7 +130,9 @@ export default function AdminDashboard({
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [department, setDepartment] = useState("");
+  const [selectedFaculty, setSelectedFaculty] = useState("");
+  const [department, setDepartment] = useState(""); // Maps to selectedDepartment
+  const [selectedDegree, setSelectedDegree] = useState("");
   const [academicYearText, setAcademicYearText] = useState("");
   const [intake, setIntake] = useState("");
   const [nicNumber, setNicNumber] = useState("");
@@ -347,7 +438,9 @@ export default function AdminDashboard({
     setStudentId("");
     setEmail("");
     setMobileNumber("");
+    setSelectedFaculty("");
     setDepartment("");
+    setSelectedDegree("");
     setAcademicYearText("");
     setIntake("");
     setNicNumber("");
@@ -604,38 +697,95 @@ export default function AdminDashboard({
                       </p>
                     </div>
 
-                    {/* Department */}
-                    <div>
-                      <label
-                        htmlFor="department"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Department <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        id="department"
-                        value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                      >
-                        <option value="">Select department</option>
-                        <option value="Computer Science">
-                          Computer Science
-                        </option>
-                        <option value="Electrical Engineering">
-                          Electrical Engineering
-                        </option>
-                        <option value="Mechanical Engineering">
-                          Mechanical Engineering
-                        </option>
-                        <option value="Civil Engineering">
-                          Civil Engineering
-                        </option>
-                        <option value="Business Administration">
-                          Business Administration
-                        </option>
-                        <option value="Architecture">Architecture</option>
-                      </select>
+                    {/* Cascading Dropdowns: Faculty, Department, Degree */}
+                    <div className="flex flex-col gap-4">
+                      {/* Row 1: Faculty + Department */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Faculty */}
+                        <div>
+                          <label
+                            htmlFor="faculty"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
+                            Faculty <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            id="faculty"
+                            value={selectedFaculty}
+                            onChange={(e) => {
+                              setSelectedFaculty(e.target.value);
+                              setDepartment("");
+                              setSelectedDegree("");
+                            }}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                          >
+                            <option value="">Select Faculty</option>
+                            {Object.keys(universityData).map((faculty) => (
+                              <option key={faculty} value={faculty}>
+                                {faculty}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Department */}
+                        <div>
+                          <label
+                            htmlFor="department"
+                            className="block text-sm font-medium text-gray-700 mb-2"
+                          >
+                            Department <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            id="department"
+                            value={department}
+                            onChange={(e) => {
+                              setDepartment(e.target.value);
+                              setSelectedDegree("");
+                            }}
+                            disabled={!selectedFaculty}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            <option value="">Select Department</option>
+                            {selectedFaculty &&
+                              Object.keys(universityData[selectedFaculty]).map(
+                                (dept) => (
+                                  <option key={dept} value={dept}>
+                                    {dept}
+                                  </option>
+                                ),
+                              )}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Degree Program */}
+                      <div className="w-full">
+                        <label
+                          htmlFor="degree"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Degree Program <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          id="degree"
+                          value={selectedDegree}
+                          onChange={(e) => setSelectedDegree(e.target.value)}
+                          disabled={!department}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Degree Program</option>
+                          {selectedFaculty &&
+                            department &&
+                            universityData[selectedFaculty][department].map(
+                              (degree) => (
+                                <option key={degree} value={degree}>
+                                  {degree}
+                                </option>
+                              ),
+                            )}
+                        </select>
+                      </div>
                     </div>
 
                     {/* NIC + Gender side-by-side */}

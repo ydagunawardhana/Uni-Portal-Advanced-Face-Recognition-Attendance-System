@@ -21,11 +21,102 @@ const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
 const FRAME_INTERVAL_MS = 300;
 
+const universityData: Record<string, Record<string, string[]>> = {
+  "Faculty of Computing": {
+    "Department of Software Engineering & Computer Security": [
+      "BSc (Hons) in Software Engineering",
+      "BSc (Hons) in Computer Networks",
+      "BSc (Hons) Computer Security",
+      "BSc (Hons) Technology Management",
+      "Bachelor of Information Technology (Major in Cyber Security)",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Computer and Data Science": [
+      "BSc (Hons) in Computer Science",
+      "BSc (Hons) in Data Science",
+      "BSc (Hons) Artificial Intelligence",
+      "BSc in Management Information Systems (Special)",
+    ],
+  },
+  "Faculty of Business": {
+    "Department of Management": [
+      "BM (Honors) in Business Analytics",
+      "BM (Honors) in Applied Economics",
+      "BSc in Business Management (Industrial Management) (Special)",
+      "BSc in Business Management (Project Management) (Special)",
+      "BSc in Business Management (Human Resource Management) (Special)",
+      "BSc (Hons) International Management and Business",
+      "BSc (Hons) Business Communication",
+      "BA in Business Communication",
+      "BSc in Multimedia",
+      "Bachelor of Business",
+      "Bachelor of Science in Business Administration (BSBA)",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Accounting and Finance": [
+      "BM (Hons) in Accounting and Finance",
+      "BSc (Hons) Accounting and Finance",
+    ],
+    "Department of Marketing and Tourism": [
+      "BM (Hons) in Marketing Management",
+      "BBM (Hons) Tourism, Hospitality & Events",
+      "BSc (Hons) Marketing Management",
+      "BSc (Hons) Events, Tourism and Hospitality Management",
+    ],
+    "Department of Operations and Logistics": [
+      "BSc in Business Management (Logistics Management) (Special)",
+      "BSc (Hons) Operations and Logistics Management",
+      "Bachelor of Business: Management and Innovation & Supply Chain and Logistics Management",
+    ],
+    "Department of Legal Studies": [
+      "Bachelor of Laws (Honours)",
+      "BM (Hons) in Law and Business Studies",
+      "BM (Hons.) in Law and International Trade",
+      "BM (Hons) in Law and E-Commerce",
+      "LLB (Hons) Law",
+    ],
+  },
+  "Faculty of Engineering": {
+    "Department of Electrical, Electronic & Systems Engineering": [
+      "Bachelor of Science of Engineering Honours in Electrical and Electronic Engineering",
+      "Bachelor of Science of Engineering Honours in Computer Engineering",
+      "BEng (Hons) Electrical, Electronics, and Communication Engineering",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Mechatronic and Industrial Engineering": [
+      "Bachelor of Science of Engineering Honours in Mechatronic Engineering",
+      "BEng (Hons) Mechanical and Mechatronics",
+      "BEng (Hons) Robotics and Automation Engineering",
+      "BEng (Hons) Civil and Structural Engineering",
+      "BSc (Hons) Quantity Surveying",
+      "BSc (Hons) Quantity Surveying Top-Up Degree",
+    ],
+    "Department of Design Studies": [
+      "Bachelor of Interior Design",
+      "BA (Hons) in Interior Design",
+    ],
+  },
+  "Faculty of Science": {
+    "Department of Health Sciences": [
+      "BSc (Hons) in Biomedical Science",
+      "BSc (Hons) Biomedical Science",
+      "BSc (Honours) in Pharmaceutical Science",
+      "BSc (Hons) Nutrition and Health",
+      "BSc (Hons) Nursing",
+      "BSc (Hons) Nursing – Top up",
+      "Foundation Programme for Bachelor's Degree",
+    ],
+    "Department of Life Sciences": ["BSc (Hons) Psychology"],
+  },
+};
+
 interface StudentData {
   id: number;
   name: string;
   index_number: string;
-  department: string;
+  faculty?: string;
+  department?: string;
+  degree_program?: string;
   academic_year: string;
   intake: string;
   mobile: string;
@@ -50,12 +141,14 @@ export default function ManageStudents({
 }: ManageStudentsProps = {}) {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFacultyFilter, setSelectedFacultyFilter] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedIntake, setSelectedIntake] = useState("all");
 
   // Data
   const [students, setStudents] = useState<StudentData[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<StudentData[]>([]);
   const [pendingRetrains, setPendingRetrains] = useState<StudentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -67,7 +160,9 @@ export default function ManageStudents({
   const [editForm, setEditForm] = useState({
     name: "",
     mobile: "",
+    faculty: "",
     department: "",
+    degree_program: "",
     academic_year: "",
     intake: "",
     nic_number: "",
@@ -75,6 +170,8 @@ export default function ManageStudents({
     index_number: "",
     email: "",
   });
+  const [editFaculty, setEditFaculty] = useState("");
+  const [editSubDepartment, setEditSubDepartment] = useState("");
 
   // Delete Modal State
   const [studentToDelete, setStudentToDelete] = useState<StudentData | null>(
@@ -379,10 +476,20 @@ export default function ManageStudents({
   // --- EDIT LOGIC ---
   const openEditModal = (student: StudentData) => {
     setEditingStudent(student);
+
+    // Bind natively from database fields
+    const studentFaculty = student.faculty || "";
+    const studentDept = student.department || "";
+    const studentDegree = student.degree_program || "";
+
+    setEditFaculty(studentFaculty);
+    setEditSubDepartment(studentDept);
     setEditForm({
       name: student.name,
       mobile: student.mobile || "",
-      department: student.department || "",
+      faculty: studentFaculty,
+      department: studentDept,
+      degree_program: studentDegree,
       academic_year: student.academic_year || "",
       intake: student.intake || "",
       nic_number: student.nic_number || "",
@@ -414,7 +521,9 @@ export default function ManageStudents({
           body: JSON.stringify({
             name: editForm.name,
             mobile: editForm.mobile,
+            faculty: editForm.faculty,
             department: editForm.department,
+            degree_program: editForm.degree_program,
             academic_year: editForm.academic_year,
             intake: editForm.intake,
             nic_number: editForm.nic_number,
@@ -424,20 +533,9 @@ export default function ManageStudents({
       );
 
       if (res.ok) {
-        const updatedStudent = await res.json();
         toast.success("Student updated successfully", { id: toastId });
-
-        // Update local state
-        setStudents((prev) =>
-          prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)),
-        );
-        setPendingRetrains((prev) =>
-          prev.map((s) =>
-            s.id === updatedStudent.id ? { ...s, ...updatedStudent } : s,
-          ),
-        );
-
         setIsEditModalOpen(false);
+        fetchData(); // Cleanly reload the latest data from the DB
       } else {
         const data = await res
           .json()
@@ -450,24 +548,38 @@ export default function ManageStudents({
     }
   };
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.index_number.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    const results = students.filter((student) => {
+      const matchesSearch =
+        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.index_number.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesDepartment =
-      selectedDepartment === "all" || student.department === selectedDepartment;
+      const matchesFaculty =
+        selectedFacultyFilter === "all" || student.faculty === selectedFacultyFilter;
 
-    const matchesBatch =
-      selectedBatch === "all" || student.academic_year === selectedBatch;
+      const matchesDepartment =
+        selectedDepartment === "all" || student.department === selectedDepartment;
 
-    const matchesIntake =
-      selectedIntake === "all" ||
-      selectedIntake === "" ||
-      student.intake?.toLowerCase().includes(selectedIntake.toLowerCase());
+      const matchesBatch =
+        selectedBatch === "all" || student.academic_year === selectedBatch;
 
-    return matchesSearch && matchesDepartment && matchesBatch && matchesIntake;
-  });
+      const matchesIntake =
+        selectedIntake === "all" ||
+        selectedIntake === "" ||
+        student.intake?.toLowerCase().includes(selectedIntake.toLowerCase());
+
+      return matchesSearch && matchesFaculty && matchesDepartment && matchesBatch && matchesIntake;
+    });
+    
+    setFilteredStudents(results);
+  }, [
+    students,
+    searchQuery,
+    selectedFacultyFilter,
+    selectedDepartment,
+    selectedBatch,
+    selectedIntake
+  ]);
 
   if (isLoading) {
     return (
@@ -497,24 +609,45 @@ export default function ManageStudents({
 
           <div className="flex flex-wrap items-center gap-3">
             <select
+              aria-label="Filter by Faculty"
+              value={selectedFacultyFilter}
+              onChange={(e) => {
+                setSelectedFacultyFilter(e.target.value);
+                setSelectedDepartment("all"); // Reset department when faculty changes
+              }}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
+            >
+              <option value="all">All Faculties</option>
+              {Object.keys(universityData).map((faculty) => (
+                <option key={faculty} value={faculty}>
+                  {faculty}
+                </option>
+              ))}
+            </select>
+
+            <select
               aria-label="Filter by Department"
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[180px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
               <option value="all">All Departments</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Electrical Engineering">
-                Electrical Engineering
-              </option>
-              <option value="Mechanical Engineering">
-                Mechanical Engineering
-              </option>
-              <option value="Civil Engineering">Civil Engineering</option>
-              <option value="Business Administration">
-                Business Administration
-              </option>
-              <option value="Architecture">Architecture</option>
+              {selectedFacultyFilter === "all"
+                ? // Group all departments or just list all
+                  Object.values(universityData).flatMap((fac) =>
+                    Object.keys(fac).map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    )),
+                  )
+                : Object.keys(universityData[selectedFacultyFilter] || {}).map(
+                    (dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ),
+                  )}
             </select>
 
             <select
@@ -623,9 +756,6 @@ export default function ManageStudents({
               <User className="w-6 h-6 text-blue-600" />
               All Registered Students
             </h2>
-            <p className="text-gray-600 mt-1">
-              Complete directory of all registered profiles
-            </p>
           </div>
 
           <div className="bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 font-bold text-gray-700">
@@ -808,34 +938,98 @@ export default function ManageStudents({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* --- Academic Details --- */}
+                <div className="space-y-4">
+                  {/* Row: Faculty and Department */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Faculty
+                      </label>
+                      <select
+                        value={editFaculty}
+                        onChange={(e) => {
+                          setEditFaculty(e.target.value);
+                          setEditSubDepartment("");
+                          setEditForm({
+                            ...editForm,
+                            faculty: e.target.value,
+                            department: "",
+                            degree_program: "",
+                          });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Faculty</option>
+                        {Object.keys(universityData).map((faculty) => (
+                          <option key={faculty} value={faculty}>
+                            {faculty}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Department
+                      </label>
+                      <select
+                        value={editSubDepartment}
+                        onChange={(e) => {
+                          setEditSubDepartment(e.target.value);
+                          setEditForm({
+                            ...editForm,
+                            department: e.target.value,
+                            degree_program: "",
+                          });
+                        }}
+                        disabled={!editFaculty}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Select Department</option>
+                        {editFaculty &&
+                          Object.keys(universityData[editFaculty]).map(
+                            (dept) => (
+                              <option key={dept} value={dept}>
+                                {dept}
+                              </option>
+                            ),
+                          )}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row: Degree Program */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Department
+                      Degree Program
                     </label>
                     <select
-                      value={editForm.department}
+                      value={editForm.degree_program}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, department: e.target.value })
+                        setEditForm({
+                          ...editForm,
+                          degree_program: e.target.value,
+                        })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      disabled={!editSubDepartment}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
-                      <option value="Computer Science">Computer Science</option>
-                      <option value="Electrical Engineering">
-                        Electrical Engineering
-                      </option>
-                      <option value="Mechanical Engineering">
-                        Mechanical Engineering
-                      </option>
-                      <option value="Civil Engineering">
-                        Civil Engineering
-                      </option>
-                      <option value="Business Administration">
-                        Business Administration
-                      </option>
-                      <option value="Architecture">Architecture</option>
+                      <option value="">Select Degree Program</option>
+                      {editFaculty &&
+                        editSubDepartment &&
+                        universityData[editFaculty][editSubDepartment].map(
+                          (degree) => (
+                            <option key={degree} value={degree}>
+                              {degree}
+                            </option>
+                          ),
+                        )}
                     </select>
                   </div>
+                </div>
+
+                {/* --- Row: Gender & Batch --- */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Gender
@@ -852,9 +1046,6 @@ export default function ManageStudents({
                       <option value="Female">Female</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Batch (Year)
@@ -875,6 +1066,10 @@ export default function ManageStudents({
                       <option value="Year 4">Year 4</option>
                     </select>
                   </div>
+                </div>
+
+                {/* --- Row: Intake --- */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Intake

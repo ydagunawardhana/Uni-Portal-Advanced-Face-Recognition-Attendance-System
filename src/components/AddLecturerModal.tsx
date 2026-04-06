@@ -18,29 +18,92 @@ export default function AddLecturerModal({
   const [fullName, setFullName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [email, setEmail] = useState("");
+  const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
   const [autoGeneratePassword, setAutoGeneratePassword] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Available subjects list
-  const availableSubjects = [
-    "Database Systems",
-    "Web Development",
-    "Data Structures",
-    "Computer Networks",
-    "Software Engineering",
-    "Operating Systems",
-    "Artificial Intelligence",
-    "Machine Learning",
-    "Mobile App Development",
-    "Cybersecurity",
-    "Cloud Computing",
-    "Algorithm Design",
-    "Object-Oriented Programming",
-    "Discrete Mathematics",
-    "Computer Architecture",
-  ];
+  const universityData: Record<string, string[]> = {
+    "Faculty of Computing": [
+      "Department of Software Engineering & Computer Security",
+      "Department of Computer and Data Science",
+    ],
+    "Faculty of Business": [
+      "Department of Accounting & Finance",
+      "Department of Business Management",
+    ],
+    "Faculty of Engineering": [
+      "Department of Civil Engineering",
+      "Department of Mechanical Engineering",
+      "Department of Electronic & Electrical Engineering",
+    ],
+    "Faculty of Health and Life Science": [
+      "Department of Health Sciences",
+      "Department of Life Sciences",
+    ],
+  };
+
+  const subjectsByDepartment: Record<string, string[]> = {
+    "Department of Software Engineering & Computer Security": [
+      "Programming",
+      "Database Systems",
+      "Software Engineering",
+      "Cyber Security",
+    ],
+    "Department of Computer and Data Science": [
+      "Data Science",
+      "Artificial Intelligence",
+      "Machine Learning",
+      "Data Mining",
+      "Mathematics",
+    ],
+    "Department of Accounting & Finance": [
+      "Financial Accounting",
+      "Corporate Finance",
+      "Taxation",
+      "Audit",
+    ],
+    "Department of Business Management": [
+      "Marketing",
+      "HR Management",
+      "Business Strategy",
+      "Economics",
+    ],
+    "Department of Civil Engineering": [
+      "Structural Design",
+      "Fluid Mechanics",
+      "Geotechnical Engineering",
+    ],
+    "Department of Mechanical Engineering": [
+      "Thermodynamics",
+      "Robotics",
+      "Manufacturing Systems",
+    ],
+    "Department of Electronic & Electrical Engineering": [
+      "Circuits",
+      "Signal Processing",
+      "Power Systems",
+    ],
+    "Department of Health Sciences": [
+      "Anatomy",
+      "Pathology",
+      "Nursing",
+      "Biomedical Science",
+      "Pharmacology",
+    ],
+    "Department of Life Sciences": [
+      "Psychology",
+      "Biology",
+      "Chemistry",
+      "Genetics",
+    ],
+  };
+
+  const availableSubjects =
+    department && subjectsByDepartment[department]
+      ? subjectsByDepartment[department]
+      : [];
 
   if (!isOpen) return null;
 
@@ -61,8 +124,8 @@ export default function AddLecturerModal({
 
   const handleSave = () => {
     // Validate required fields
-    if (!fullName || !employeeId || !email || !department) {
-      toast.error("Please fill in all required fields");
+    if (!fullName || !employeeId || !email || !faculty || !department) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
@@ -70,6 +133,7 @@ export default function AddLecturerModal({
       fullName,
       employeeId,
       email,
+      faculty,
       department,
       assignedSubjects,
       autoGeneratePassword,
@@ -83,6 +147,7 @@ export default function AddLecturerModal({
     setFullName("");
     setEmployeeId("");
     setEmail("");
+    setFaculty("");
     setDepartment("");
     setAssignedSubjects([]);
     setAutoGeneratePassword(false);
@@ -174,30 +239,52 @@ export default function AddLecturerModal({
             />
           </div>
 
-          {/* Department */}
-          <div>
-            <label
-              htmlFor="department"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="department"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="">Select department</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Business Administration">
-                Business Administration
-              </option>
-              <option value="Architecture">Architecture</option>
-            </select>
+          {/* Faculty & Department Cascade Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Faculty <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={faculty}
+                onChange={(e) => {
+                  setFaculty(e.target.value);
+                  setDepartment("");
+                  setAssignedSubjects([]); // Flush mismatch constraints
+                }}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Select Faculty</option>
+                {Object.keys(universityData).map((fac) => (
+                  <option key={fac} value={fac}>
+                    {fac}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  setAssignedSubjects([]); // Flush on cascade hop
+                }}
+                disabled={!faculty}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Department</option>
+                {faculty &&
+                  universityData[faculty].map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           {/* Assigned Subjects - Badge Multi-select */}
@@ -237,8 +324,9 @@ export default function AddLecturerModal({
             {/* Subject Selector */}
             <div className="relative">
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 value=""
+                disabled={!department}
                 onChange={(e) => {
                   if (e.target.value) {
                     handleSelectSubject(e.target.value);
@@ -246,7 +334,9 @@ export default function AddLecturerModal({
                 }}
               >
                 <option value="" disabled>
-                  Select a subject to add...
+                  {department
+                    ? "Select a subject to add..."
+                    : "Select a Department first"}
                 </option>
                 {availableSubjects
                   .filter((subject) => !assignedSubjects.includes(subject))

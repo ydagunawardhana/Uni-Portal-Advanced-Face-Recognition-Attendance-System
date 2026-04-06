@@ -25,7 +25,9 @@ class Student(Base):
     # Extended registration fields
     email           = Column(String, nullable=True)
     mobile          = Column(String, nullable=True)
+    faculty         = Column(String, nullable=True)
     department      = Column(String, nullable=True)
+    degree_program  = Column(String, nullable=True)
     nic_number      = Column(String, nullable=True)
     gender          = Column(String, nullable=True)
     academic_year   = Column(String, nullable=True)
@@ -52,6 +54,17 @@ class AttendanceLog(Base):
     # Relationship: each log belongs to one student
     student = relationship("Student", back_populates="attendance_logs")
 
+
+class DeviceSession(Base):
+    __tablename__ = "device_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, index=True, nullable=False)
+    device_name = Column(String, nullable=False)
+    browser = Column(String, nullable=False)
+    ip_address = Column(String, nullable=False)
+    last_active = Column(DateTime, default=func.now())
+    is_current_session = Column(Boolean, default=False)
 
 class AuditLog(Base):
     """System-level actions trackable for Admin dashboard."""
@@ -87,6 +100,7 @@ class Lecturer(Base):
     name              = Column(String, nullable=False)
     employee_id       = Column(String, unique=True, index=True, nullable=False)
     email             = Column(String, unique=True, index=True, nullable=False)
+    faculty           = Column(String, nullable=True)
     department        = Column(String, nullable=False)
     assigned_subjects = Column(String, nullable=True) # Comma-separated or JSON
     is_active         = Column(Boolean, default=True, nullable=False)

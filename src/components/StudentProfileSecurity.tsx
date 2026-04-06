@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2, Camera, Clock } from 'lucide-react';
+import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2, Camera, Clock, Laptop, Smartphone, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const API_BASE = "http://localhost:8000";
@@ -9,7 +9,9 @@ interface StudentData {
   index_number: string;
   email: string;
   mobile: string;
+  faculty?: string;
   department: string;
+  degree_program?: string;
   nic_number: string;
   gender: string;
   academic_year: string;
@@ -17,6 +19,15 @@ interface StudentData {
   profile_picture?: string | null;
   retrain_requested: boolean;
   last_trained_date?: string | null;
+}
+
+interface SessionData {
+  id: number;
+  device_name: string;
+  browser: string;
+  ip_address: string;
+  last_active: string;
+  is_current_session: boolean;
 }
 
 export default function StudentProfileSecurity() {
@@ -30,6 +41,7 @@ export default function StudentProfileSecurity() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [isRetraining, setIsRetraining] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
@@ -42,23 +54,56 @@ export default function StudentProfileSecurity() {
   const lastTrained = studentData?.last_trained_date || 'Not available';
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndSessions = async () => {
       const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
       if (!token) return;
       try {
-        const res = await fetch(`${API_BASE}/api/student/profile`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setStudentData(data);
+        const [profileRes, sessionsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/student/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(`${API_BASE}/api/student/sessions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+        
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          setStudentData(profileData);
         }
+        
+        if (sessionsRes.ok) {
+           const sessionData = await sessionsRes.json();
+           setSessions(sessionData);
+        }
+
       } catch (err) {
         console.error(err);
       }
     };
-    fetchProfile();
+    fetchProfileAndSessions();
   }, []);
+
+  const handleRevokeSession = async (sessionId: number) => {
+    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    if (!token) return;
+    
+    const toastId = toast.loading("Revoking access...");
+    try {
+      const res = await fetch(`${API_BASE}/api/student/sessions/${sessionId}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success("Session revoked securely.", { id: toastId });
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+      } else {
+        toast.error("Failed to revoke session.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Network error.", { id: toastId });
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -296,53 +341,72 @@ export default function StudentProfileSecurity() {
               <p className="text-base text-gray-700">{studentData?.email || '...'}</p>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                Faculty
+              </label>
+              <p className="text-base text-gray-700">{studentData?.faculty || 'N/A'}</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Department
                 </label>
-                <p className="text-base text-gray-700">{studentData?.department || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.department || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Batch
                 </label>
-                <p className="text-base text-gray-700">{studentData?.academic_year || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.academic_year || 'N/A'}</p>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                Degree Program
+              </label>
+              <p className="text-base text-gray-700">{studentData?.degree_program || 'N/A'}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Mobile
                 </label>
-                <p className="text-base text-gray-700">{studentData?.mobile || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.mobile || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   NIC Number
                 </label>
-                <p className="text-base text-gray-700">{studentData?.nic_number || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.nic_number || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Gender
                 </label>
-                <p className="text-base text-gray-700">{studentData?.gender || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.gender || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
                   Intake
                 </label>
-                <p className="text-base text-gray-700">{studentData?.intake || '...'}</p>
+                <p className="text-base text-gray-700">{studentData?.intake || 'N/A'}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Side - Face Recognition Status */}
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-          <div className="flex items-center gap-2 mb-6">
-            <Shield className="w-5 h-5 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">Face Recognition Status</h2>
-          </div>
+        {/* Right Side - Stacked Cards */}
+        <div className="space-y-6">
+          {/* Face Recognition Status Card */}
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Shield className="w-5 h-5 text-red-600" />
+              <h2 className="text-xl font-bold text-gray-900">Face Recognition Status</h2>
+            </div>
 
           {/* Status Section */}
           <div className="mb-8">
@@ -405,11 +469,60 @@ export default function StudentProfileSecurity() {
             </p>
           </div>
 
-          {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Face re-training requires admin approval. You will be notified via email once your request is processed.
-            </p>
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Face re-training requires admin approval. You will be notified via email once your request is processed.
+              </p>
+            </div>
+          </div>
+
+          {/* Active Sessions & Devices Card */}
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-900">Active Sessions & Devices</h2>
+            </div>
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+              {sessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50 hover:bg-white transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-gray-100 rounded-full text-gray-600">
+                      {session.device_name.toLowerCase().includes("pc") || session.device_name.toLowerCase().includes("mac") ? (
+                        <Laptop className="w-5 h-5" />
+                      ) : (
+                        <Smartphone className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {session.device_name} <span className="text-gray-400 font-normal ml-1">• {session.browser}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {session.ip_address} • {session.last_active}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    {session.is_current_session ? (
+                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                        Active Now
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => handleRevokeSession(session.id)}
+                        className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Revoke Access
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {sessions.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No active sessions tracked securely.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

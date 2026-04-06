@@ -203,7 +203,9 @@ class ActivityItem(BaseModel):
 class UpdateStudentRequest(BaseModel):
     name: str
     mobile: Optional[str] = None
+    faculty: Optional[str] = None
     department: Optional[str] = None
+    degree_program: Optional[str] = None
     academic_year: Optional[str] = None
     intake: Optional[str] = None
     nic_number: Optional[str] = None
@@ -441,6 +443,7 @@ class LecturerCreateRequest(BaseModel):
     name: str
     employee_id: str
     email: str
+    faculty: Optional[str] = None
     department: str
     assigned_subjects: Optional[str] = None
     auto_generate_password: bool = True
@@ -449,6 +452,7 @@ class LecturerCreateRequest(BaseModel):
 class LecturerUpdateRequest(BaseModel):
     name: str
     email: Optional[str] = None
+    faculty: Optional[str] = None
     department: str
     assigned_subjects: Optional[str] = None
     is_active: bool
@@ -618,7 +622,9 @@ def update_student(
     # Update Student record
     student.name = payload.name
     student.mobile = payload.mobile
+    student.faculty = payload.faculty
     student.department = payload.department
+    student.degree_program = payload.degree_program
     student.academic_year = payload.academic_year
     student.intake = payload.intake
     student.nic_number = payload.nic_number
@@ -792,6 +798,7 @@ async def create_lecturer(
         name=payload.name,
         employee_id=payload.employee_id,
         email=payload.email,
+        faculty=payload.faculty,
         department=payload.department,
         assigned_subjects=payload.assigned_subjects,
         is_active=True
@@ -840,6 +847,7 @@ def update_lecturer(
 
     # Update Lecturer fields
     lecturer.name = payload.name
+    lecturer.faculty = payload.faculty
     lecturer.department = payload.department
     lecturer.assigned_subjects = payload.assigned_subjects
     lecturer.is_active = payload.is_active
