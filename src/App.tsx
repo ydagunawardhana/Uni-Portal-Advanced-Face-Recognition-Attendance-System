@@ -9,6 +9,7 @@ import StudentDashboard from "./components/StudentDashboard";
 import ForgotPasswordScreen from "./components/ForgotPasswordScreen";
 import StudentCorrectionRequestScreen from "./components/AttendanceCorrectionRequest";
 import LecturerLiveClassMonitoring from "./components/LecturerLiveClassMonitoring";
+import AdminLogin from "./components/AdminLogin";
 
 type Screen =
   | "landing"
@@ -21,7 +22,8 @@ type Screen =
   | "sidebar-demo"
   | "start-live-session"
   | "live-monitoring"
-  | "student-correction";
+  | "student-correction"
+  | "admin-login";
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
 export default function App() {
@@ -37,7 +39,7 @@ export default function App() {
     return "landing";
   });
 
-  const [loginRole, setLoginRole] = useState<"Admin" | "Lecturer" | "Student">("Admin");
+  const [loginRole, setLoginRole] = useState<"Lecturer" | "Student">("Student");
 
   const handleLogin = (role: "Admin" | "Lecturer" | "Student") => {
     setUserRole(role);
@@ -61,7 +63,7 @@ export default function App() {
     localStorage.removeItem("adminActiveTab");
     localStorage.removeItem("requiresPasswordChange");
 
-    setCurrentScreen("login");
+    setCurrentScreen("landing");
     setUserRole(null);
   };
 
@@ -90,8 +92,12 @@ export default function App() {
       />
       {currentScreen === "landing" && (
         <LandingPage onNavigateToLogin={(role) => {
-          setLoginRole(role ?? "Admin");
-          setCurrentScreen("login");
+          if (role === "Admin") {
+            setCurrentScreen("admin-login");
+          } else {
+            setLoginRole(role ?? "Student");
+            setCurrentScreen("login");
+          }
         }} />
       )}
       {currentScreen === "login" && (
@@ -99,6 +105,12 @@ export default function App() {
           initialRole={loginRole}
           onLogin={handleLogin}
           onForgotPassword={handleForgotPassword}
+          onBackToHome={() => setCurrentScreen("landing")}
+        />
+      )}
+      {currentScreen === "admin-login" && (
+        <AdminLogin
+          onLogin={handleLogin}
           onBackToHome={() => setCurrentScreen("landing")}
         />
       )}

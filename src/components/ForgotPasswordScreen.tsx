@@ -24,6 +24,7 @@ export default function ForgotPasswordScreen({
   onBackToLogin,
 }: ForgotPasswordScreenProps) {
   const [email, setEmail] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [step, setStep] = useState(1);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
@@ -75,6 +76,8 @@ export default function ForgotPasswordScreen({
         throw new Error(data.detail || "Failed to send verification code");
       }
 
+      setRecoveryEmail(data.recovery_email);
+
       toast.success("Success! Verification code sent to your email.", {
         id: toastId,
         duration: 4000,
@@ -114,10 +117,12 @@ export default function ForgotPasswordScreen({
       }
 
       // UX delay — keep the loading spinner visible
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      await new Promise((resolve) => setTimeout(resolve, 2500));
 
       // Toast AFTER delay
-      toast.success("Code verified! You can now reset your password.", { id: toastId });
+      toast.success("Code verified! You can now reset your password.", {
+        id: toastId,
+      });
       setStep(3);
     } catch (error: any) {
       toast.error(error.message || "Verification failed. Please try again.", {
@@ -147,10 +152,10 @@ export default function ForgotPasswordScreen({
       const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email, 
-          otp: otp.join(""), 
-          new_password: newPassword 
+        body: JSON.stringify({
+          email,
+          otp: otp.join(""),
+          new_password: newPassword,
         }),
       });
 
@@ -161,13 +166,18 @@ export default function ForgotPasswordScreen({
       }
 
       // UX delay — keep the loading spinner visible
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Toast AFTER delay
-      toast.success("Password successfully reset! Please login.", { id: toastId, duration: 4000 });
+      toast.success("Password successfully reset! Please login.", {
+        id: toastId,
+        duration: 4000,
+      });
       onBackToLogin();
     } catch (error: any) {
-      toast.error(error.message || "Reset failed. Please try again.", { id: toastId });
+      toast.error(error.message || "Reset failed. Please try again.", {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }
@@ -586,7 +596,10 @@ export default function ForgotPasswordScreen({
                       Check your email
                     </h2>
                     <p style={{ color: "#5a5d61ff", fontSize: "0.895rem" }}>
-                      We've sent a 6-digit verification code to your email.
+                      We've sent a 6-digit verification code to your registered
+                      email:
+                      <br />{" "}
+                      <span className="text-gray-800 font-medium">{recoveryEmail}</span>
                     </p>
                   </div>
 
@@ -644,7 +657,7 @@ export default function ForgotPasswordScreen({
                           Didn't receive the code?{" "}
                           <button
                             type="button"
-                            onClick={handleSubmit} 
+                            onClick={handleSubmit}
                             style={{
                               color: "#2563eb",
                               fontWeight: 600,

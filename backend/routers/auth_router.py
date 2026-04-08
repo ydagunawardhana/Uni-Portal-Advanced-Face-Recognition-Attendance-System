@@ -202,9 +202,10 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     # 1. Check user exists
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     if not user:
-        # For security, you might normally return a generic success hidden message, 
-        # but the user requested handling 'Email not found' on frontend specifically.
-        raise HTTPException(status_code=404, detail="Email not found.")
+        raise HTTPException(status_code=404, detail="Account not found for this email.")
+        
+    if not user.personal_email:
+        raise HTTPException(status_code=400, detail="No personal recovery email is linked to this account. Please contact admin.")
 
     # 2. Generate 6-digit OTP
     otp = str(random.randint(100000, 999999))
@@ -221,7 +222,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     db.commit()
 
     # 4. Send Email
-    send_otp_email(payload.email, otp)
+    send_otp_email(user.personal_email, otp)
 
     log_audit_action(
         db=db,
@@ -232,7 +233,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
         target_id=payload.email,
     )
 
-    return {"message": "Verification code sent to your email."}
+    return {"message": "Verification code sent to your email.", "recovery_email": user.personal_email}
 
 
 @router.post("/auth/verify-otp")

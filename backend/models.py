@@ -10,6 +10,7 @@ class User(Base):
 
     id              = Column(Integer, primary_key=True, index=True)
     email           = Column(String, unique=True, index=True, nullable=False)
+    personal_email  = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role            = Column(String, nullable=False)   # 'Admin' | 'Lecturer' | 'Student'
     is_active       = Column(Boolean, default=True, nullable=False)
@@ -24,6 +25,7 @@ class Student(Base):
 
     # Extended registration fields
     email           = Column(String, nullable=True)
+    personal_email  = Column(String, nullable=True)
     mobile          = Column(String, nullable=True)
     faculty         = Column(String, nullable=True)
     department      = Column(String, nullable=True)
@@ -100,6 +102,7 @@ class Lecturer(Base):
     name              = Column(String, nullable=False)
     employee_id       = Column(String, unique=True, index=True, nullable=False)
     email             = Column(String, unique=True, index=True, nullable=False)
+    personal_email    = Column(String, nullable=True)
     faculty           = Column(String, nullable=True)
     department        = Column(String, nullable=False)
     assigned_subjects = Column(String, nullable=True) # Comma-separated or JSON

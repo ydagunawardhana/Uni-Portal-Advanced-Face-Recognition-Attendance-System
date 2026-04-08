@@ -32,14 +32,14 @@ def seed_admin() -> None:
         ).first()
         if not exists:
             admin = models.User(
-                email           = "admin@gmail.com",
+                email           = "admin@university.edu",
                 hashed_password = hash_password("admin123"),
                 role            = "Admin",
                 is_active       = True,
             )
             db.add(admin)
             db.commit()
-            print("[Seeder] Default Admin created  →  admin@gmail.com / admin123")
+            print("[Seeder] Default Admin created  →  admin@university.edu / admin123")
         else:
             print("[Seeder] Admin account already exists — skipping.")
     finally:

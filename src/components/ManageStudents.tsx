@@ -121,6 +121,7 @@ interface StudentData {
   intake: string;
   mobile: string;
   email: string;
+  personal_email?: string;
   nic_number: string;
   gender: string;
   profile_picture?: string | null;
@@ -169,6 +170,7 @@ export default function ManageStudents({
     gender: "",
     index_number: "",
     email: "",
+    personal_email: "",
   });
   const [editFaculty, setEditFaculty] = useState("");
   const [editSubDepartment, setEditSubDepartment] = useState("");
@@ -496,6 +498,7 @@ export default function ManageStudents({
       gender: student.gender || "",
       index_number: student.index_number,
       email: student.email || "",
+      personal_email: student.personal_email || "",
     });
     setIsEditModalOpen(true);
   };
@@ -521,6 +524,7 @@ export default function ManageStudents({
           body: JSON.stringify({
             name: editForm.name,
             mobile: editForm.mobile,
+            personal_email: editForm.personal_email,
             faculty: editForm.faculty,
             department: editForm.department,
             degree_program: editForm.degree_program,
@@ -880,7 +884,7 @@ export default function ManageStudents({
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-500 mb-1">
-                    Email Address (Read-only)
+                    Official Email (Read-only)
                   </label>
                   <input
                     type="text"
@@ -904,6 +908,19 @@ export default function ManageStudents({
                     value={editForm.name}
                     onChange={(e) =>
                       setEditForm({ ...editForm, name: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Personal Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.personal_email}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, personal_email: e.target.value })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />

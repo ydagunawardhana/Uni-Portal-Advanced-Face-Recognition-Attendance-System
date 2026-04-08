@@ -8,6 +8,7 @@ interface StudentData {
   name: string;
   index_number: string;
   email: string;
+  personal_email?: string;
   mobile: string;
   faculty?: string;
   department: string;
@@ -336,9 +337,16 @@ export default function StudentProfileSecurity() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
-                Email Address
+                University Email
               </label>
               <p className="text-base text-gray-700">{studentData?.email || '...'}</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                Personal Email
+              </label>
+              <p className="text-base text-gray-700">{studentData?.personal_email || '...'}</p>
             </div>
 
             <div>

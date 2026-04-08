@@ -39,17 +39,17 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 DATASET_DIR = Path(__file__).resolve().parent.parent / "dataset"
 
 
-def send_student_credentials_email(email: str, name: str, password: str):
+def send_student_credentials_email(personal_email: str, official_email: str, name: str, password: str):
     SENDER_EMAIL = "ydmaxx43@gmail.com"
     SENDER_PASSWORD = "zucytjngeujifxgl"
     
     msg = EmailMessage()
     msg['Subject'] = "Welcome to University Portal - Student Account Credentials"
     msg['From'] = "Uni Portal Admin"
-    msg['To'] = email
+    msg['To'] = personal_email
     
     # Plain text fallback
-    text_fallback = f"Dear {name},\n\nWelcome to the University Face Recognition Attendance Portal!\nYour student account has been successfully created. Here are your temporary login credentials:\n\nUsername: {email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
+    text_fallback = f"Dear {name},\n\nWelcome to the University Face Recognition Attendance Portal!\nYour student account has been successfully created. Here are your temporary login credentials:\n\nYour official login username is: {official_email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
     msg.set_content(text_fallback)
 
     # 2. Simple & Clean HTML Version (Dark Theme)
@@ -66,8 +66,8 @@ def send_student_credentials_email(email: str, name: str, password: str):
           </p>
           
           <div style="background-color: #334155; border: 2px dashed #3b82f6; padding: 20px; text-align: center; border-radius: 8px; margin: 35px 0;">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Username</p>
-            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{email}</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Your official login username is:</p>
+            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{official_email}</p>
             <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Temporary Password</p>
             <p style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; letter-spacing: 2px; font-family: monospace;">{password}</p>
           </div>
@@ -101,21 +101,21 @@ def send_student_credentials_email(email: str, name: str, password: str):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            print(f"Student credentials successfully emailed to {email}")
+            print(f"Student credentials successfully emailed to {personal_email}")
     except Exception as e:
-        print(f"Failed to email student credentials to {email}. Error: {e}")
+        print(f"Failed to email student credentials to {personal_email}. Error: {e}")
 
-def send_lecturer_credentials_email(email: str, name: str, password: str):
+def send_lecturer_credentials_email(personal_email: str, official_email: str, name: str, password: str):
     SENDER_EMAIL = "ydmaxx43@gmail.com"
     SENDER_PASSWORD = "zucytjngeujifxgl"
     
     msg = EmailMessage()
     msg['Subject'] = "Welcome to University Portal - Lecturer Account Credentials"
     msg['From'] = "Uni Portal Admin"
-    msg['To'] = email
+    msg['To'] = personal_email
     
     # Plain text fallback
-    text_fallback = f"Dear {name},\n\nWelcome to the Academic Portal!\nYour Lecturer credentials have been generated.\n\nUsername: {email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
+    text_fallback = f"Dear {name},\n\nWelcome to the Academic Portal!\nYour Lecturer credentials have been generated.\n\nYour official login username is: {official_email}\nTemporary Password: {password}\nAccess Portal: http://localhost:3000/login\n\nPlease log in and change your password immediately.\n\nBest Regards,\nUniversity Portal Admin Team"
     msg.set_content(text_fallback)
 
     # 2. Simple & Clean HTML Version (Dark Theme)
@@ -132,8 +132,8 @@ def send_lecturer_credentials_email(email: str, name: str, password: str):
           </p>
           
           <div style="background-color: #334155; border: 2px dashed #3b82f6; padding: 20px; text-align: center; border-radius: 8px; margin: 35px 0;">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Username</p>
-            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{email}</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Your official login username is:</p>
+            <p style="margin: 0 0 20px 0; font-size: 20px; color: #ffffff; font-weight: bold;">{official_email}</p>
             <p style="margin: 0 0 10px 0; font-size: 14px; color: #9ca3af;">Temporary Password</p>
             <p style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; letter-spacing: 2px; font-family: monospace;">{password}</p>
           </div>
@@ -167,9 +167,9 @@ def send_lecturer_credentials_email(email: str, name: str, password: str):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            print(f"Lecturer credentials successfully emailed to {email}")
+            print(f"Lecturer credentials successfully emailed to {personal_email}")
     except Exception as e:
-        print(f"Failed to email lecturer credentials to {email}. Error: {e}")
+        print(f"Failed to email lecturer credentials to {personal_email}. Error: {e}")
 
 def generate_temp_password(name: str) -> str:
     """Generate an 8-character password: 3 letters + 1 special + 4 alphanumeric."""
@@ -203,6 +203,7 @@ class ActivityItem(BaseModel):
 class UpdateStudentRequest(BaseModel):
     name: str
     mobile: Optional[str] = None
+    personal_email: Optional[str] = None
     faculty: Optional[str] = None
     department: Optional[str] = None
     degree_program: Optional[str] = None
@@ -422,8 +423,11 @@ class RegisterStudentRequest(BaseModel):
     name:               str
     index_number:       str
     email:              str
+    personal_email:     str
     mobile:             str
+    faculty:            Optional[str] = None
     department:         str
+    degree_program:     Optional[str] = None
     nic_number:         str
     gender:             str
     academic_year:      str
@@ -443,6 +447,7 @@ class LecturerCreateRequest(BaseModel):
     name: str
     employee_id: str
     email: str
+    personal_email: str
     faculty: Optional[str] = None
     department: str
     assigned_subjects: Optional[str] = None
@@ -452,6 +457,7 @@ class LecturerCreateRequest(BaseModel):
 class LecturerUpdateRequest(BaseModel):
     name: str
     email: Optional[str] = None
+    personal_email: Optional[str] = None
     faculty: Optional[str] = None
     department: str
     assigned_subjects: Optional[str] = None
@@ -544,8 +550,11 @@ def register_student(
         index_number      = payload.index_number,
         name              = payload.name,
         email             = payload.email,
+        personal_email    = payload.personal_email,
         mobile            = payload.mobile,
+        faculty           = payload.faculty,
         department        = payload.department,
+        degree_program    = payload.degree_program,
         nic_number        = payload.nic_number,
         gender            = payload.gender,
         academic_year     = payload.academic_year,
@@ -558,6 +567,7 @@ def register_student(
     #  Create User login account 
     user = models.User(
         email           = payload.email,
+        personal_email  = payload.personal_email,
         hashed_password = hashed,
         role            = "Student",
         is_active       = True,
@@ -567,7 +577,7 @@ def register_student(
     db.refresh(student)
 
     if payload.auto_gen_password and generated_password:
-        background_tasks.add_task(send_student_credentials_email, payload.email, payload.name, generated_password)
+        background_tasks.add_task(send_student_credentials_email, payload.personal_email, payload.email, payload.name, generated_password)
 
     # Audit log
     log_audit_action(
@@ -622,6 +632,8 @@ def update_student(
     # Update Student record
     student.name = payload.name
     student.mobile = payload.mobile
+    if payload.personal_email is not None:
+        student.personal_email = payload.personal_email
     student.faculty = payload.faculty
     student.department = payload.department
     student.degree_program = payload.degree_program
@@ -629,6 +641,11 @@ def update_student(
     student.intake = payload.intake
     student.nic_number = payload.nic_number
     student.gender = payload.gender
+
+    # Sync with users table
+    user_record = db.query(models.User).filter(models.User.email == student.email).first()
+    if user_record and payload.personal_email is not None:
+        user_record.personal_email = payload.personal_email
 
     db.commit()
     db.refresh(student)
@@ -798,6 +815,7 @@ async def create_lecturer(
         name=payload.name,
         employee_id=payload.employee_id,
         email=payload.email,
+        personal_email=payload.personal_email,
         faculty=payload.faculty,
         department=payload.department,
         assigned_subjects=payload.assigned_subjects,
@@ -809,6 +827,7 @@ async def create_lecturer(
     # Create User Record
     new_user = models.User(
         email=payload.email,
+        personal_email=payload.personal_email,
         hashed_password=hashed_pw,
         role="Lecturer",
         is_active=True
@@ -825,7 +844,7 @@ async def create_lecturer(
     )
 
     if payload.auto_generate_password and temp_pw:
-        background_tasks.add_task(send_lecturer_credentials_email, payload.email, payload.name, temp_pw)
+        background_tasks.add_task(send_lecturer_credentials_email, payload.personal_email, payload.email, payload.name, temp_pw)
         return {"success": True, "message": f"Lecturer {payload.name} registered and credentials emailed successfully."}
 
     return {"success": True, "message": f"Lecturer {payload.name} registered successfully."}
@@ -847,6 +866,8 @@ def update_lecturer(
 
     # Update Lecturer fields
     lecturer.name = payload.name
+    if payload.personal_email is not None:
+        lecturer.personal_email = payload.personal_email
     lecturer.faculty = payload.faculty
     lecturer.department = payload.department
     lecturer.assigned_subjects = payload.assigned_subjects
@@ -856,6 +877,8 @@ def update_lecturer(
     user = db.query(models.User).filter(models.User.email == lecturer.email).first()
     if user:
         user.is_active = payload.is_active
+        if payload.personal_email is not None:
+            user.personal_email = payload.personal_email
 
     db.commit()
 
@@ -905,7 +928,7 @@ def delete_lecturer(
     return {"success": True, "message": "Lecturer profile and user account deleted successfully."}
 
 
-# ─── Audit Logs ──────────────────────────────────────────────────────────────
+# Audit Logs
 
 @router.get("/audit-logs")
 def get_audit_logs(

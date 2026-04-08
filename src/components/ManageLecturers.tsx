@@ -13,6 +13,7 @@ interface Lecturer {
   department: string;
   faculty?: string;
   email: string;
+  personal_email?: string;
   assigned_subjects?: string;
   is_active: boolean;
   avatarColor?: string; // Optional local UI state
@@ -169,6 +170,7 @@ export default function ManageLecturers() {
         name: formData.fullName,
         employee_id: formData.employeeId,
         email: formData.email,
+        personal_email: formData.personal_email,
         faculty: formData.faculty,
         department: formData.department,
         assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
@@ -212,6 +214,7 @@ export default function ManageLecturers() {
       const payload = {
         name: formData.fullName,
         email: formData.email,
+        personal_email: formData.personalEmail,
         faculty: formData.faculty,
         department: formData.department,
         assigned_subjects: Array.isArray(formData.assignedSubjects) ? formData.assignedSubjects.join(", ") : (formData.assignedSubjects || ""),
@@ -614,6 +617,7 @@ export default function ManageLecturers() {
           name: selectedLecturer.name,
           employeeId: selectedLecturer.employee_id,
           email: selectedLecturer.email,
+          personalEmail: selectedLecturer.personal_email || "",
           faculty: selectedLecturer.faculty || "",
           department: selectedLecturer.department,
           assigned_subjects: selectedLecturer.assigned_subjects || "",

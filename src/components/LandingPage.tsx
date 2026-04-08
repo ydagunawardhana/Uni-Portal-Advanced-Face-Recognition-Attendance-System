@@ -89,21 +89,22 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* Lecturer Button */}
+                {/* Student Portal - Primary */}
                 <button
-                  onClick={() => onNavigateToLogin("Lecturer")}
-                  className="group px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 flex items-center justify-center space-x-2"
+                  onClick={() => onNavigateToLogin("Student")}
+                  className="group px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-lg shadow-xl shadow-blue-900/20 hover:shadow-blue-900/30 hover:scale-105 flex items-center justify-center space-x-2"
                 >
-                  <span>Access Lecturer Portal</span>
+                  <GraduationCap className="w-5 h-5" />
+                  <span>Student Portal</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                {/* Admin Button */}
+                {/* Lecturer Portal - Secondary */}
                 <button
-                  onClick={() => onNavigateToLogin("Admin")}
-                  className="px-8 py-4 bg-transparent border-2 border-blue-500 text-blue-400 rounded-lg hover:bg-blue-600/10 transition-all font-semibold text-lg"
+                  onClick={() => onNavigateToLogin("Lecturer")}
+                  className="px-8 py-4 bg-transparent border-2 border-blue-500 text-blue-400 rounded-xl hover:bg-blue-600/10 transition-all font-semibold text-lg hover:scale-105 flex items-center justify-center space-x-2"
                 >
-                  Admin Login
+                  <span>Lecturer Portal</span>
                 </button>
               </div>
 
@@ -484,6 +485,14 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                   <Phone className="w-4 h-4" />
                   <span className="text-sm">+1 (555) 123-4567</span>
                 </li>
+                <li>
+                  <button
+                    onClick={() => onNavigateToLogin("Admin")}
+                    className="text-gray-400 hover:text-blue-400 transition-colors text-sm text-left cursor-pointer"
+                  >
+                    System Admin
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
@@ -491,7 +500,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8 mt-8 text-center text-gray-400 text-sm">
             <p>
-              &copy; 2024 UniPortal. All rights reserved. | University Smart
+              &copy; 2026 UniPortal. All rights reserved. | University Smart
               Attendance System
             </p>
           </div>

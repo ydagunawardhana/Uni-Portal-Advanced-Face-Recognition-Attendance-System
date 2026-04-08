@@ -128,7 +128,7 @@ export default function AdminDashboard({
   //  Form fields
   const [studentName, setStudentName] = useState("");
   const [studentId, setStudentId] = useState("");
-  const [email, setEmail] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [department, setDepartment] = useState(""); // Maps to selectedDepartment
@@ -329,13 +329,16 @@ export default function AdminDashboard({
     captureLoop();
   }, [capturing, captureComplete, captureFrame, studentId, camActive]);
 
+  // Derived fields
+  const autoEmail = studentId ? `${studentId.toLowerCase().replace(/\s+/g, '')}@students.university.edu` : "";
+
   //  Register student
   const handleRegisterStudent = useCallback(async () => {
     // Basic validation
     if (
       !studentName ||
       !studentId ||
-      !email ||
+      !personalEmail ||
       !mobileNumber ||
       !department ||
       !nicNumber ||
@@ -365,9 +368,12 @@ export default function AdminDashboard({
         body: JSON.stringify({
           name: studentName,
           index_number: studentId,
-          email,
+          email: autoEmail,
+          personal_email: personalEmail,
           mobile: mobileNumber,
           department,
+          faculty: selectedFaculty,
+          degree_program: selectedDegree,
           nic_number: nicNumber,
           gender,
           academic_year: academicYearText,
@@ -420,7 +426,7 @@ export default function AdminDashboard({
   }, [
     studentName,
     studentId,
-    email,
+    personalEmail,
     mobileNumber,
     department,
     nicNumber,
@@ -430,13 +436,15 @@ export default function AdminDashboard({
     autoGeneratePassword,
     captureComplete,
     capturedFrames,
+    selectedFaculty,
+    selectedDegree,
   ]);
 
   //  Clear form
   const handleClearForm = () => {
     setStudentName("");
     setStudentId("");
-    setEmail("");
+    setPersonalEmail("");
     setMobileNumber("");
     setSelectedFaculty("");
     setDepartment("");
@@ -655,24 +663,45 @@ export default function AdminDashboard({
                       />
                     </div>
 
-                    {/* Email */}
+                    {/* Personal Email */}
+                    <div>
+                      <label
+                        htmlFor="personalEmail"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Personal Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        id="personalEmail"
+                        value={personalEmail}
+                        onChange={(e) => setPersonalEmail(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        placeholder="e.g. john.doe@gmail.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Secure logic credentials will be generated and delivered here
+                      </p>
+                    </div>
+
+                    {/* Official University Email */}
                     <div>
                       <label
                         htmlFor="email"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        Email Address <span className="text-red-500">*</span>
+                        Official University Email (Auto-generated)
                       </label>
                       <input
-                        type="email"
+                        type="text"
                         id="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        value={autoEmail}
+                        readOnly
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-black font-medium outline-none cursor-not-allowed"
                         placeholder="student@university.edu"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Essential for attendance reports
+                        Essential for academic attendance grouping
                       </p>
                     </div>
 

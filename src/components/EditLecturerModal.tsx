@@ -11,6 +11,7 @@ interface EditLecturerModalProps {
     name: string;
     employeeId: string;
     email: string;
+    personalEmail: string;
     faculty?: string;
     department: string;
     assigned_subjects?: string;
@@ -61,6 +62,7 @@ export default function EditLecturerModal({
 }: EditLecturerModalProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -73,6 +75,7 @@ export default function EditLecturerModal({
     if (isOpen && lecturer) {
       setFullName(lecturer.name);
       setEmail(lecturer.email);
+      setPersonalEmail(lecturer.personalEmail || "");
       setFaculty(lecturer.faculty || "");
       setDepartment(lecturer.department);
       setIsActive(lecturer.status === "Active");
@@ -105,6 +108,7 @@ export default function EditLecturerModal({
       fullName,
       employeeId,
       email,
+      personalEmail,
       faculty,
       department,
       isActive,
@@ -186,13 +190,13 @@ export default function EditLecturerModal({
               </p>
             </div>
 
-            {/* Email Address */}
+            {/* Official Email */}
             <div>
               <label
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email Address <span className="text-red-500">*</span>
+                Official Email (Read-only)
               </label>
               <input
                 type="email"
@@ -203,8 +207,26 @@ export default function EditLecturerModal({
                 placeholder="lecturer@university.edu"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Email address is used as the login username and cannot be changed.
+                Used as the login username and cannot be changed.
               </p>
+            </div>
+
+            {/* Personal Email */}
+            <div className="md:col-span-2">
+              <label
+                htmlFor="personalEmail"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Personal Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="personalEmail"
+                value={personalEmail}
+                onChange={(e) => setPersonalEmail(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                placeholder="Enter personal email for notifications"
+              />
             </div>
           </div>
 

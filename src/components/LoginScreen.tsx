@@ -20,17 +20,17 @@ interface LoginScreenProps {
   onLogin: (role: "Admin" | "Lecturer" | "Student") => void;
   onForgotPassword: () => void;
   onBackToHome?: () => void;
-  initialRole?: "Admin" | "Lecturer" | "Student";
+  initialRole?: "Lecturer" | "Student";
 }
 
 export default function LoginScreen({
   onLogin,
   onForgotPassword,
   onBackToHome,
-  initialRole = "Admin",
+  initialRole = "Student",
 }: LoginScreenProps) {
   const [selectedRole, setSelectedRole] = useState<
-    "Admin" | "Lecturer" | "Student"
+    "Lecturer" | "Student"
   >(initialRole);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -112,8 +112,7 @@ export default function LoginScreen({
     },
   ];
 
-  const roles: Array<"Admin" | "Lecturer" | "Student"> = [
-    "Admin",
+  const roles: Array<"Lecturer" | "Student"> = [
     "Lecturer",
     "Student",
   ];
@@ -407,7 +406,7 @@ export default function LoginScreen({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="login-input"
-                      placeholder="Enter your Email Address"
+                      placeholder="Enter your University Email Address"
                       required
                       disabled={loading}
                     />

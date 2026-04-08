@@ -50,7 +50,7 @@ def student_login(payload: StudentLoginRequest, db: Session = Depends(get_db)):
             detail="Account is deactivated. Contact your administrator."
         )
 
-    student = db.query(models.Student).filter(models.Student.email == payload.email).first()
+    student = db.query(models.Student).filter(models.Student.email == user.email).first()
     requires_change = student.requires_password_change if student else False
 
     token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email})
@@ -114,6 +114,7 @@ class StudentProfileResponse(BaseModel):
     name: str
     index_number: str
     email: str
+    personal_email: Optional[str] = None
     mobile: str
     faculty: Optional[str] = None
     department: str
@@ -140,6 +141,7 @@ def get_student_profile(
         name=student_record.name,
         index_number=student_record.index_number,
         email=student_record.email,
+        personal_email=student_record.personal_email,
         mobile=student_record.mobile,
         faculty=student_record.faculty,
         department=student_record.department,

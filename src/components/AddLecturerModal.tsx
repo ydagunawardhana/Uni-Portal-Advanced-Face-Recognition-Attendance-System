@@ -17,7 +17,7 @@ export default function AddLecturerModal({
 }: AddLecturerModalProps) {
   const [fullName, setFullName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [email, setEmail] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
@@ -122,9 +122,13 @@ export default function AddLecturerModal({
     setIsDropdownOpen(!isDropdownOpen);
   };
 
+  const autoEmail = employeeId
+    ? `${employeeId.toLowerCase().replace(/\s+/g, "")}@university.edu`
+    : "";
+
   const handleSave = () => {
     // Validate required fields
-    if (!fullName || !employeeId || !email || !faculty || !department) {
+    if (!fullName || !employeeId || !personalEmail || !faculty || !department) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -132,7 +136,8 @@ export default function AddLecturerModal({
     const lecturerData = {
       fullName,
       employeeId,
-      email,
+      email: autoEmail,
+      personal_email: personalEmail,
       faculty,
       department,
       assignedSubjects,
@@ -146,7 +151,7 @@ export default function AddLecturerModal({
     // Reset form
     setFullName("");
     setEmployeeId("");
-    setEmail("");
+    setPersonalEmail("");
     setFaculty("");
     setDepartment("");
     setAssignedSubjects([]);
@@ -184,7 +189,7 @@ export default function AddLecturerModal({
         </div>
 
         {/* Form Content */}
-        <div className="px-6 py-6 space-y-5">
+        <div className="px-6 py-6 space-y-5 max-h-[70vh] overflow-y-auto">
           {/* Full Name */}
           <div>
             <label
@@ -217,24 +222,42 @@ export default function AddLecturerModal({
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="e.g., LEC-009"
+              placeholder="e.g. LEC001"
             />
           </div>
 
-          {/* Email Address */}
+          {/* Personal Email Address */}
+          <div>
+            <label
+              htmlFor="personalEmail"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Personal Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              id="personalEmail"
+              value={personalEmail}
+              onChange={(e) => setPersonalEmail(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              placeholder="e.g. john.doe@gmail.com"
+            />
+          </div>
+
+          {/* Official University Email */}
           <div>
             <label
               htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Email Address <span className="text-red-500">*</span>
+              Official University Email (Auto-generated)
             </label>
             <input
-              type="email"
+              type="text"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              value={autoEmail}
+              readOnly
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-900 font-medium outline-none cursor-not-allowed"
               placeholder="lecturer@university.edu"
             />
           </div>
