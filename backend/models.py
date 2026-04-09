@@ -119,3 +119,21 @@ class PasswordReset(Base):
     expires_at = Column(DateTime, nullable=False)
     used       = Column(Boolean, default=False)
 
+
+class PreRegistration(Base):
+    """Temporary storage for student applications before official registration."""
+    __tablename__ = "pre_registrations"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    name            = Column(String, nullable=False)
+    personal_email  = Column(String, nullable=False)
+    mobile          = Column(String, nullable=True)
+    nic_number      = Column(String, nullable=True)
+    gender          = Column(String, nullable=True)
+    faculty         = Column(String, nullable=True)
+    department      = Column(String, nullable=True)
+    degree_program  = Column(String, nullable=True)
+    intake          = Column(String, nullable=True)
+    academic_year   = Column(String, nullable=True)
+    created_at      = Column(DateTime, server_default=func.now())
+

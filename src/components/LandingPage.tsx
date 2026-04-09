@@ -6,13 +6,18 @@ import {
   ArrowRight,
   Mail,
   Phone,
+  ChevronRight
 } from "lucide-react";
 
 interface LandingPageProps {
   onNavigateToLogin: (role?: "Admin" | "Lecturer" | "Student") => void;
+  onNavigateToEnroll: () => void;
 }
 
-export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
+export default function LandingPage({
+  onNavigateToLogin,
+  onNavigateToEnroll,
+}: LandingPageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation Bar */}
@@ -51,7 +56,7 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
               </a>
               <button
                 onClick={() => onNavigateToLogin()}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
+                className="px-6 py-2.5 bg-blue-600 cursor-pointer text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
               >
                 Login to Portal
               </button>
@@ -92,19 +97,30 @@ export default function LandingPage({ onNavigateToLogin }: LandingPageProps) {
                 {/* Student Portal - Primary */}
                 <button
                   onClick={() => onNavigateToLogin("Student")}
-                  className="group px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-lg shadow-xl shadow-blue-900/20 hover:shadow-blue-900/30 hover:scale-105 flex items-center justify-center space-x-2"
+                  className="group px-8 py-4 bg-blue-600 cursor-pointer text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-lg shadow-xl shadow-blue-900/20 hover:shadow-blue-900/30 hover:scale-105 flex items-center justify-center space-x-2"
                 >
                   <GraduationCap className="w-5 h-5" />
                   <span>Student Portal</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                {/* Lecturer Portal - Secondary */}
                 <button
                   onClick={() => onNavigateToLogin("Lecturer")}
-                  className="px-8 py-4 bg-transparent border-2 border-blue-500 text-blue-400 rounded-xl hover:bg-blue-600/10 transition-all font-semibold text-lg hover:scale-105 flex items-center justify-center space-x-2"
+                  className="px-8 py-4 bg-transparent border-2 cursor-pointer border-blue-500 text-blue-400 rounded-xl hover:bg-blue-600/10 transition-all font-semibold text-lg hover:scale-105 flex items-center justify-center space-x-2"
                 >
                   <span>Lecturer Portal</span>
+                </button>
+              </div>
+
+              {/* Enrollment Link */}
+              <div className="mt-6 flex items-center space-x-2 group">
+                <span className="text-gray-400 text-sm mr-3">New Student?</span>
+                <button
+                  onClick={onNavigateToEnroll}
+                  className="text-blue-400 text-md cursor-pointer font-bold hover:text-white hover:scale-105 transition-colors flex items-center"
+                >
+                  Pre-Register for Enrollment
+                  <ChevronRight size={15} className="ml-1 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
 

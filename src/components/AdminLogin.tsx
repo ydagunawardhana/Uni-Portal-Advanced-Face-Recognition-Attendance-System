@@ -48,7 +48,7 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
       localStorage.setItem("user_email", email);
 
       toast.success("Administrator login successful!", { id: toastId });
-      
+
       setIsRedirecting(true);
       setTimeout(() => {
         onLogin("Admin");
@@ -64,8 +64,14 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10 max-w-md w-full border border-gray-100 animate-in fade-in zoom-in duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
+      {/* Subtle Mesh Gradient Background */}
+      <div className="absolute inset-0 z-0 opacity-30">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-800 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-8 sm:p-10 max-w-md w-full border border-slate-200 animate-in fade-in zoom-in duration-500">
         <div className="text-center mb-8">
           <div className="bg-blue-50 text-blue-600 p-4 rounded-full mx-auto mb-4 w-fit flex items-center justify-center">
             <Lock size={32} />
@@ -130,8 +136,8 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
               {isRedirecting
                 ? "Authenticating..."
                 : loading
-                ? "Verifying..."
-                : "Secure Sign In"}
+                  ? "Verifying..."
+                  : "Secure Sign In"}
             </span>
           </button>
         </form>

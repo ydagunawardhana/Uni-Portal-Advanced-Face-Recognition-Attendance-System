@@ -29,9 +29,9 @@ export default function LoginScreen({
   onBackToHome,
   initialRole = "Student",
 }: LoginScreenProps) {
-  const [selectedRole, setSelectedRole] = useState<
-    "Lecturer" | "Student"
-  >(initialRole);
+  const [selectedRole, setSelectedRole] = useState<"Lecturer" | "Student">(
+    initialRole,
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -112,10 +112,7 @@ export default function LoginScreen({
     },
   ];
 
-  const roles: Array<"Lecturer" | "Student"> = [
-    "Lecturer",
-    "Student",
-  ];
+  const roles: Array<"Lecturer" | "Student"> = ["Lecturer", "Student"];
 
   return (
     <>

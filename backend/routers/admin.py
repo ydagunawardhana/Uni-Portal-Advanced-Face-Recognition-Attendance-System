@@ -435,6 +435,7 @@ class RegisterStudentRequest(BaseModel):
     face_frames:        list[str]     # 50 base64 strings
     auto_gen_password:  bool          = False
     password:           Optional[str] = None   
+    pre_registration_id: Optional[int] = None
 
 
 class RegisterStudentResponse(BaseModel):
@@ -462,6 +463,50 @@ class LecturerUpdateRequest(BaseModel):
     department: str
     assigned_subjects: Optional[str] = None
     is_active: bool
+
+
+@router.get("/pre-registrations", response_model=List[dict])
+def get_pre_registrations(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Fetch all pending pre-registration records for admin review."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    pre_regs = db.query(models.PreRegistration).order_by(models.PreRegistration.created_at.desc()).all()
+    
+    # Convert to dict for easier serialization if needed, though SQLAlchemy models work too
+    return [
+        {
+            "id": pr.id,
+            "name": pr.name,
+            "personal_email": pr.personal_email,
+            "mobile": pr.mobile,
+            "nic_number": pr.nic_number,
+            "gender": pr.gender,
+            "faculty": pr.faculty,
+            "department": pr.department,
+            "degree_program": pr.degree_program,
+            "intake": pr.intake,
+            "created_at": pr.created_at
+        } for pr in pre_regs
+    ]
+
+
+@router.delete("/pre-registrations/{pre_reg_id}", status_code=204)
+def delete_pre_registration(
+    pre_reg_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Reject and delete a pre-registration record."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    record = db.query(models.PreRegistration).filter(models.PreRegistration.id == pre_reg_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Pre-registration record not found")
+
+    db.delete(record)
+    db.commit()
 
 
 @router.post(
@@ -573,6 +618,11 @@ def register_student(
         is_active       = True,
     )
     db.add(user)
+
+    # 4. Clear from Pre-Registration if applicable
+    if payload.pre_registration_id:
+        db.query(models.PreRegistration).filter(models.PreRegistration.id == payload.pre_registration_id).delete()
+
     db.commit()
     db.refresh(student)
 

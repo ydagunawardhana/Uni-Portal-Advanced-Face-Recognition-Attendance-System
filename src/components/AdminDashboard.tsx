@@ -16,6 +16,7 @@ import ManageLecturers from "./ManageLecturers";
 import ManageStudents from "./ManageStudents";
 import AttendanceReports from "./AttendanceReports";
 import SystemAuditLogs from "./SystemAuditLogs";
+import PendingRegistrations from "./PendingRegistrations";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
@@ -138,6 +139,7 @@ export default function AdminDashboard({
   const [nicNumber, setNicNumber] = useState("");
   const [gender, setGender] = useState("");
   const [autoGeneratePassword, setAutoGeneratePassword] = useState(false);
+  const [pendingPreRegId, setPendingPreRegId] = useState<number | null>(null);
 
   //  Webcam / capture state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -191,6 +193,23 @@ export default function AdminDashboard({
     localStorage.setItem("adminActiveTab", tab);
     // Always scroll to top when changing tabs so the fixed header never overlaps content
     window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
+  const handleProcessPreRegistration = (data: any) => {
+    setStudentName(data.name);
+    setPersonalEmail(data.personal_email);
+    setMobileNumber(data.mobile || "");
+    setNicNumber(data.nic_number || "");
+    setGender(data.gender || "Male");
+    setSelectedFaculty(data.faculty || "");
+    setDepartment(data.department || "");
+    setSelectedDegree(data.degree_program || "");
+    setIntake(data.intake || "");
+    setPendingPreRegId(data.id);
+
+    setActiveTab("students");
+    localStorage.setItem("adminActiveTab", "students");
+    toast.success(`Form pre-filled for ${data.name}`);
   };
 
   //  Camera helpers
@@ -381,6 +400,7 @@ export default function AdminDashboard({
           face_frames: capturedFrames,
           auto_gen_password: autoGeneratePassword,
           password: undefined,
+          pre_registration_id: pendingPreRegId,
         }),
       });
 
@@ -415,6 +435,7 @@ export default function AdminDashboard({
       });
 
       handleClearForm();
+      setPendingPreRegId(null);
     } catch {
       toast.error("Server error. Please check the backend.", {
         id: toastId,
@@ -612,6 +633,9 @@ export default function AdminDashboard({
           )}
           {activeTab === "reports" && <AttendanceReports />}
           {activeTab === "audit" && <SystemAuditLogs />}
+          {activeTab === "pre_registrations" && (
+             <PendingRegistrations onProcess={handleProcessPreRegistration} />
+          )}
 
           {/*  Student Registration  */}
           {activeTab === "students" && (

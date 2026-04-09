@@ -10,6 +10,7 @@ import ForgotPasswordScreen from "./components/ForgotPasswordScreen";
 import StudentCorrectionRequestScreen from "./components/AttendanceCorrectionRequest";
 import LecturerLiveClassMonitoring from "./components/LecturerLiveClassMonitoring";
 import AdminLogin from "./components/AdminLogin";
+import StudentEnrollment from "./components/StudentEnrollment";
 
 type Screen =
   | "landing"
@@ -23,7 +24,8 @@ type Screen =
   | "start-live-session"
   | "live-monitoring"
   | "student-correction"
-  | "admin-login";
+  | "admin-login"
+  | "enroll";
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
 export default function App() {
@@ -91,14 +93,17 @@ export default function App() {
         }}
       />
       {currentScreen === "landing" && (
-        <LandingPage onNavigateToLogin={(role) => {
-          if (role === "Admin") {
-            setCurrentScreen("admin-login");
-          } else {
-            setLoginRole(role ?? "Student");
-            setCurrentScreen("login");
-          }
-        }} />
+        <LandingPage 
+          onNavigateToLogin={(role) => {
+            if (role === "Admin") {
+              setCurrentScreen("admin-login");
+            } else {
+              setLoginRole(role ?? "Student");
+              setCurrentScreen("login");
+            }
+          }} 
+          onNavigateToEnroll={() => setCurrentScreen("enroll")}
+        />
       )}
       {currentScreen === "login" && (
         <LoginScreen
@@ -113,6 +118,9 @@ export default function App() {
           onLogin={handleLogin}
           onBackToHome={() => setCurrentScreen("landing")}
         />
+      )}
+      {currentScreen === "enroll" && (
+        <StudentEnrollment onBackToHome={() => setCurrentScreen("landing")} />
       )}
       {currentScreen === "forgot-password" && (
         <ForgotPasswordScreen onBackToLogin={handleBackToLogin} />

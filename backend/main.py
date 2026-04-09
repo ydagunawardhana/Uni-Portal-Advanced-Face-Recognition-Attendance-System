@@ -16,6 +16,7 @@ from routers import attendance as attendance_router
 from routers import auth_router
 from routers import admin as admin_router
 from routers import student as student_router
+from routers import public as public_router
 
 
 # Admin seeder
@@ -93,6 +94,7 @@ app.include_router(auth_router.router)
 app.include_router(attendance_router.router)
 app.include_router(admin_router.router)
 app.include_router(student_router.router)
+app.include_router(public_router.router)
 
 
 # Routes
