@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   HelpCircle,
+  Users,
 } from "lucide-react";
 
 interface StudentSidebarProps {
@@ -37,6 +38,11 @@ export default function StudentSidebar({
       id: "request-correction",
       label: "Request Correction",
       icon: FileText,
+    },
+    {
+      id: "book-consultations",
+      label: "Book Consultations",
+      icon: Users,
     },
     { id: "profile", label: "My Profile", icon: User },
     { id: "help", label: "Help & Support", icon: HelpCircle },

@@ -15,11 +15,11 @@ import {
   User,
 } from "lucide-react";
 
-// ─── Constants ────────────────────────────────────────────────
+// Constants
 const API_BASE = "http://localhost:8000";
 const CAPTURE_INTERVAL_MS = 3000; // send a frame every 3 seconds
 
-// ─── Props / Data Interfaces ──────────────────────────────────
+// Props / Data Interfaces
 interface LecturerLiveClassMonitoringProps {
   onLogout: () => void;
   onNavigate: (screen: any) => void;
@@ -42,7 +42,7 @@ interface FaceBox {
   name: string;
 }
 
-// ─── API Response shapes ──────────────────────────────────────
+// API Response shapes
 interface ApiFaceResult {
   label: string;
   user_id: number;
@@ -66,17 +66,14 @@ interface ApiAttendanceResponse {
   timestamp: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────
-let _logIdCounter = 1000; // local counter for unique log entry ids
+// Helpers
+let _logIdCounter = 1000; 
 
 function nowTimeString(): string {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * Convert a raw LBPH bbox {x,y,w,h} (pixel coords in the captured image)
- * into CSS percentage strings relative to the video container.
- */
+
 function bboxToPercent(
   bbox: { x: number; y: number; w: number; h: number },
   frameW: number,
@@ -90,12 +87,12 @@ function bboxToPercent(
   };
 }
 
-// ─── Component ────────────────────────────────────────────────
+// Component
 export default function LecturerLiveClassMonitoring({
   onLogout,
   onNavigate,
 }: LecturerLiveClassMonitoringProps) {
-  // ── UI state (unchanged from original) ──────────────────────
+  // UI state 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
@@ -106,25 +103,25 @@ export default function LecturerLiveClassMonitoring({
   const [editTime, setEditTime] = useState("");
   const [editReason, setEditReason] = useState("");
 
-  // ── Face box state – now driven by live API ──────────────────
+  // Face box state – now driven by live API 
   const [entranceFaces, setEntranceFaces] = useState<FaceBox[]>([]);
   const [unknownFaces, setUnknownFaces] = useState<FaceBox[]>([]);
   const [exitFaces, setExitFaces] = useState<FaceBox[]>([]);
 
-  // ── Attendance log state ─────────────────────────────────────
+  // Attendance log state 
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
-  // ── Live stats (derived from log entries) ───────────────────
+  // Live stats (derived from log entries) 
   const [liveStats, setLiveStats] = useState({
     currentlyInside: 0,
     totalEntered: 0,
     leftEarly: 0,
   });
 
-  // ── Attendance notification toast ───────────────────────────
+  // Attendance notification toast 
   const [attendanceToast, setAttendanceToast] = useState<string | null>(null);
 
-  // ── Camera / recognition refs & state ───────────────────────
+  // Camera / recognition refs & state 
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const exitVideoRef     = useRef<HTMLVideoElement>(null);
   const canvasRef        = useRef<HTMLCanvasElement>(null);
@@ -132,17 +129,15 @@ export default function LecturerLiveClassMonitoring({
   const captureTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const [cameraError,   setCameraError]   = useState<string | null>(null);
   const [isProcessing,  setIsProcessing]  = useState(false);
-  // Storing the stream in state guarantees a re-render after acquisition,
-  // so the useEffect below can safely attach srcObject to mounted <video> nodes.
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
-  // ── Clock ─────────────────────────────────────────────────────
+  // Clock 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // ── Auto-dismiss toasts ───────────────────────────────────────
+  // Auto-dismiss toasts 
   useEffect(() => {
     if (showSuccessToast) {
       const t = setTimeout(() => setShowSuccessToast(false), 5000);
@@ -157,7 +152,7 @@ export default function LecturerLiveClassMonitoring({
     }
   }, [attendanceToast]);
 
-  // ── Update live stats whenever logEntries changes ─────────────
+  // Update live stats whenever logEntries changes 
   useEffect(() => {
     const entered = logEntries.filter((e) => e.status === "entered").length;
     const exited  = logEntries.filter((e) => e.status === "exited").length;
@@ -168,7 +163,7 @@ export default function LecturerLiveClassMonitoring({
     });
   }, [logEntries]);
 
-  // ── Step 1: Acquire the MediaStream (does NOT touch video refs) ──
+  // Step 1: Acquire the MediaStream (does NOT touch video refs) 
   const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
@@ -177,8 +172,6 @@ export default function LecturerLiveClassMonitoring({
         audio: false,
       });
       streamRef.current = stream;
-      // Storing in state triggers a re-render → the useEffect below
-      // fires AFTER the <video> elements are mounted in the DOM.
       setMediaStream(stream);
     } catch (err: any) {
       const msg =
@@ -192,9 +185,6 @@ export default function LecturerLiveClassMonitoring({
     }
   }, []);
 
-  // ── Step 2: Attach stream to <video> elements after DOM is ready ──
-  // This runs every time mediaStream or sessionActive changes, which
-  // guarantees the <video> tags are already mounted before we touch them.
   useEffect(() => {
     if (!mediaStream || !sessionActive) return;
 
@@ -212,7 +202,7 @@ export default function LecturerLiveClassMonitoring({
     attach();
   }, [mediaStream, sessionActive]);
 
-  // ── Camera teardown ───────────────────────────────────────────
+  // Camera teardown
   const stopCamera = useCallback(() => {
     if (captureTimerRef.current) {
       clearInterval(captureTimerRef.current);
@@ -226,7 +216,7 @@ export default function LecturerLiveClassMonitoring({
     if (exitVideoRef.current)     exitVideoRef.current.srcObject     = null;
   }, []);
 
-  // ── Capture + recognise ───────────────────────────────────────
+  // Capture + recognise
   const captureAndRecognize = useCallback(async () => {
     const video  = entranceVideoRef.current;
     const canvas = canvasRef.current;
@@ -251,16 +241,20 @@ export default function LecturerLiveClassMonitoring({
       form.append("file", blob, "frame.jpg");
       form.append("debounce_min", "1");
 
+      const token = localStorage.getItem("lecturerToken");
       const res = await fetch(`${API_BASE}/api/attendance`, {
         method: "POST",
-        body:   form,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const data: ApiAttendanceResponse = await res.json();
 
-      // ── Update face boxes ──────────────────────────────────
+      // Update face boxes 
       const newEntered: FaceBox[] = [];
       const newUnknown: FaceBox[] = [];
 
@@ -293,7 +287,7 @@ export default function LecturerLiveClassMonitoring({
           }))
       );
 
-      // ── Prepend new log entries ────────────────────────────
+      // Prepend new log entries
       if (data.logs.length > 0) {
         const newEntries: LogEntry[] = data.logs.map((log) => ({
           id:          _logIdCounter++,
@@ -318,12 +312,9 @@ export default function LecturerLiveClassMonitoring({
     }
   }, [isProcessing]);
 
-  // ── Session lifecycle ─────────────────────────────────────────
+  // Session lifecycle
   const handleStartSession = useCallback(() => {
-    // IMPORTANT: set sessionActive FIRST so React renders the <video> elements
-    // into the DOM. Only then does startCamera() fire; when it resolves the
-    // stream, setMediaStream triggers the attach-useEffect which finds the
-    // now-mounted video refs and sets srcObject correctly.
+
     setSessionActive(true);
     startCamera();
   }, [startCamera]);
@@ -354,10 +345,10 @@ export default function LecturerLiveClassMonitoring({
     setShowSuccessToast(true);
   }, [stopCamera]);
 
-  // ── Cleanup on unmount ────────────────────────────────────────
+  // Cleanup on unmount
   useEffect(() => () => stopCamera(), [stopCamera]);
 
-  // ── Edit modal helpers (unchanged logic) ──────────────────────
+  // Edit modal helpers (unchanged logic)
   const handleEditEntry = (entry: LogEntry) => {
     setSelectedEntry(entry);
     setEditStatus(entry.status === "entered" ? "Present" : "Absent");
@@ -378,9 +369,7 @@ export default function LecturerLiveClassMonitoring({
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
   // RENDER
-  // ─────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
       {/* Hidden canvas used for frame capture — never rendered visibly */}
@@ -469,7 +458,7 @@ export default function LecturerLiveClassMonitoring({
           <div className="flex-1 p-6 overflow-auto">
             <div className="grid grid-cols-2 gap-6 h-full">
 
-              {/* ── Entrance Camera Feed ──────────────────────── */}
+              {/* Entrance Camera Feed */}
               <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden flex flex-col">
                 <div className="bg-green-600 px-4 py-3 flex items-center space-x-2">
                   <Video className="w-5 h-5 text-white" />
@@ -551,7 +540,7 @@ export default function LecturerLiveClassMonitoring({
                 )}
               </div>
 
-              {/* ── Exit Camera Feed ──────────────────────────── */}
+              {/* Exit Camera Feed */}
               <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden flex flex-col">
                 <div className="bg-red-600 px-4 py-3 flex items-center space-x-2">
                   <Video className="w-5 h-5 text-white" />

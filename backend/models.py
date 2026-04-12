@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -43,6 +43,7 @@ class Student(Base):
     # Relationship: one student can have many attendance logs
     attendance_logs = relationship("AttendanceLog", back_populates="student")
     notifications   = relationship("Notification", back_populates="student")
+    appointments    = relationship("Appointment", back_populates="student")
 
 
 class AttendanceLog(Base):
@@ -107,6 +108,10 @@ class Lecturer(Base):
     department        = Column(String, nullable=False)
     assigned_subjects = Column(String, nullable=True) # Comma-separated or JSON
     is_active         = Column(Boolean, default=True, nullable=False)
+    profile_picture   = Column(String, nullable=True)
+    office_hours      = Column(Text, nullable=True) # JSON array of {day, startTime, endTime, location}
+
+    appointments      = relationship("Appointment", back_populates="lecturer")
 
 
 class PasswordReset(Base):
@@ -136,4 +141,21 @@ class PreRegistration(Base):
     intake          = Column(String, nullable=True)
     academic_year   = Column(String, nullable=True)
     created_at      = Column(DateTime, server_default=func.now())
+
+
+class Appointment(Base):
+    """Student-Lecturer Consultation Appointments."""
+    __tablename__ = "appointments"
+
+    id               = Column(Integer, primary_key=True, index=True)
+    student_id       = Column(Integer, ForeignKey("students.id"), nullable=False)
+    lecturer_id      = Column(Integer, ForeignKey("lecturers.id"), nullable=False)
+    appointment_date = Column(String, nullable=False) # e.g., 'Monday' or '2026-04-15'
+    time_slot        = Column(String, nullable=False) # e.g., '10:00 AM - 12:00 PM'
+    reason           = Column(Text, nullable=True)
+    status           = Column(String, default="Pending") # 'Pending', 'Approved', 'Rejected'
+    created_at       = Column(DateTime(timezone=True), server_default=func.now())
+
+    student          = relationship("Student", back_populates="appointments")
+    lecturer         = relationship("Lecturer", back_populates="appointments")
 

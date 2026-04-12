@@ -1,8 +1,10 @@
 import {
   LayoutDashboard,
+  User,
   Video,
   History,
   BookOpen,
+  Calendar,
   Settings,
   ClipboardCheck,
   GraduationCap,
@@ -15,6 +17,7 @@ interface LecturerSidebarProps {
   onTabChange: (tab: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  pendingCount?: number;
 }
 
 export default function LecturerSidebar({
@@ -22,6 +25,7 @@ export default function LecturerSidebar({
   onTabChange,
   isCollapsed = false,
   onToggleCollapse,
+  pendingCount = 0,
 }: LecturerSidebarProps) {
   const menuItems = [
     {
@@ -45,8 +49,20 @@ export default function LecturerSidebar({
       icon: History,
     },
     { id: "subjects", label: "My Subjects", icon: BookOpen },
+    {
+      id: "appointments",
+      label: "Appointments",
+      icon: Calendar,
+    },
+    {
+      id: "profile",
+      label: "My Profile",
+      icon: User,
+    },
     { id: "settings", label: "Settings", icon: Settings },
   ];
+
+  // Removed mock state for pending count
 
   return (
     <div
@@ -72,12 +88,12 @@ export default function LecturerSidebar({
                 Lecturer Portal
               </h2>
               <p className="text-xs text-gray-400 ml-0.5">
-            Attendance System
-          </p>
-          </div>
+                Attendance System
+              </p>
+            </div>
           )}
-      </div>
         </div>
+      </div>
 
       {/* Navigation Menu */}
       <nav
@@ -89,42 +105,52 @@ export default function LecturerSidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center ${isCollapsed ? "justify-center px-3" : "space-x-3 px-4"} py-3 rounded-lg transition-all duration-200 ${
+              className={`w-full flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-4"} py-3 cursor-pointer rounded-lg transition-all duration-200 ${
                 activeTab === item.id
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
               }`}
               title={isCollapsed ? item.label : undefined}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <span className="text-sm font-medium">
-                  {item.label}
-                </span>
-              )}
+              <div className="flex items-center space-x-3">
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {!isCollapsed && (
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                )}
+              </div>
+
+              {!isCollapsed &&
+                item.id === "appointments" &&
+                pendingCount > 0 && (
+                  <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-blue-600 rounded-full">
+                    {pendingCount}
+                  </span>
+                )}
             </button>
           );
         })}
       </nav>
 
       {/* Collapse Sidebar Footer */}
-      <div className="border-t border-gray-700">
+      <div className="border-t-2 border-gray-700">
         <button
           onClick={onToggleCollapse}
-          className={`w-full flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"} py-4 hover:bg-gray-800 transition-colors group`}
+          className={`w-full flex cursor-pointer items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"} py-4 hover:bg-gray-800 transition-colors group`}
           title={
             isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"
           }
         >
           {!isCollapsed && (
-            <span className="text-sm font-medium text-gray-300 group-hover:text-white">
+            <span className="text-sm font-medium text-gray-300 group-hover:text-white mb-3">
               Collapse Sidebar
             </span>
           )}
           {isCollapsed ? (
-            <ChevronsRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            <ChevronsRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors mb-3" />
           ) : (
-            <ChevronsLeft className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            <ChevronsLeft className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors mb-3" />
           )}
         </button>
       </div>

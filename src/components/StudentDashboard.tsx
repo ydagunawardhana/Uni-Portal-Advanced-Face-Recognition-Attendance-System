@@ -6,6 +6,7 @@ import StudentTimetable from "./StudentTimetable";
 import AttendanceCorrectionRequest from "./AttendanceCorrectionRequest";
 import StudentProfileSecurity from "./StudentProfileSecurity";
 import StudentHelpSupport from "./StudentHelpSupport";
+import BookConsultations from "./BookConsultations";
 import { Bell, LogOut, CheckCircle, AlertTriangle, Info } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -47,9 +48,7 @@ export default function StudentDashboard({
   // Fetch Data
   const fetchNotifications = async () => {
     try {
-      const token =
-        localStorage.getItem("studentToken") ||
-        localStorage.getItem("access_token");
+      const token = localStorage.getItem("studentToken");
       if (!token) return;
 
       const response = await fetch(`${API_BASE}/api/student/notifications`, {
@@ -83,9 +82,7 @@ export default function StudentDashboard({
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
-        const token =
-          localStorage.getItem("studentToken") ||
-          localStorage.getItem("access_token");
+        const token = localStorage.getItem("studentToken");
         if (!token) return;
 
         const response = await fetch(`${API_BASE}/api/student/profile`, {
@@ -148,9 +145,7 @@ export default function StudentDashboard({
 
   const markAllAsRead = async () => {
     try {
-      const token =
-        localStorage.getItem("studentToken") ||
-        localStorage.getItem("access_token");
+      const token = localStorage.getItem("studentToken");
       if (!token) return;
 
       const response = await fetch(
@@ -209,6 +204,8 @@ export default function StudentDashboard({
         return <StudentProfileSecurity />;
       case "help":
         return <StudentHelpSupport />;
+      case "book-consultations":
+        return <BookConsultations />;
       default:
         return <DashboardOverview />;
     }

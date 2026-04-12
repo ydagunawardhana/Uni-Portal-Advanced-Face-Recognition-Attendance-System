@@ -77,7 +77,7 @@ export default function LoginScreen({
           String(data.requires_password_change),
         );
       } else {
-        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("lecturerToken", data.access_token);
       }
 
       localStorage.setItem("user_role", data.role || selectedRole);
@@ -153,7 +153,7 @@ export default function LoginScreen({
           {onBackToHome && (
             <button
               onClick={onBackToHome}
-              className="absolute top-4 left-6 lg:left-12 flex items-center gap-2 p-3 text-blue-100 hover:text-white transition-colors z-50"
+              className="absolute top-4 left-6 lg:left-12 cursor-pointer flex items-center gap-2 p-3 text-blue-100 hover:text-white transition-colors z-50"
             >
               <ArrowLeft size={20} />
               <span className="font-medium tracking-wide">Back to Home</span>

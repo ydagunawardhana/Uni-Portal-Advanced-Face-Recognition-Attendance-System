@@ -72,3 +72,33 @@ class AttendanceResponse(BaseModel):
 class AttendanceHistoryResponse(BaseModel):
     total:   int
     records: list[AttendanceLogOut]
+
+
+
+# Appointment
+
+class AppointmentBase(BaseModel):
+    lecturer_id:      int
+    appointment_date: str
+    time_slot:        str
+    reason:           Optional[str] = None
+
+
+class AppointmentCreate(AppointmentBase):
+    pass
+
+
+class AppointmentUpdateStatus(BaseModel):
+    status: str           # 'Approved' | 'Rejected'
+
+
+class AppointmentOut(AppointmentBase):
+    id:            int
+    student_id:    int
+    status:        str
+    created_at:    datetime
+    student_name:  Optional[str] = None
+    student_index: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+

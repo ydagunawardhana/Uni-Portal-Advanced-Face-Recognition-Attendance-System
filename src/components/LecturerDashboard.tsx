@@ -7,7 +7,8 @@ import LecturerMySubjects from './LecturerMySubjects';
 import LecturerSettings from './LecturerSettings';
 import LecturerLiveClassMonitoring from './LecturerLiveClassMonitoring';
 import ManualAttendanceMarking from './ManualAttendanceMarking';
-import SubjectAttendanceRecord from './SubjectAttendanceRecord';
+import LecturerProfile from './LecturerProfile';
+import Appointments from './Appointments';
 
 interface AttendanceRecord {
   id: number;
@@ -28,7 +29,8 @@ interface LecturerDashboardProps {
 
 export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Set to false for expanded state
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [presentCount, setPresentCount] = useState(5);
   const [attendanceLog, setAttendanceLog] = useState<AttendanceRecord[]>([
     { id: 1, studentName: 'John Smith', indexNumber: 'CS/2021/001', timestamp: '09:15:23' },
@@ -86,12 +88,46 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
     return () => clearInterval(interval);
   }, [activeTab]);
 
+  // Fetch real-time pending appointment count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      const token = localStorage.getItem("lecturerToken");
+      if (!token) return;
+
+      try {
+        const profRes = await fetch('http://localhost:8000/api/lecturer/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!profRes.ok) return;
+        const profile = await profRes.json();
+
+        const appRes = await fetch(`http://localhost:8000/api/appointments/lecturer/${profile.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (appRes.ok) {
+          const data = await appRes.json();
+          const count = data.filter((a: any) => a.status === 'Pending').length;
+          setPendingCount(count);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pending count:", err);
+      }
+    };
+
+    fetchPendingCount();
+    // Poll every 30 seconds for new requests
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
 
   const getHeaderTitle = () => {
     switch (activeTab) {
+      case 'profile':
+        return 'My Profile';
       case 'dashboard':
         return 'Lecturer Dashboard';
       case 'live-class':
@@ -102,6 +138,8 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
         return 'My Subjects';
       case 'settings':
         return 'Settings';
+      case 'appointments':
+        return 'Appointments';
       default:
         return 'Lecturer Dashboard';
     }
@@ -109,6 +147,8 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
 
   const getHeaderDescription = () => {
     switch (activeTab) {
+      case 'profile':
+        return 'Manage your personal and academic information';
       case 'dashboard':
         return 'Overview of your classes and attendance';
       case 'live-class':
@@ -119,13 +159,15 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
         return 'Manage your assigned courses';
       case 'settings':
         return 'Manage your account and preferences';
+      case 'appointments':
+        return 'Manage student consultation requests and upcoming meetings';
       default:
         return 'Overview of your classes and attendance';
     }
   };
 
   // Dashboard view with sidebar
-  if (activeTab === 'dashboard' || activeTab === 'history' || activeTab === 'subjects' || activeTab === 'settings' || activeTab === 'mark-attendance') {
+  if (activeTab === 'profile' || activeTab === 'dashboard' || activeTab === 'history' || activeTab === 'subjects' || activeTab === 'settings' || activeTab === 'mark-attendance' || activeTab === 'appointments') {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <LecturerSidebar 
@@ -133,6 +175,7 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
           onTabChange={handleTabChange} 
           isCollapsed={isSidebarCollapsed} 
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          pendingCount={pendingCount}
         />
 
         <div className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'ml-[80px]' : 'ml-[280px]'}`}>
@@ -166,10 +209,12 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
             <ManualAttendanceMarking />
           ) : (
             <main className="p-8">
+              {activeTab === 'profile' && <LecturerProfile />}
               {activeTab === 'dashboard' && <LecturerDashboardHome />}
               {activeTab === 'history' && <LecturerAttendanceHistory />}
               {activeTab === 'subjects' && <LecturerMySubjects />}
               {activeTab === 'settings' && <LecturerSettings />}
+              {activeTab === 'appointments' && <Appointments />}
             </main>
           )}
         </div>
@@ -186,9 +231,13 @@ export default function LecturerDashboard({ onLogout }: LecturerDashboardProps) 
           onTabChange={handleTabChange} 
           isCollapsed={isSidebarCollapsed} 
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          pendingCount={pendingCount}
         />
         <div className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'ml-[80px]' : 'ml-[280px]'}`}>
-          <LecturerLiveClassMonitoring />
+          <LecturerLiveClassMonitoring 
+            onLogout={onLogout} 
+            onNavigate={(screen) => console.log('Navigate to:', screen)} 
+          />
         </div>
       </div>
     );

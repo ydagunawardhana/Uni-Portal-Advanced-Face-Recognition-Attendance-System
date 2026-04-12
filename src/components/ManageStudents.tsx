@@ -201,10 +201,7 @@ export default function ManageStudents({
   }, []);
 
   const fetchData = async () => {
-    const token =
-      localStorage.getItem("adminToken") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("token");
+    const token = localStorage.getItem("adminToken");
     if (!token) {
       setIsLoading(false);
       return;
@@ -319,10 +316,7 @@ export default function ManageStudents({
         const b64 = captureFrame();
         if (b64) {
           try {
-            const token =
-              localStorage.getItem("adminToken") ||
-              localStorage.getItem("access_token") ||
-              localStorage.getItem("token");
+            const token = localStorage.getItem("adminToken");
             const res = await fetch(`${API_BASE}/api/admin/validate-face`, {
               method: "POST",
               headers: {
@@ -379,10 +373,7 @@ export default function ManageStudents({
     if (!studentToCapture || capturedFrames.length < TOTAL_FRAMES) return;
     setIsUploading(true);
 
-    const token =
-      localStorage.getItem("adminToken") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("token");
+    const token = localStorage.getItem("adminToken");
     const toastId = toast.loading(
       `Uploading dataset for ${studentToCapture.name}...`,
     );
@@ -446,10 +437,7 @@ export default function ManageStudents({
     if (!studentToDelete) return;
 
     const student = studentToDelete;
-    const token =
-      localStorage.getItem("adminToken") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("token");
+    const token = localStorage.getItem("adminToken");
     const toastId = toast.loading(`Deleting ${student.name}...`);
 
     try {
@@ -506,10 +494,7 @@ export default function ManageStudents({
   const handleSaveEdit = async () => {
     if (!editingStudent) return;
 
-    const token =
-      localStorage.getItem("adminToken") ||
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("token");
+    const token = localStorage.getItem("adminToken");
     const toastId = toast.loading("Updating student details...");
 
     try {
@@ -559,10 +544,12 @@ export default function ManageStudents({
         student.index_number.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesFaculty =
-        selectedFacultyFilter === "all" || student.faculty === selectedFacultyFilter;
+        selectedFacultyFilter === "all" ||
+        student.faculty === selectedFacultyFilter;
 
       const matchesDepartment =
-        selectedDepartment === "all" || student.department === selectedDepartment;
+        selectedDepartment === "all" ||
+        student.department === selectedDepartment;
 
       const matchesBatch =
         selectedBatch === "all" || student.academic_year === selectedBatch;
@@ -572,9 +559,15 @@ export default function ManageStudents({
         selectedIntake === "" ||
         student.intake?.toLowerCase().includes(selectedIntake.toLowerCase());
 
-      return matchesSearch && matchesFaculty && matchesDepartment && matchesBatch && matchesIntake;
+      return (
+        matchesSearch &&
+        matchesFaculty &&
+        matchesDepartment &&
+        matchesBatch &&
+        matchesIntake
+      );
     });
-    
+
     setFilteredStudents(results);
   }, [
     students,
@@ -582,7 +575,7 @@ export default function ManageStudents({
     selectedFacultyFilter,
     selectedDepartment,
     selectedBatch,
-    selectedIntake
+    selectedIntake,
   ]);
 
   if (isLoading) {
@@ -678,7 +671,7 @@ export default function ManageStudents({
 
           <button
             onClick={() => onRegisterNew && onRegisterNew()}
-            className="flex items-center space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-medium whitespace-nowrap ml-auto"
+            className="flex items-center cursor-pointer space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-medium whitespace-nowrap ml-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Register New Student</span>
@@ -740,7 +733,7 @@ export default function ManageStudents({
 
                   <button
                     onClick={() => setStudentToCapture(student)}
-                    className="mt-auto w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="mt-auto w-full py-2.5 cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Camera className="w-4 h-4" />
                     Recapture Face
@@ -823,14 +816,14 @@ export default function ManageStudents({
                       <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => openEditModal(student)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit Student"
                         >
                           <Edit2 className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setStudentToDelete(student)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 cursor-pointer hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete Student"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -861,7 +854,7 @@ export default function ManageStudents({
               </h3>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -920,7 +913,10 @@ export default function ManageStudents({
                     type="email"
                     value={editForm.personal_email}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, personal_email: e.target.value })
+                      setEditForm({
+                        ...editForm,
+                        personal_email: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1109,13 +1105,13 @@ export default function ManageStudents({
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+                className="px-6 py-2 border cursor-pointer border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2"
+                className="px-6 py-2 bg-blue-600 cursor-pointer text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Save Changes

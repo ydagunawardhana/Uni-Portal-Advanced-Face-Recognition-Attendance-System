@@ -56,14 +56,18 @@ export default function App() {
 
   const handleLogout = () => {
     // Completely destroy the local session cache
-    localStorage.removeItem("token");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("lecturerToken");
     localStorage.removeItem("studentToken");
-    localStorage.removeItem("access_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("user_email");
     localStorage.removeItem("isAdminLoggedIn");
     localStorage.removeItem("adminActiveTab");
     localStorage.removeItem("requiresPasswordChange");
+    
+    // Cleanup deprecated keys
+    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
 
     setCurrentScreen("landing");
     setUserRole(null);
@@ -87,7 +91,7 @@ export default function App() {
       <Toaster
         position="top-center"
         toastOptions={{
-          style: { fontFamily: "inherit", fontSize: "0.95rem" },
+          style: { fontFamily: "inherit", fontSize: "0.95rem", zIndex: 9999 },
           success: { iconTheme: { primary: "#16a34a", secondary: "#fff" } },
           error:   { iconTheme: { primary: "#dc2626", secondary: "#fff" } },
         }}

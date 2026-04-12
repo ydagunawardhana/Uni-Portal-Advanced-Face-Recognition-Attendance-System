@@ -111,6 +111,7 @@ def update_password(
 
 
 class StudentProfileResponse(BaseModel):
+    id: int
     name: str
     index_number: str
     email: str
@@ -138,6 +139,7 @@ def get_student_profile(
         raise HTTPException(status_code=404, detail="Student profile not found.")
         
     return StudentProfileResponse(
+        id=student_record.id,
         name=student_record.name,
         index_number=student_record.index_number,
         email=student_record.email,

@@ -10,6 +10,7 @@ import {
   Clock,
   ChevronsLeft,
   ChevronsRight,
+  LogOut,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -18,12 +19,14 @@ interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onCollapseChange?: (isCollapsed: boolean) => void;
+  onLogout?: () => void;
 }
 
 export default function Sidebar({
   activeTab,
   onTabChange,
   onCollapseChange,
+  onLogout,
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [preRegCount, setPreRegCount] = useState(0);
@@ -33,7 +36,7 @@ export default function Sidebar({
   // Runs once on mount and every 60 seconds to stay fresh.
   useEffect(() => {
     const fetchCounts = async () => {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("adminToken");
       if (!token) return;
       try {
         const [preRegRes, reTrainRes] = await Promise.all([
@@ -158,7 +161,7 @@ export default function Sidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center px-4 py-3.5 rounded-lg transition-all duration-200 group ${
+              className={`w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
                 isActive
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -197,10 +200,26 @@ export default function Sidebar({
       </nav>
 
       {/* Footer / Collapse Trigger */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t border-gray-700 space-y-2">
+        {/* Logout */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className={`w-full flex items-center px-4 py-3 cursor-pointer rounded-lg transition-colors text-red-400 hover:bg-gray-800 hover:text-red-300 ${
+              isCollapsed ? "justify-center" : "gap-3"
+            }`}
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && (
+              <span className="text-sm font-medium">Logout</span>
+            )}
+          </button>
+        )}
+
+        {/* Collapse toggle */}
         <button
           onClick={handleToggleCollapse}
-          className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-300 hover:text-white"
+          className="w-full flex items-center justify-center cursor-pointer space-x-3 px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-300 hover:text-white"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           {isCollapsed ? (

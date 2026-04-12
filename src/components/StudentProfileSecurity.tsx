@@ -56,7 +56,7 @@ export default function StudentProfileSecurity() {
 
   useEffect(() => {
     const fetchProfileAndSessions = async () => {
-      const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+      const token = localStorage.getItem("studentToken");
       if (!token) return;
       try {
         const [profileRes, sessionsRes] = await Promise.all([
@@ -86,7 +86,7 @@ export default function StudentProfileSecurity() {
   }, []);
 
   const handleRevokeSession = async (sessionId: number) => {
-    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    const token = localStorage.getItem("studentToken");
     if (!token) return;
     
     const toastId = toast.loading("Revoking access...");
@@ -110,7 +110,7 @@ export default function StudentProfileSecurity() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    const token = localStorage.getItem("studentToken");
     if (!token) {
       toast.error('Authentication missing.');
       return;
@@ -151,7 +151,7 @@ export default function StudentProfileSecurity() {
   };
 
   const handleRequestRetraining = async () => {
-    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    const token = localStorage.getItem("studentToken");
     if (!token) {
       toast.error('Authentication missing. Please log in again.');
       return;
@@ -181,7 +181,7 @@ export default function StudentProfileSecurity() {
   };
 
   const handleCancelRequest = async () => {
-    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    const token = localStorage.getItem("studentToken");
     if (!token) return;
 
     const toastId = toast.loading("Cancelling request...");
@@ -215,7 +215,7 @@ export default function StudentProfileSecurity() {
       return;
     }
 
-    const token = localStorage.getItem("studentToken") || localStorage.getItem("access_token");
+    const token = localStorage.getItem("studentToken");
     if (!token) {
       toast.error('Authentication missing. Please log in again.');
       return;

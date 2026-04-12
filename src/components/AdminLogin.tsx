@@ -43,7 +43,7 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
         return;
       }
 
-      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("adminToken", data.access_token);
       localStorage.setItem("user_role", data.role || "Admin");
       localStorage.setItem("user_email", email);
 

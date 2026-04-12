@@ -114,7 +114,7 @@ export default function LandingPage({
 
               {/* Enrollment Link */}
               <div className="mt-6 flex items-center space-x-2 group">
-                <span className="text-gray-400 text-sm mr-3">New Student?</span>
+                <span className="text-gray-400 text-md mr-3">New Student?</span>
                 <button
                   onClick={onNavigateToEnroll}
                   className="text-blue-400 text-md cursor-pointer font-bold hover:text-white hover:scale-105 transition-colors flex items-center"

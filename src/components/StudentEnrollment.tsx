@@ -130,11 +130,11 @@ export default function StudentEnrollment({
     personal_email: "",
     mobile: "",
     nic_number: "",
-    gender: "Male",
+    gender: "",
     faculty: "",
     department: "",
     degree_program: "",
-    academic_year: new Date().getFullYear().toString(),
+    academic_year: "",
     intake: "",
   });
 
@@ -847,7 +847,7 @@ export default function StudentEnrollment({
               {currentStep < 3 ? (
                 <button
                   onClick={handleNext}
-                  className="login-btn px-10 py-3.5 w-auto min-w-[160px]"
+                  className="login-btn px-10 py-3.5 w-auto min-w-[180px]"
                 >
                   <span>Continue</span>
                   <ArrowRight size={18} />
@@ -1039,7 +1039,7 @@ function EnrollStyles() {
         .login-input:focus {
           background: #fff;
           border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.1), 0 0 0 1px #3b82f6;
         }
         .login-input::placeholder { color: #9ca3af; }
         .field-icon {

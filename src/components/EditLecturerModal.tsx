@@ -143,7 +143,7 @@ export default function EditLecturerModal({
           <button
             aria-label="Close"
             onClick={handleCancel}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 cursor-pointer hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -349,7 +349,7 @@ export default function EditLecturerModal({
               <button
                 aria-label="Toggle Status"
                 onClick={() => setIsActive(!isActive)}
-                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
+                className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
                   isActive ? "bg-blue-600 shadow-lg shadow-blue-200" : "bg-gray-300"
                 }`}
               >
@@ -367,14 +367,14 @@ export default function EditLecturerModal({
         <div className="flex items-center justify-end space-x-4 px-8 py-6 border-t border-gray-100 bg-gray-50/50">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+            className="px-6 py-2.5 border cursor-pointer border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
+            className="px-8 py-2.5 bg-blue-600 cursor-pointer text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? 'Saving...' : 'Save Changes'}

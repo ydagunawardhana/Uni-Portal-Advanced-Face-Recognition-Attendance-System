@@ -44,7 +44,7 @@ export default function PendingRegistrations({
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const getToken = () => {
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem("adminToken");
     if (!token) {
       toast.error("Authentication required. Please log in as Admin.");
       return null;
@@ -167,7 +167,7 @@ export default function PendingRegistrations({
           </div>
           <button
             onClick={fetchData}
-            className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-gray-200 bg-white shadow-sm"
+            className="p-2.5 text-gray-400 cursor-pointer hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-gray-200 bg-white shadow-sm"
             title="Refresh Queue"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />

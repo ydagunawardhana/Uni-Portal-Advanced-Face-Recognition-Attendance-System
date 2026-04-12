@@ -20,7 +20,7 @@ import {
   Power,
   Camera,
   AlertTriangle,
-  BookOpen,
+  ClipboardList,
   ChevronRight,
 } from "lucide-react";
 import {
@@ -88,6 +88,29 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
   const [statsError, setStatsError] = useState(false);
   const [activityError, setActivityError] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [preRegCount, setPreRegCount] = useState<number | null>(null);
+
+  // Fetch pre-registration count (same source as Sidebar badge)
+  useEffect(() => {
+    const fetchPreRegCount = async () => {
+      const token = localStorage.getItem("adminToken");
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/pre-registrations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPreRegCount(Array.isArray(data) ? data.length : 0);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+    fetchPreRegCount();
+    const interval = setInterval(fetchPreRegCount, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Mock data for visualizations
   const weeklyTrendData = [
@@ -313,16 +336,19 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
           </h3>
         </div>
 
-        {/* Card 3: Active Modules Today */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4">
-            <BookOpen size={30} />
+        {/* Card 3: Pending Pre-Registrations */}
+        <div
+          className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md cursor-pointer"
+          onClick={() => onTabChange && onTabChange("pre_registrations")}
+        >
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4">
+            <ClipboardList size={30} />
           </div>
           <p className="text-sm font-medium text-gray-500">
-            Active Modules Today
+            Pending Pre-Registrations
           </p>
           <h3 className="text-3xl font-bold text-gray-900 mt-1">
-            {stats ? stats.activeModulesToday : "—"} Sessions
+            {preRegCount !== null ? preRegCount : "—"} Pending
           </h3>
         </div>
       </div>
@@ -555,7 +581,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
           <div className="px-6 pb-6">
             <button
               onClick={() => onTabChange && onTabChange("audit")}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="w-full flex items-center cursor-pointer justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               <span>View All Activity</span>
               <ArrowRight className="w-4 h-4" />
@@ -624,24 +650,35 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                 const newState = !isCameraActive;
                 setIsCameraActive(newState);
                 if (newState) {
-                  toast.success("Camera System Started: Face recognition is now active.");
+                  toast.success(
+                    "Camera System Started: Face recognition is now active.",
+                  );
                 } else {
                   toast.success("Camera System Stopped.");
                 }
               }}
               className={`w-full text-left px-4 py-3 cursor-pointer rounded-lg transition-colors duration-300 ${
-                isCameraActive 
-                  ? "bg-red-50 hover:bg-red-100 border-red-200" 
+                isCameraActive
+                  ? "bg-red-50 hover:bg-red-100 border-red-200"
                   : "bg-gray-50 hover:bg-gray-100 border-gray-100"
               }`}
             >
-              <div className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-gray-900"}`}>
-                <Power size={18} className={isCameraActive ? "text-red-600 animate-pulse" : "text-black"} /> 
+              <div
+                className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-gray-900"}`}
+              >
+                <Power
+                  size={18}
+                  className={
+                    isCameraActive ? "text-red-600 animate-pulse" : "text-black"
+                  }
+                />
                 {isCameraActive ? "Stop Camera System" : "Start Camera System"}
               </div>
-              <p className={`text-xs mt-1 ${isCameraActive ? "text-red-600" : "text-emerald-600"}`}>
-                {isCameraActive 
-                  ? "Face recognition is currently running. Click to halt." 
+              <p
+                className={`text-xs mt-1 ${isCameraActive ? "text-red-600" : "text-emerald-600"}`}
+              >
+                {isCameraActive
+                  ? "Face recognition is currently running. Click to halt."
                   : "Launch the face recognition module for attendance"}
               </p>
             </button>

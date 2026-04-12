@@ -543,6 +543,7 @@ export default function AdminDashboard({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onCollapseChange={setIsSidebarCollapsed}
+        onLogout={handleLogoutClick}
       />
 
       <div
@@ -612,7 +613,7 @@ export default function AdminDashboard({
               </div>
               <button
                 onClick={handleLogoutClick}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
@@ -1043,7 +1044,7 @@ export default function AdminDashboard({
                   <button
                     type="button"
                     onClick={() => (camActive ? stopCamera() : startCamera())}
-                    className={`w-full py-3 mb-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+                    className={`w-full py-3 mb-3 cursor-pointer rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
                       camActive
                         ? "border-2 border-red-500 text-red-500 hover:bg-red-50"
                         : "bg-green-600 hover:bg-green-700 text-white"
@@ -1059,7 +1060,7 @@ export default function AdminDashboard({
                   <button
                     onClick={handleCaptureImages}
                     disabled={captureComplete || capturing}
-                    className={`w-full py-3 rounded-lg font-medium transition-colors mb-5 flex items-center justify-center space-x-2 ${
+                    className={`w-full py-3 rounded-lg font-medium cursor-pointer transition-colors mb-5 flex items-center justify-center space-x-2 ${
                       captureComplete || capturing
                         ? "bg-gray-400 cursor-not-allowed"
                         : "bg-blue-600 hover:bg-blue-700"
@@ -1121,14 +1122,14 @@ export default function AdminDashboard({
               <div className="mt-4 flex justify-end space-x-4 mb-6">
                 <button
                   onClick={handleClearForm}
-                  className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                  className="px-8 py-3 border-2 cursor-pointer border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
                 >
                   Clear Form
                 </button>
                 <button
                   onClick={handleRegisterStudent}
                   disabled={!captureComplete || registering}
-                  className={`px-8 py-3 rounded-lg font-medium transition-colors shadow-md flex items-center gap-2 ${
+                  className={`px-8 py-3 rounded-lg font-medium cursor-pointer transition-colors shadow-md flex items-center gap-2 ${
                     captureComplete && !registering
                       ? "bg-blue-600 hover:bg-blue-700 text-white"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"

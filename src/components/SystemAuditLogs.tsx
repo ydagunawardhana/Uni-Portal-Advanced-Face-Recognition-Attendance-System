@@ -22,37 +22,59 @@ interface AuditLog {
   timestamp: string | null;
   action_type: string;
   description: string;
-  // Extended fields (returned by backend or derived client-side)
   ip_address?: string;
   severity?: "Info" | "Warning" | "Critical";
 }
 
-// ── Severity derivation ──────────────────────────────────────────────────────
+// Severity derivation
 const deriveSeverity = (log: AuditLog): "Info" | "Warning" | "Critical" => {
   if (log.severity) return log.severity;
   const text = `${log.action_type} ${log.description}`.toLowerCase();
-  if (text.includes("delete") || text.includes("fail") || text.includes("unauthor") || text.includes("critical"))
+  if (
+    text.includes("delete") ||
+    text.includes("fail") ||
+    text.includes("unauthor") ||
+    text.includes("critical")
+  )
     return "Critical";
-  if (text.includes("update") || text.includes("warn") || text.includes("suspend") || text.includes("disable"))
+  if (
+    text.includes("update") ||
+    text.includes("warn") ||
+    text.includes("suspend") ||
+    text.includes("disable")
+  )
     return "Warning";
   return "Info";
 };
 
 const severityConfig = {
-  Info:     { cls: "bg-blue-100 text-blue-700",   icon: <Info          className="w-3.5 h-3.5" /> },
-  Warning:  { cls: "bg-amber-100 text-amber-700",  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  Critical: { cls: "bg-red-100 text-red-700",     icon: <XCircle       className="w-3.5 h-3.5" /> },
+  Info: {
+    cls: "bg-blue-100 text-blue-700",
+    icon: <Info className="w-3.5 h-3.5" />,
+  },
+  Warning: {
+    cls: "bg-amber-100 text-amber-700",
+    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+  },
+  Critical: {
+    cls: "bg-red-100 text-red-700",
+    icon: <XCircle className="w-3.5 h-3.5" />,
+  },
 };
 
-// ── Status derivation ────────────────────────────────────────────────────────
+// Status derivation
 const deriveStatus = (description: string): "Success" | "Failed" => {
   const lower = description.toLowerCase();
-  if (lower.includes("fail") || lower.includes("error") || lower.includes("unauthor"))
+  if (
+    lower.includes("fail") ||
+    lower.includes("error") ||
+    lower.includes("unauthor")
+  )
     return "Failed";
   return "Success";
 };
 
-// ── Role derivation ──────────────────────────────────────────────────────────
+// Role derivation
 const deriveRole = (log: AuditLog): "Admin" | "Lecturer" | "Student" | null => {
   const actionType = log.action_type?.toLowerCase() ?? "";
   const desc = log.description?.toLowerCase() ?? "";
@@ -82,63 +104,75 @@ const deriveRole = (log: AuditLog): "Admin" | "Lecturer" | "Student" | null => {
 
 const getRoleBadgeColor = (role: "Admin" | "Lecturer" | "Student") => {
   switch (role) {
-    case "Admin":    return "bg-purple-100 text-purple-700 border-purple-200";
-    case "Lecturer": return "bg-blue-100 text-blue-700 border-blue-200";
-    case "Student":  return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "Admin":
+      return "bg-purple-100 text-purple-700 border-purple-200";
+    case "Lecturer":
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    case "Student":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
   }
 };
 
-// ── Timestamp formatter ──────────────────────────────────────────────────────
+// Timestamp formatter
 const formatTimestamp = (iso: string | null) => {
   if (!iso) return { date: "—", time: "" };
   const d = new Date(iso);
   return {
-    date: d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "2-digit" }),
-    time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    date: d.toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    }),
+    time: d.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
   };
 };
 
-// ── Performed By extractor ───────────────────────────────────────────────────
+// Performed By extractor
 const extractPerformedBy = (description: string): string => {
-  // Match patterns like: Admin 'user@email.com' or lecturer 'Name'
   const quotedMatch = description.match(/'([^']+)'/);
   if (quotedMatch) return quotedMatch[1];
-  // Fallback: try to find an email
+
   const emailMatch = description.match(/[\w.-]+@[\w.-]+/);
   if (emailMatch) return emailMatch[0];
   return "System";
 };
 
-// ── Component ────────────────────────────────────────────────────────────────
+// Component
 export default function SystemAuditLogs() {
-  const [searchQuery, setSearchQuery]       = useState("");
-  const [startDate, setStartDate]           = useState("");
-  const [endDate, setEndDate]               = useState("");
-  const [roleFilter, setRoleFilter]         = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
   const [actionTypeFilter, setActionTypeFilter] = useState("All");
-  const [currentPage, setCurrentPage]       = useState(1);
-  const [logs, setLogs]                     = useState<AuditLog[]>([]);
-  const [isLoading, setIsLoading]           = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = 30;
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
+  // Data fetching
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token =
-        localStorage.getItem("adminToken") ||
-        localStorage.getItem("access_token");
+      const token = localStorage.getItem("adminToken");
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
-      if (startDate)   params.append("start_date", startDate);
-      if (endDate)     params.append("end_date", endDate);
+      if (startDate) params.append("start_date", startDate);
+      if (endDate) params.append("end_date", endDate);
       if (roleFilter && roleFilter !== "All") params.append("role", roleFilter);
-      if (actionTypeFilter && actionTypeFilter !== "All") params.append("action_type", actionTypeFilter);
+      if (actionTypeFilter && actionTypeFilter !== "All")
+        params.append("action_type", actionTypeFilter);
 
-      const res = await fetch(`${API_BASE}/api/admin/audit-logs?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${API_BASE}/api/admin/audit-logs?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (res.ok) {
         const data: AuditLog[] = await res.json();
@@ -159,14 +193,14 @@ export default function SystemAuditLogs() {
     return () => clearTimeout(debounce);
   }, [fetchLogs]);
 
-  // ── Pagination ─────────────────────────────────────────────────────────────
-  const totalPages   = Math.ceil(logs.length / itemsPerPage);
-  const startIndex   = (currentPage - 1) * itemsPerPage;
-  const endIndex     = startIndex + itemsPerPage;
-  const currentLogs  = logs.slice(startIndex, endIndex);
+  // Pagination
+  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentLogs = logs.slice(startIndex, endIndex);
   const totalRecords = logs.length;
 
-  // ── CSV Export ─────────────────────────────────────────────────────────────
+  // CSV Export
   const handleExportCSV = () => {
     if (!logs || logs.length === 0) {
       toast.error("No logs available to export.");
@@ -177,22 +211,34 @@ export default function SystemAuditLogs() {
 
   const executeCSVExport = () => {
     try {
-      const headers = ["Timestamp", "Action Type", "Description", "Performed By", "Severity", "Status"];
-      const csvRows = logs.map((l) => [
-        `"${l.timestamp ?? ""}"`,
-        `"${l.action_type}"`,
-        `"${l.description.replace(/"/g, '""')}"`,
-        `"${extractPerformedBy(l.description)}"`,
-        `"${deriveSeverity(l)}"`,
-        `"${deriveStatus(l.description)}"`,
-      ].join(","));
+      const headers = [
+        "Timestamp",
+        "Action Type",
+        "Description",
+        "Performed By",
+        "Severity",
+        "Status",
+      ];
+      const csvRows = logs.map((l) =>
+        [
+          `"${l.timestamp ?? ""}"`,
+          `"${l.action_type}"`,
+          `"${l.description.replace(/"/g, '""')}"`,
+          `"${extractPerformedBy(l.description)}"`,
+          `"${deriveSeverity(l)}"`,
+          `"${deriveStatus(l.description)}"`,
+        ].join(","),
+      );
 
       const csvContent = [headers.join(","), ...csvRows].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `audit_logs_${new Date().toISOString().split("T")[0]}.csv`);
+      link.setAttribute(
+        "download",
+        `audit_logs_${new Date().toISOString().split("T")[0]}.csv`,
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -205,18 +251,22 @@ export default function SystemAuditLogs() {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // Render
   return (
     <div className="pb-20">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">System Activity Logs</h2>
-          <p className="text-gray-600 mt-1">Track all system activities and user actions</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            System Activity Logs
+          </h2>
+          <p className="text-gray-600 mt-1">
+            Track all system activities and user actions
+          </p>
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
+          className="flex items-center cursor-pointer space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
         >
           <Download className="w-5 h-5" />
           <span className="font-medium">Export to CSV</span>
@@ -228,7 +278,9 @@ export default function SystemAuditLogs() {
         <div className="grid grid-cols-4 gap-4">
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search
+            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -243,7 +295,9 @@ export default function SystemAuditLogs() {
 
           {/* Start Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+            <label className="block text-sm cursor-pointer font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
@@ -257,7 +311,9 @@ export default function SystemAuditLogs() {
 
           {/* End Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
@@ -271,7 +327,9 @@ export default function SystemAuditLogs() {
 
           {/* Role Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filter by Role
+            </label>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <select
@@ -289,11 +347,13 @@ export default function SystemAuditLogs() {
 
         {/* Action Type */}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Action Type</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Action Type
+          </label>
           <select
             value={actionTypeFilter}
             onChange={(e) => setActionTypeFilter(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
+            className="w-full px-4  cursor-pointer py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
           >
             <option value="All">All Actions</option>
             <option value="Login Activity">Login Activity</option>
@@ -310,12 +370,24 @@ export default function SystemAuditLogs() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Timestamp</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action Type</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Performed By</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Severity</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Timestamp
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Action Type
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Performed By
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Severity
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -323,30 +395,41 @@ export default function SystemAuditLogs() {
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center">
                     <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-500 mb-3" />
-                    <p className="text-sm text-gray-500">Loading audit logs...</p>
+                    <p className="text-sm text-gray-500">
+                      Loading audit logs...
+                    </p>
                   </td>
                 </tr>
               ) : currentLogs.length > 0 ? (
                 currentLogs.map((log) => {
                   const { date, time } = formatTimestamp(log.timestamp);
-                  const status   = deriveStatus(log.description);
+                  const status = deriveStatus(log.description);
                   const severity = deriveSeverity(log);
-                  const role     = deriveRole(log);
-                  const sevCfg   = severityConfig[severity];
+                  const role = deriveRole(log);
+                  const sevCfg = severityConfig[severity];
 
                   return (
-                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={log.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       {/* Timestamp */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{date}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {date}
+                        </div>
                         <div className="text-xs text-gray-500">{time}</div>
                       </td>
 
                       {/* Action Type + Role badge */}
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900 mb-1">{log.action_type}</div>
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {log.action_type}
+                        </div>
                         {role && (
-                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${getRoleBadgeColor(role)}`}>
+                          <span
+                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${getRoleBadgeColor(role)}`}
+                          >
                             {role}
                           </span>
                         )}
@@ -354,7 +437,9 @@ export default function SystemAuditLogs() {
 
                       {/* Description */}
                       <td className="px-6 py-4 max-w-xs">
-                        <div className="text-sm text-gray-700 break-words">{log.description}</div>
+                        <div className="text-sm text-gray-700 break-words">
+                          {log.description}
+                        </div>
                       </td>
 
                       {/* Performed By */}
@@ -366,7 +451,9 @@ export default function SystemAuditLogs() {
 
                       {/* Severity */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sevCfg.cls}`}>
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sevCfg.cls}`}
+                        >
                           {sevCfg.icon}
                           {severity}
                         </span>
@@ -393,8 +480,12 @@ export default function SystemAuditLogs() {
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center">
                     <FileX className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm font-medium text-gray-500">No audit logs found matching your criteria</p>
-                    <p className="text-xs text-gray-400 mt-1">Try adjusting your filters or date range</p>
+                    <p className="text-sm font-medium text-gray-500">
+                      No audit logs found matching your criteria
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Try adjusting your filters or date range
+                    </p>
                   </td>
                 </tr>
               )}
@@ -407,7 +498,9 @@ export default function SystemAuditLogs() {
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
-              <span className="font-medium">{Math.min(endIndex, totalRecords)}</span>{" "}
+              <span className="font-medium">
+                {Math.min(endIndex, totalRecords)}
+              </span>{" "}
               of <span className="font-medium">{totalRecords}</span> records
             </div>
 
@@ -426,7 +519,10 @@ export default function SystemAuditLogs() {
               </button>
 
               <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((page) => (
+                {Array.from(
+                  { length: Math.min(totalPages, 7) },
+                  (_, i) => i + 1,
+                ).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
@@ -439,11 +535,15 @@ export default function SystemAuditLogs() {
                     {page}
                   </button>
                 ))}
-                {totalPages > 7 && <span className="px-2 text-gray-400">…</span>}
+                {totalPages > 7 && (
+                  <span className="px-2 text-gray-400">…</span>
+                )}
               </div>
 
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
                 disabled={currentPage === totalPages}
                 className={`flex items-center space-x-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === totalPages
@@ -467,23 +567,28 @@ export default function SystemAuditLogs() {
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                 <Download size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Export Audit Logs</h3>
+              <h3 className="text-xl font-bold text-gray-900">
+                Export Audit Logs
+              </h3>
             </div>
-            
+
             <p className="text-gray-600 mb-6 leading-relaxed">
-              You are about to export <span className="font-bold text-gray-900">{logs.length}</span> audit log records as a CSV file. This file contains sensitive system activity data. Are you sure you want to proceed?
+              You are about to export{" "}
+              <span className="font-bold text-gray-900">{logs.length}</span>{" "}
+              audit log records as a CSV file. This file contains sensitive
+              system activity data. Are you sure you want to proceed?
             </p>
-            
+
             <div className="flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setShowExportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm cursor-pointer font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={executeCSVExport}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 text-sm cursor-pointer font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
               >
                 <Download size={16} /> Yes, Export Data
               </button>
