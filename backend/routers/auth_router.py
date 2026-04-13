@@ -35,6 +35,7 @@ class LoginResponse(BaseModel):
     token_type:   str = "bearer"
     role:         str
     email:        str
+    requires_password_change: bool
     message:      str
 
 
@@ -126,10 +127,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         description=f"{user.role} '{user.email}' logged into the portal.",
     )
 
+    # Check if password change is required (only for Lecturers here, Students handled in their own router)
+    requires_change = False
+    if user.role == "Lecturer":
+        lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == user.email).first()
+        if lecturer:
+            requires_change = lecturer.requires_password_change
+
     return LoginResponse(
         access_token=token,
         role=user.role,
         email=user.email,
+        requires_password_change=requires_change,
         message=f"Login successful! Welcome back.",
     )
 

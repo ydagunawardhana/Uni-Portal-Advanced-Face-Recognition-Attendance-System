@@ -65,6 +65,31 @@ export default function LecturerProfile() {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    if (window.location.hash === "#password-settings") {
+      const element = document.getElementById("password-settings");
+      if (element) {
+        // Add a small delay to ensure the page is fully rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Optional: Highlight the section briefly
+          element.classList.add("ring-4", "ring-yellow-500", "ring-offset-4");
+          setTimeout(
+            () =>
+              element.classList.remove(
+                "ring-4",
+                "ring-yellow-500",
+                "ring-offset-4",
+              ),
+            3000,
+          );
+          // Clear hash after scroll to prevent re-scroll on other updates
+          window.history.replaceState(null, "", window.location.pathname);
+        }, 600);
+      }
+    }
+  }, []);
+
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("lecturerToken");
@@ -151,6 +176,10 @@ export default function LecturerProfile() {
           });
           passwordSuccess = false;
         } else {
+          // CRITICAL: Stop the persistent dashboard warning and session toast
+          localStorage.removeItem("lecturerRequiresPasswordChange");
+          sessionStorage.removeItem("passwordWarningToastShown");
+
           setCurrentPassword("");
           setNewPassword("");
           setConfirmPassword("");
@@ -620,7 +649,10 @@ export default function LecturerProfile() {
       </div>
 
       {/* Card 6 - Security */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm w-full">
+      <div
+        id="password-settings"
+        className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm w-full transition-all duration-500"
+      >
         <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
           <div className="p-2 bg-red-100 rounded-lg text-red-600">
             <Lock className="w-8 h-8" />

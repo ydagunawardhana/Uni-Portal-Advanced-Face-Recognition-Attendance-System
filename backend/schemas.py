@@ -90,6 +90,7 @@ class AppointmentCreate(AppointmentBase):
 
 class AppointmentUpdateStatus(BaseModel):
     status: str           # 'Approved' | 'Rejected'
+    decline_reason: Optional[str] = None
 
 
 class AppointmentOut(AppointmentBase):
@@ -99,6 +100,12 @@ class AppointmentOut(AppointmentBase):
     created_at:    datetime
     student_name:  Optional[str] = None
     student_index: Optional[str] = None
+    lecturer_name: Optional[str] = None
+    lecturer_department: Optional[str] = None
+    student_faculty:    Optional[str] = None
+    student_department: Optional[str] = None
+    student_degree:     Optional[str] = None
+    decline_reason:     Optional[str] = None
 
     model_config = {"from_attributes": True}
 

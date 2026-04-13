@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import LandingPage from "./components/LandingPage";
 import LoginScreen from "./components/LoginScreen";
 import AdminDashboard from "./components/AdminDashboard";
@@ -55,22 +55,31 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    // Completely destroy the local session cache
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("lecturerToken");
-    localStorage.removeItem("studentToken");
-    localStorage.removeItem("user_role");
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("isAdminLoggedIn");
-    localStorage.removeItem("adminActiveTab");
-    localStorage.removeItem("requiresPasswordChange");
-    
-    // Cleanup deprecated keys
-    localStorage.removeItem("token");
-    localStorage.removeItem("access_token");
+    // 1. Show the toast immediately
+    toast.success("Logged out successfully", {
+      icon: "👋",
+      duration: 3000,
+    });
 
-    setCurrentScreen("landing");
-    setUserRole(null);
+    // 2. Add a slight delay before actual logout and redirect
+    setTimeout(() => {
+      // Completely destroy the local session cache
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("lecturerToken");
+      localStorage.removeItem("studentToken");
+      localStorage.removeItem("user_role");
+      localStorage.removeItem("user_email");
+      localStorage.removeItem("isAdminLoggedIn");
+      localStorage.removeItem("adminActiveTab");
+
+      // Cleanup security warning flags
+      localStorage.removeItem("lecturerRequiresPasswordChange");
+      localStorage.removeItem("requiresPasswordChange");
+      sessionStorage.removeItem("passwordWarningToastShown");
+
+      setCurrentScreen("landing");
+      setUserRole(null);
+    }, 1500); // 1.5 seconds delay
   };
 
   const handleNavigate = (screen: Screen) => {
@@ -90,8 +99,9 @@ export default function App() {
       {/* Global toast container — sits above all screens */}
       <Toaster
         position="top-center"
+        containerStyle={{ zIndex: 2147483647 }}
         toastOptions={{
-          style: { fontFamily: "inherit", fontSize: "0.95rem", zIndex: 9999 },
+          style: { fontFamily: "inherit", fontSize: "0.95rem" },
           success: { iconTheme: { primary: "#16a34a", secondary: "#fff" } },
           error:   { iconTheme: { primary: "#dc2626", secondary: "#fff" } },
         }}

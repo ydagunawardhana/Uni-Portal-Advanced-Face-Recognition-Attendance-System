@@ -110,6 +110,7 @@ class Lecturer(Base):
     is_active         = Column(Boolean, default=True, nullable=False)
     profile_picture   = Column(String, nullable=True)
     office_hours      = Column(Text, nullable=True) # JSON array of {day, startTime, endTime, location}
+    requires_password_change = Column(Boolean, default=True, nullable=False)
 
     appointments      = relationship("Appointment", back_populates="lecturer")
 
@@ -153,6 +154,7 @@ class Appointment(Base):
     appointment_date = Column(String, nullable=False) # e.g., 'Monday' or '2026-04-15'
     time_slot        = Column(String, nullable=False) # e.g., '10:00 AM - 12:00 PM'
     reason           = Column(Text, nullable=True)
+    decline_reason   = Column(Text, nullable=True)
     status           = Column(String, default="Pending") # 'Pending', 'Approved', 'Rejected'
     created_at       = Column(DateTime(timezone=True), server_default=func.now())
 

@@ -78,6 +78,12 @@ export default function LoginScreen({
         );
       } else {
         localStorage.setItem("lecturerToken", data.access_token);
+        if (selectedRole === "Lecturer") {
+          localStorage.setItem(
+            "lecturerRequiresPasswordChange",
+            String(data.requires_password_change),
+          );
+        }
       }
 
       localStorage.setItem("user_role", data.role || selectedRole);

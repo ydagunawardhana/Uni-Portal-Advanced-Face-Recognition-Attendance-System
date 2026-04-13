@@ -89,6 +89,12 @@ def update_password(
         raise HTTPException(status_code=400, detail="New password must be at least 8 characters long.")
 
     current_user.hashed_password = hash_password(payload.new_password)
+    
+    # Also clear the forced password change requirement
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == current_user.email).first()
+    if lecturer:
+        lecturer.requires_password_change = False
+        
     db.commit()
 
     return {"success": True, "message": "Password updated successfully."}

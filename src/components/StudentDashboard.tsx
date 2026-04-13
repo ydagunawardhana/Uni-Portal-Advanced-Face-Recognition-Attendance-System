@@ -165,13 +165,7 @@ export default function StudentDashboard({
   };
 
   const handleLogoutClick = () => {
-    toast.success("Logged out successfully!", {
-      icon: "👋",
-      duration: 2500,
-    });
-    setTimeout(() => {
-      onLogout();
-    }, 500);
+    onLogout();
   };
 
   const getNotificationIcon = (type: string) => {

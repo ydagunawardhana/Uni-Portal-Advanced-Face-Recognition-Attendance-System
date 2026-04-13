@@ -527,13 +527,7 @@ export default function AdminDashboard({
   };
 
   const handleLogoutClick = () => {
-    toast.success("Logged out successfully!", {
-      icon: "👋",
-      duration: 2500,
-    });
-    setTimeout(() => {
-      onLogout();
-    }, 500);
+    onLogout();
   };
 
   //  Render
