@@ -70,7 +70,7 @@ export default function DashboardOverview() {
   ];
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-2 space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Profile Card */}
         <div className="bg-white rounded-lg shadow-md p-6">

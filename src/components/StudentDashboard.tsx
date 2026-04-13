@@ -22,6 +22,7 @@ export default function StudentDashboard({
 }: StudentDashboardProps) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [studentFirstName, setStudentFirstName] = useState("Student");
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
 
   // Notification States
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -113,6 +114,7 @@ export default function StudentDashboard({
     const requiresPassChange =
       localStorage.getItem("requiresPasswordChange") === "true";
     if (requiresPassChange) {
+      setNeedsPasswordChange(true);
       toast(
         "⚠️ Security Alert: Please go to your Profile to change your auto-generated temporary password.",
         {
@@ -184,7 +186,39 @@ export default function StudentDashboard({
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardOverview />;
+        return (
+          <div className="p-8 pb-10">
+            {needsPasswordChange && (
+              <div className="bg-white border border-gray-200 p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="p-2 rounded-lg mr-4">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-red-700">
+                      Security Warning: Temporary Password in Use
+                    </p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      Please navigate to your <strong>My Profile</strong> and Go
+                      to Change Password Section to change your password
+                      immediately to secure your account.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    window.location.hash = "password-settings";
+                    setActiveTab("profile");
+                  }}
+                  className="ml-6 px-4 py-2 bg-yellow-100 text-black text-sm font-bold rounded-lg hover:bg-red-100 border-2 transition-colors whitespace-nowrap cursor-pointer shadow-md"
+                >
+                  Go to Profile
+                </button>
+              </div>
+            )}
+            <DashboardOverview />
+          </div>
+        );
       case "timetable":
         return <StudentTimetable />;
       case "request-correction":
@@ -195,7 +229,7 @@ export default function StudentDashboard({
           />
         );
       case "profile":
-        return <StudentProfileSecurity />;
+        return <StudentProfileSecurity notifications={notifications} />;
       case "help":
         return <StudentHelpSupport />;
       case "book-consultations":
@@ -232,7 +266,7 @@ export default function StudentDashboard({
             <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none"
+                className="relative p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors focus:outline-none"
               >
                 <Bell className="w-6 h-6 text-gray-600" />
                 {unreadCount > 0 && (
@@ -246,7 +280,9 @@ export default function StudentDashboard({
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 transform transition-all flex flex-col">
                   <div className="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
-                    <h3 className="font-bold text-gray-800">Notifications</h3>
+                    <h3 className="font-bold cursor-pointer text-gray-800">
+                      Notifications
+                    </h3>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
@@ -308,7 +344,7 @@ export default function StudentDashboard({
             {/* Logout Button */}
             <button
               onClick={handleLogoutClick}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center cursor-pointer space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>

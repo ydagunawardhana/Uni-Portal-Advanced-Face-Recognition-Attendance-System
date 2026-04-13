@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2, Camera, Clock, Laptop, Smartphone, Activity } from 'lucide-react';
+import { User, CheckCircle, Calendar, Lock, Eye, EyeOff, Shield, Loader2, Camera, Clock, Laptop, Smartphone, Activity, Bell, BellOff, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const API_BASE = "http://localhost:8000";
@@ -31,7 +31,7 @@ interface SessionData {
   is_current_session: boolean;
 }
 
-export default function StudentProfileSecurity() {
+export default function StudentProfileSecurity({ notifications = [] }: { notifications?: any[] }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -83,6 +83,31 @@ export default function StudentProfileSecurity() {
       }
     };
     fetchProfileAndSessions();
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash === "#password-settings") {
+      const element = document.getElementById("password-settings");
+      if (element) {
+        // Add a small delay to ensure the page is fully rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Optional: Highlight the section briefly
+          element.classList.add("ring-2", "ring-yellow-500", "ring-offset-4");
+          setTimeout(
+            () =>
+              element.classList.remove(
+                "ring-2",
+                "ring-yellow-500",
+                "ring-offset-4",
+              ),
+            2000,
+          );
+          // Clear hash after scroll
+          window.history.replaceState(null, "", window.location.pathname);
+        }, 500);
+      }
+    }
   }, []);
 
   const handleRevokeSession = async (sessionId: number) => {
@@ -257,6 +282,29 @@ export default function StudentProfileSecurity() {
     }
   };
 
+  const renderNotificationIcon = (title: string) => {
+    const t = title?.toLowerCase() || "";
+    // If it's an update, success, or resolved state, show the green checkmark
+    if (
+      t.includes("update") ||
+      t.includes("updated") ||
+      t.includes("success") ||
+      t.includes("approved")
+    ) {
+      return (
+        <div className="mt-0.5 flex-shrink-0 text-green-500">
+          <CheckCircle className="w-[18px] h-[18px]" />
+        </div>
+      );
+    }
+    // Default informative state (Requests, generic alerts)
+    return (
+      <div className="mt-0.5 flex-shrink-0 text-blue-500">
+        <Info className="w-[18px] h-[18px]" />
+      </div>
+    );
+  };
+
   return (
     <>    
     <style>{`
@@ -272,8 +320,8 @@ export default function StudentProfileSecurity() {
         <p className="text-gray-600 mt-2">Manage your profile information and security settings</p>
       </div>
 
-      {/* Main Content - Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
+      {/* Main Content - Three Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side - Profile Card */}
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
           <div className="flex items-center gap-2 mb-6">
@@ -444,7 +492,7 @@ export default function StudentProfileSecurity() {
             <button
               onClick={handleRequestRetraining}
               disabled={isRetraining || studentData?.retrain_requested}
-              className={`w-full px-6 py-3 border-2 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
+              className={`w-full cursor-pointer px-6 py-3 border-2 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
                 studentData?.retrain_requested
                   ? 'bg-yellow-50 border-yellow-500 text-yellow-600'
                   : 'bg-white border-red-600 text-red-600 hover:bg-red-50'
@@ -467,7 +515,7 @@ export default function StudentProfileSecurity() {
             {studentData?.retrain_requested && (
               <button 
                 onClick={handleCancelRequest} 
-                className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium underline-offset-2 hover:underline w-full text-center"
+                className="mt-3 text-sm cursor-pointer text-red-600 hover:text-red-700 font-medium underline-offset-2 hover:underline w-full text-center"
               >
                 Cancel Request
               </button>
@@ -480,7 +528,7 @@ export default function StudentProfileSecurity() {
             {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Face re-training requires admin approval. You will be notified via email once your request is processed.
+                <strong>Note:</strong> Face re-training requires admin approval. You will be notified via notification once your request is processed.
               </p>
             </div>
           </div>
@@ -527,8 +575,64 @@ export default function StudentProfileSecurity() {
                   </div>
                 </div>
               ))}
-              {sessions.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No active sessions tracked securely.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3rd Column Wrapper */}
+        <div className="relative h-[500px] lg:h-auto">
+          {/* The Card - absolutely positioned to exactly match the 1st column's height */}
+          <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-gray-200 p-8 flex flex-col">
+            {/* Header - flex-shrink-0 prevents it from squishing */}
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Recent Notifications</h3>
+              </div>
+            </div>
+
+            {/* Scrollable Body - flex-1 takes remaining space, overflow-y-auto makes it scroll */}
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {/* Check if notifications exist and have items */}
+              {notifications && notifications.length > 0 ? (
+                <div className="space-y-3">
+                  {notifications.map((notif, index) => (
+                    <div
+                      key={notif.id || index}
+                      className="flex gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
+                    >
+                      {renderNotificationIcon(notif.title)}
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
+                          {notif.title}
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
+                          {notif.message}
+                        </p>
+                        <span className="text-[10px] font-bold text-gray-400 mt-2 block uppercase tracking-wider">
+                          {notif.timestamp
+                            ? new Date(notif.timestamp).toLocaleDateString()
+                            : "Just now"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Beautiful Empty State */
+                <div className="flex flex-col items-center justify-center h-full text-center opacity-80 pt-10">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <BellOff className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h4 className="text-[15px] font-bold text-gray-700">
+                    You're all caught up!
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1.5 max-w-[200px] mx-auto leading-relaxed">
+                    There are no new notifications or alerts to display right now.
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -536,7 +640,7 @@ export default function StudentProfileSecurity() {
       </div>
 
       {/* Change Password Section - Full Width Below */}
-      <div className="mt-6 max-w-6xl">
+      <div id="password-settings" className="mt-6 transition-all duration-500">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
           <div className="flex items-center gap-2 mb-6">
             <Lock className="w-5 h-5 text-red-600" />
@@ -621,7 +725,7 @@ export default function StudentProfileSecurity() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="px-8 py-3 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

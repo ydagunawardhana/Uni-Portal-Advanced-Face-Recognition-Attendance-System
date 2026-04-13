@@ -7,6 +7,10 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  Sun,
+  UserCheck,
+  EyeOff,
+  Move3d,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "./Sidebar";
@@ -1108,6 +1112,45 @@ export default function AdminDashboard({
                         All images captured successfully!
                       </p>
                     )}
+                  </div>
+
+                  {/* Face Capture Guidelines Card */}
+                  <div className="mt-8 bg-blue-50/50 border border-blue-100 rounded-xl p-5">
+                    <h4 className="text-md font-bold text-blue-900 mb-4 flex items-center gap-2">
+                      Best Practices for Face Capture
+                    </h4>
+                    
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3">
+                        <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600 shadow-sm mt-0.5">
+                          <Sun className="w-5 h-5" /> {/* Lighting Icon */}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-black">Ensure Good Lighting</p>
+                          <p className="text-sm text-gray-500 mt-0.5">The student's face should be evenly lit without harsh shadows.</p>
+                        </div>
+                      </li>
+                      
+                      <li className="flex items-start gap-3">
+                        <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600 shadow-sm mt-0.5">
+                          <UserCheck className="w-5 h-5" /> {/* Neutral Face Icon */}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-black">Neutral Expression</p>
+                          <p className="text-sm text-gray-500 mt-0.5">Ask the student to maintain a neutral face and look straight ahead.</p>
+                        </div>
+                      </li>
+
+                      <li className="flex items-start gap-3">
+                        <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600 shadow-sm mt-0.5">
+                          <Move3d className="w-5 h-5" /> {/* Move Head Icon */}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-black">Slow Head Movement</p>
+                          <p className="text-sm text-gray-500 mt-0.5">During capture, the student should turn their head very slowly side-to-side.</p>
+                        </div>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>

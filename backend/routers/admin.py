@@ -211,6 +211,7 @@ class UpdateStudentRequest(BaseModel):
     intake: Optional[str] = None
     nic_number: Optional[str] = None
     gender: Optional[str] = None
+    is_active: bool = True
 
 
 class RecaptureRequest(BaseModel):
@@ -605,6 +606,7 @@ def register_student(
         academic_year     = payload.academic_year,
         intake            = payload.intake,
         face_dataset_path = dataset_path,
+        is_active         = True,
     )
     db.add(student)
     db.flush()   # get the auto-generated student.id before committing
@@ -691,11 +693,14 @@ def update_student(
     student.intake = payload.intake
     student.nic_number = payload.nic_number
     student.gender = payload.gender
+    student.is_active = payload.is_active
 
     # Sync with users table
     user_record = db.query(models.User).filter(models.User.email == student.email).first()
-    if user_record and payload.personal_email is not None:
-        user_record.personal_email = payload.personal_email
+    if user_record:
+        if payload.personal_email is not None:
+            user_record.personal_email = payload.personal_email
+        user_record.is_active = payload.is_active
 
     db.commit()
     db.refresh(student)

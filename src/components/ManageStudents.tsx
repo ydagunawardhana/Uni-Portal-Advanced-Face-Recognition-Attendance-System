@@ -126,6 +126,7 @@ interface StudentData {
   gender: string;
   profile_picture?: string | null;
   retrain_requested?: boolean;
+  is_active?: boolean;
 }
 
 interface FaceStatus {
@@ -174,6 +175,7 @@ export default function ManageStudents({
   });
   const [editFaculty, setEditFaculty] = useState("");
   const [editSubDepartment, setEditSubDepartment] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
   // Delete Modal State
   const [studentToDelete, setStudentToDelete] = useState<StudentData | null>(
@@ -474,6 +476,7 @@ export default function ManageStudents({
 
     setEditFaculty(studentFaculty);
     setEditSubDepartment(studentDept);
+    setIsActive(student.is_active !== false); // Default to true if undefined
     setEditForm({
       name: student.name,
       mobile: student.mobile || "",
@@ -517,6 +520,7 @@ export default function ManageStudents({
             intake: editForm.intake,
             nic_number: editForm.nic_number,
             gender: editForm.gender,
+            is_active: isActive,
           }),
         },
       );
@@ -771,13 +775,14 @@ export default function ManageStudents({
                 <th className="p-4 font-semibold">Batch</th>
                 <th className="p-4 font-semibold">Intake</th>
                 <th className="p-4 font-semibold">Mobile</th>
+                <th className="p-4 font-semibold text-center">Status</th>
                 <th className="p-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-500">
+                  <td colSpan={9} className="p-8 text-center text-gray-500">
                     No students matching search criteria.
                   </td>
                 </tr>
@@ -813,6 +818,17 @@ export default function ManageStudents({
                       {student.mobile || "-"}
                     </td>
                     <td className="p-4 text-center">
+                      <span
+                        className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          student.is_active !== false
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {student.is_active !== false ? "Active" : "Suspended"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => openEditModal(student)}
@@ -845,9 +861,9 @@ export default function ManageStudents({
             className="absolute inset-0"
             onClick={() => setIsEditModalOpen(false)}
           ></div>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100">
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-blue-600" />
                 Edit Student Details
@@ -860,8 +876,8 @@ export default function ManageStudents({
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-left">
+            {/* Modal Body - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto text-left flex-1 custom-scrollbar">
               {/* Read-only Identifiers */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1098,11 +1114,52 @@ export default function ManageStudents({
                     />
                   </div>
                 </div>
+
+                {/* Status Toggle */}
+                <div className="mb-4 mt-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Account Status
+                  </label>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50/50">
+                    {/* Dynamic Text Section */}
+                    <div className="flex-1 pr-4">
+                      <h4
+                        className={`text-sm font-bold transition-colors ${
+                          isActive ? "text-green-700" : "text-red-600"
+                        }`}
+                      >
+                        {isActive ? "Account Active" : "Account Suspended"}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isActive
+                          ? "Student has full portal access and can log in."
+                          : "Student portal access is completely revoked."}
+                      </p>
+                    </div>
+
+                    {/* Foolproof Toggle Button */}
+                    <button
+                      aria-label="Toggle Status"
+                      onClick={() => setIsActive(!isActive)}
+                      className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
+                        isActive
+                          ? "bg-blue-600 shadow-lg shadow-blue-200"
+                          : "bg-gray-300"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 ${
+                          isActive ? "translate-x-8" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
+            {/* Modal Footer - Fixed */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 flex-shrink-0 rounded-b-2xl">
               <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="px-6 py-2 border cursor-pointer border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors"
@@ -1143,7 +1200,7 @@ export default function ManageStudents({
               </div>
               <button
                 onClick={closeCaptureModal}
-                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
               >
                 <X className="w-6 h-6 text-gray-800" />
               </button>
@@ -1200,7 +1257,7 @@ export default function ManageStudents({
                   <button
                     onClick={() => (camActive ? stopCamera() : startCamera())}
                     disabled={isUploading || capturing}
-                    className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                    className={`flex-1 py-3 rounded-xl cursor-pointer font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
                       camActive
                         ? "border-2 border-red-500 text-red-500 hover:bg-red-50"
                         : "bg-green-600 text-white hover:bg-green-700"
@@ -1292,7 +1349,7 @@ export default function ManageStudents({
                     <button
                       onClick={handleStartCapture}
                       disabled={!camActive || capturing || isUploading}
-                      className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl flex items-center justify-center gap-3 transition-all ${
+                      className={`w-full py-4 cursor-pointer rounded-xl font-bold text-lg shadow-xl flex items-center justify-center gap-3 transition-all ${
                         camActive && !capturing && !isUploading
                           ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02]"
                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -1323,7 +1380,7 @@ export default function ManageStudents({
                       <button
                         onClick={handleConfirmUpload}
                         disabled={isUploading}
-                        className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-green-200 hover:bg-green-700 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                        className="flex-1 py-4 bg-green-600 cursor-pointer text-white rounded-xl font-bold text-lg shadow-xl shadow-green-200 hover:bg-green-700 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                       >
                         {isUploading ? (
                           <Loader2 className="w-6 h-6 animate-spin" />

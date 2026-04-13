@@ -21,6 +21,19 @@ import { toast } from "react-hot-toast";
 
 const API_BASE = "http://localhost:8000";
 
+interface OfficeHour {
+  day: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+}
+
+interface Qualification {
+  degree: string;
+  institution: string;
+  year: string;
+}
+
 interface LecturerData {
   name: string;
   employee_id: string;
@@ -52,14 +65,8 @@ export default function LecturerProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Dynamic Lists State
-  const [qualifications, setQualifications] = useState([
-    { degree: "PhD in Computer Science", institution: "University of Colombo", year: "2018" },
-    { degree: "MSc in Software Engineering", institution: "University of Westminster", year: "2014" }
-  ]);
-  const [officeHours, setOfficeHours] = useState([
-    { day: "Monday", startTime: "10:00", endTime: "12:00", location: "Staff Room 02" },
-    { day: "Wednesday", startTime: "14:00", endTime: "16:00", location: "Zoom Link" }
-  ]);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [officeHours, setOfficeHours] = useState<OfficeHour[]>([]);
 
   useEffect(() => {
     fetchProfile();
@@ -106,13 +113,21 @@ export default function LecturerProfile() {
         setPersonalEmail(data.personal_email || "");
         if (data.office_hours) {
           try {
-            const parsed = typeof data.office_hours === 'string' 
-              ? JSON.parse(data.office_hours) 
-              : data.office_hours;
-            if (Array.isArray(parsed)) setOfficeHours(parsed);
+            const parsed =
+              typeof data.office_hours === "string"
+                ? JSON.parse(data.office_hours)
+                : data.office_hours;
+            if (Array.isArray(parsed)) {
+              setOfficeHours(parsed);
+            } else {
+              setOfficeHours([]);
+            }
           } catch (e) {
             console.error("Failed to parse office hours:", e);
+            setOfficeHours([]);
           }
+        } else {
+          setOfficeHours([]);
         }
       }
     } catch (err) {
@@ -632,8 +647,8 @@ export default function LecturerProfile() {
                 ...officeHours,
                 {
                   day: "Monday",
-                  startTime: "09:00",
-                  endTime: "10:00",
+                  startTime: "",
+                  endTime: "",
                   location: "",
                 },
               ])

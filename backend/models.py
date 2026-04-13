@@ -39,6 +39,7 @@ class Student(Base):
     profile_picture = Column(String, nullable=True)
     retrain_requested = Column(Boolean, default=False)
     last_trained_date = Column(Date, nullable=True)
+    is_active         = Column(Boolean, default=True, nullable=False)
 
     # Relationship: one student can have many attendance logs
     attendance_logs = relationship("AttendanceLog", back_populates="student")

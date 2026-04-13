@@ -41,7 +41,7 @@ export default function StudentSidebar({
     },
     {
       id: "book-consultations",
-      label: "Book Consultations",
+      label: "Book Appointments",
       icon: Users,
     },
     { id: "profile", label: "My Profile", icon: User },
@@ -70,7 +70,7 @@ export default function StudentSidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
+              className={`w-full flex cursor-pointer items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
                 isActive
                   ? "bg-red-100 text-red-700 shadow-sm"
                   : "text-gray-600 hover:bg-gray-100"
@@ -90,7 +90,7 @@ export default function StudentSidebar({
       <div className="p-4 border-t border-gray-200">
         <button
           onClick={onLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all"
+          className="w-full cursor-pointer flex items-center space-x-3 px-4 py-3 rounded-lg font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>
