@@ -33,6 +33,7 @@ from auth import hash_password, get_current_user
 from database import get_db, check_db_connection
 from utils.audit_logger import log_audit_action
 import models
+from services.face_trainer import update_face_model
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -630,6 +631,9 @@ def register_student(
 
     if payload.auto_gen_password and generated_password:
         background_tasks.add_task(send_student_credentials_email, payload.personal_email, payload.email, payload.name, generated_password)
+
+    # Auto-train face model in the background
+    background_tasks.add_task(update_face_model, student.index_number, student.face_dataset_path)
 
     # Audit log
     log_audit_action(

@@ -64,6 +64,7 @@ class AttendanceResponse(BaseModel):
     results:          list[FaceDetectionResult]
     logs:             list[AttendanceLogOut]
     timestamp:        str
+    annotated_frame_base64: Optional[str] = None
 
 
 

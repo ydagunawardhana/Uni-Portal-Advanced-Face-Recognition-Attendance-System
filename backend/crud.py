@@ -104,17 +104,15 @@ def log_attendance(
 
 def log_attendance_for_recognised_face(
     db:           Session,
-    index_number: str,
-    name:         str,
+    student_id:   int,
     debounce_min: int = 1,
 ) -> tuple[models.AttendanceLog, bool]:
     """
     High-level helper called by the route handler.
 
-    1. Get-or-create the Student.
-    2. Check if a log already exists within *debounce_min* minutes (anti-spam).
-    3. Determine the correct status (entered / exited).
-    4. Write the AttendanceLog and return it.
+    1. Check if a log already exists within *debounce_min* minutes (anti-spam).
+    2. Determine the correct status (entered / exited).
+    3. Write the AttendanceLog and return it.
 
     Returns
     -------
@@ -123,22 +121,21 @@ def log_attendance_for_recognised_face(
         created – False if this call was skipped due to debounce
     """
     now     = datetime.utcnow()
-    student = get_or_create_student(db, index_number, name)
 
     # Debounce: skip if already logged within the window 
-    recent = get_latest_log_for_student(db, student.id, within_minutes=debounce_min)
+    recent = get_latest_log_for_student(db, student_id, within_minutes=debounce_min)
     if recent:
         return recent, False          # return the existing log, flag as skipped
 
     status = determine_status(
         # look further back (no time limit) to decide enter/exit toggle
         db.query(models.AttendanceLog)
-        .filter(models.AttendanceLog.student_id == student.id)
+        .filter(models.AttendanceLog.student_id == student_id)
         .order_by(models.AttendanceLog.timestamp.desc())
         .first()
     )
 
-    new_log = log_attendance(db, student.id, status, timestamp=now)
+    new_log = log_attendance(db, student_id, status, timestamp=now)
     return new_log, True
 
 

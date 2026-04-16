@@ -32,7 +32,6 @@ import numpy as np
 _BASE_DIR   = Path(__file__).parent
 CASCADE_PATH = str(_BASE_DIR / "haarcascade_frontalface_default.xml")
 TRAINER_PATH = str(_BASE_DIR / "trainer.yml")
-NAMES_PATH   = str(_BASE_DIR / "names.txt")
 
 
 # Tuning knobs
@@ -42,9 +41,9 @@ NAMES_PATH   = str(_BASE_DIR / "names.txt")
 CONFIDENCE_THRESHOLD: float = float(os.getenv("FR_CONFIDENCE_THRESHOLD", "70"))
 
 # Haar Cascade scaleFactor & minNeighbors
-SCALE_FACTOR:   float = 1.3
-MIN_NEIGHBORS:  int   = 5
-MIN_FACE_SIZE:  tuple = (30, 30)   # ignore tiny detections
+SCALE_FACTOR:   float = 1.1
+MIN_NEIGHBORS:  int   = 8
+MIN_FACE_SIZE:  tuple = (60, 60)   # stricter detection to ignore objects
 
 
 
@@ -57,6 +56,8 @@ class FaceResult:
     confidence: float
     is_known:   bool
     bbox:       dict = field(default_factory=dict)   # {x, y, w, h}
+    is_enrolled: bool = True
+    color:       tuple = None
 
     def to_dict(self) -> dict:
         return {
@@ -70,31 +71,6 @@ class FaceResult:
 
 
 # Module-level singletons (loaded once, reused for every call)
-
-def _load_name_map(path: str) -> dict[int, str]:
-    """
-    Parse names.txt into {numeric_id: name}.
-
-    Expected line format:
-        User_1 : yalefaces_test
-        User_42 : SUB59
-    """
-    name_map: dict[int, str] = {}
-    pattern = re.compile(r"User_(\d+)\s*:\s*(.+)")
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                m = pattern.match(line)
-                if m:
-                    uid  = int(m.group(1))
-                    name = m.group(2).strip()
-                    name_map[uid] = name
-    except FileNotFoundError:
-        print(f"[FaceEngine] ⚠  names.txt not found at: {path}")
-    return name_map
 
 
 def _load_cascade(path: str) -> cv2.CascadeClassifier:
@@ -120,20 +96,29 @@ def _load_recognizer(path: str) -> cv2.face.LBPHFaceRecognizer:
     return recognizer
 
 
-# Lazy-load on first use so import failures don't crash the entire server
 _cascade:    Optional[cv2.CascadeClassifier]      = None
 _recognizer: Optional[cv2.face.LBPHFaceRecognizer] = None
-_name_map:   Optional[dict[int, str]]             = None
-
+_last_trainer_mtime: float = 0.0
 
 def _get_resources():
-    """Return (cascade, recognizer, name_map), loading them on first call."""
-    global _cascade, _recognizer, _name_map
+    """Return (cascade, recognizer), loading them on first call or when trainer.yml updates."""
+    global _cascade, _recognizer, _last_trainer_mtime
+    
+    try:
+        current_mtime = os.path.getmtime(TRAINER_PATH)
+    except OSError:
+        current_mtime = 0.0
+
     if _cascade is None:
-        _cascade    = _load_cascade(CASCADE_PATH)
+        _cascade = _load_cascade(CASCADE_PATH)
+        
+    if _recognizer is None or (current_mtime > _last_trainer_mtime and current_mtime > 0):
+        if _recognizer is not None:
+            print("[FaceEngine] 🔄  Auto-reloading updated trainer.yml")
         _recognizer = _load_recognizer(TRAINER_PATH)
-        _name_map   = _load_name_map(NAMES_PATH)
-    return _cascade, _recognizer, _name_map
+        _last_trainer_mtime = current_mtime
+
+    return _cascade, _recognizer
 
 
 
@@ -163,7 +148,7 @@ def _detect_faces(cascade: cv2.CascadeClassifier,
 
 # Public API
 
-def recognize_faces(frame: np.ndarray) -> list[FaceResult]:
+def recognize_faces(frame: np.ndarray, cascade=None, recognizer=None) -> list[FaceResult]:
     """
     Detect and identify all faces in a single camera frame.
 
@@ -171,21 +156,18 @@ def recognize_faces(frame: np.ndarray) -> list[FaceResult]:
     ----------
     frame : np.ndarray
         BGR image as returned by cv2.VideoCapture.read() or decoded from JPEG.
+    cascade : cv2.CascadeClassifier, optional
+    recognizer : cv2.face_LBPHFaceRecognizer, optional
 
     Returns
     -------
     list[FaceResult]
         One FaceResult per detected face.  Empty list when no faces are found.
-
-    Example
-    -------
-    >>> cap = cv2.VideoCapture(0)
-    >>> ret, frame = cap.read()
-    >>> results = recognize_faces(frame)
-    >>> for r in results:
-    ...     print(r.label, r.confidence, r.is_known)
     """
-    cascade, recognizer, name_map = _get_resources()
+    if cascade is None or recognizer is None:
+        global_cascade, global_recognizer = _get_resources()
+        cascade = cascade or global_cascade
+        recognizer = recognizer or global_recognizer
 
     gray  = _preprocess(frame)
     boxes = _detect_faces(cascade, gray)
@@ -201,7 +183,7 @@ def recognize_faces(frame: np.ndarray) -> list[FaceResult]:
         user_id, confidence = recognizer.predict(roi_resized)
 
         is_known = confidence < CONFIDENCE_THRESHOLD
-        label    = name_map.get(user_id, "Unknown") if is_known else "Unknown"
+        label    = f"ID_{user_id}" if is_known else "Unknown"
 
         results.append(FaceResult(
             label      = label,
@@ -225,15 +207,22 @@ def annotate_frame(frame: np.ndarray,
     out = frame.copy()
     for r in results:
         x, y, w, h = r.bbox["x"], r.bbox["y"], r.bbox["w"], r.bbox["h"]
-        color = (0, 200, 0) if r.is_known else (0, 0, 220)   # green / red
-
+        
+        # Yellow (0, 255, 255) for Unknown
+        # Green (0, 255, 0) for Authorized
+        # Red (0, 0, 255) for Unauthorized (wrong class)
+        if r.color:
+            color = r.color
+        elif not r.is_known:
+            color = (0, 255, 255) 
+        elif r.is_enrolled:
+            color = (0, 255, 0)
+        else:
+            color = (0, 0, 255)
+        
         cv2.rectangle(out, (x, y), (x + w, y + h), color, 2)
-
-        tag = f"{r.label}  ({r.confidence:.1f})"
-        # Background rectangle for legibility
-        (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 1)
-        cv2.rectangle(out, (x, y - th - 8), (x + tw + 4, y), color, -1)
-        cv2.putText(out, tag, (x + 2, y - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        
+        tag = f"{r.label}"
+        cv2.putText(out, tag, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
     return out

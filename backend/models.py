@@ -162,3 +162,14 @@ class Appointment(Base):
     student          = relationship("Student", back_populates="appointments")
     lecturer         = relationship("Lecturer", back_populates="appointments")
 
+
+class Enrollment(Base):
+    """Links students to specific class sessions to authorize attendance tracking."""
+    __tablename__ = "enrollments"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    class_id   = Column(String, index=True, nullable=False) # Maps to session1, session2, etc.
+
+    student    = relationship("Student")
+

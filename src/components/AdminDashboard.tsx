@@ -353,7 +353,9 @@ export default function AdminDashboard({
   }, [capturing, captureComplete, captureFrame, studentId, camActive]);
 
   // Derived fields
-  const autoEmail = studentId ? `${studentId.toLowerCase().replace(/\s+/g, '')}@students.university.edu` : "";
+  const autoEmail = studentId
+    ? `${studentId.toLowerCase().replace(/\s+/g, "")}@students.university.edu`
+    : "";
 
   //  Register student
   const handleRegisterStudent = useCallback(async () => {
@@ -633,7 +635,7 @@ export default function AdminDashboard({
           {activeTab === "reports" && <AttendanceReports />}
           {activeTab === "audit" && <SystemAuditLogs />}
           {activeTab === "pre_registrations" && (
-             <PendingRegistrations onProcess={handleProcessPreRegistration} />
+            <PendingRegistrations onProcess={handleProcessPreRegistration} />
           )}
 
           {/*  Student Registration  */}
@@ -692,7 +694,8 @@ export default function AdminDashboard({
                         htmlFor="personalEmail"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        Personal Email Address <span className="text-red-500">*</span>
+                        Personal Email Address{" "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
@@ -703,7 +706,8 @@ export default function AdminDashboard({
                         placeholder="e.g. john.doe@gmail.com"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Secure logic credentials will be generated and delivered here
+                        Secure logic credentials will be generated and delivered
+                        here
                       </p>
                     </div>
 
@@ -1119,25 +1123,36 @@ export default function AdminDashboard({
                     <h4 className="text-md font-bold text-blue-900 mb-4 flex items-center gap-2">
                       Best Practices for Face Capture
                     </h4>
-                    
+
                     <ul className="space-y-3">
                       <li className="flex items-start gap-3">
                         <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600 shadow-sm mt-0.5">
                           <Sun className="w-5 h-5" /> {/* Lighting Icon */}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-black">Ensure Good Lighting</p>
-                          <p className="text-sm text-gray-500 mt-0.5">The student's face should be evenly lit without harsh shadows.</p>
+                          <p className="text-xs font-bold text-black">
+                            Ensure Good Lighting
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            The student's face should be evenly lit without
+                            harsh shadows.
+                          </p>
                         </div>
                       </li>
-                      
+
                       <li className="flex items-start gap-3">
                         <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600 shadow-sm mt-0.5">
-                          <UserCheck className="w-5 h-5" /> {/* Neutral Face Icon */}
+                          <UserCheck className="w-5 h-5" />{" "}
+                          {/* Neutral Face Icon */}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-black">Neutral Expression</p>
-                          <p className="text-sm text-gray-500 mt-0.5">Ask the student to maintain a neutral face and look straight ahead.</p>
+                          <p className="text-xs font-bold text-black">
+                            Neutral Expression
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            Ask the student to maintain a neutral face and look
+                            straight ahead.
+                          </p>
                         </div>
                       </li>
 
@@ -1146,8 +1161,13 @@ export default function AdminDashboard({
                           <Move3d className="w-5 h-5" /> {/* Move Head Icon */}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-black">Slow Head Movement</p>
-                          <p className="text-sm text-gray-500 mt-0.5">During capture, the student should turn their head very slowly side-to-side.</p>
+                          <p className="text-xs font-bold text-black">
+                            Slow Head Movement
+                          </p>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            During capture, the student should turn their head
+                            very slowly side-to-side.
+                          </p>
                         </div>
                       </li>
                     </ul>

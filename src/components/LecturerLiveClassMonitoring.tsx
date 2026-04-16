@@ -87,15 +87,66 @@ function bboxToPercent(
   };
 }
 
+const LiveTimer = ({ isSessionActive }: { isSessionActive: boolean }) => {
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isSessionActive) {
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isSessionActive]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
+  if (!isSessionActive) return null;
+
+  return (
+    <span className="text-red-600 font-bold text-sm flex items-center gap-1.5 animate-pulse min-w-[100px]">
+      <span className="w-2 h-2 rounded-full bg-red-600"></span>
+      Live: {formatTime(elapsedTime)}
+    </span>
+  );
+};
+
+const RealTimeClock = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-end">
+      <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        {currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      </span>
+      <span className="text-sm font-medium text-gray-500">
+        {currentTime.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
+      </span>
+    </div>
+  );
+};
+
 // Component
 export default function LecturerLiveClassMonitoring({
   onLogout,
   onNavigate,
 }: LecturerLiveClassMonitoringProps) {
   // UI state 
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
+  const [selectedSession, setSelectedSession] = useState("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<LogEntry | null>(null);
@@ -103,10 +154,8 @@ export default function LecturerLiveClassMonitoring({
   const [editTime, setEditTime] = useState("");
   const [editReason, setEditReason] = useState("");
 
-  // Face box state – now driven by live API 
-  const [entranceFaces, setEntranceFaces] = useState<FaceBox[]>([]);
-  const [unknownFaces, setUnknownFaces] = useState<FaceBox[]>([]);
-  const [exitFaces, setExitFaces] = useState<FaceBox[]>([]);
+  // Face box state – now driven by live annotated frames
+  const [annotatedFrame, setAnnotatedFrame] = useState<string | null>(null);
 
   // Attendance log state 
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
@@ -131,10 +180,35 @@ export default function LecturerLiveClassMonitoring({
   const [isProcessing,  setIsProcessing]  = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
-  // Clock 
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [inCameraId, setInCameraId] = useState("");
+  const [outCameraId, setOutCameraId] = useState("");
+
+  const inCamIndex = videoDevices.findIndex(cam => cam.deviceId === inCameraId);
+  const outCamIndex = videoDevices.findIndex(cam => cam.deviceId === outCameraId);
+
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const getCameras = async () => {
+      try {
+        // 1. Request permission first to get actual device labels
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        
+        // 2. Enumerate devices
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(device => device.kind === 'videoinput');
+        setVideoDevices(videoInputs);
+
+        // 3. CRITICAL: Stop the stream immediately to turn off the camera light!
+        stream.getTracks().forEach(track => track.stop());
+
+        // Set defaults if available
+        if (videoInputs.length > 0) setInCameraId(videoInputs[0].deviceId);
+        if (videoInputs.length > 1) setOutCameraId(videoInputs[1].deviceId);
+      } catch (err) {
+        console.error("Error fetching cameras:", err);
+      }
+    };
+    getCameras();
   }, []);
 
   // Auto-dismiss toasts 
@@ -163,57 +237,18 @@ export default function LecturerLiveClassMonitoring({
     });
   }, [logEntries]);
 
-  // Step 1: Acquire the MediaStream (does NOT touch video refs) 
   const startCamera = useCallback(async () => {
+    // Media stream no longer needed for frontend processing.
+    // The backend VideoCapture process handles the streams natively using OpenCV indices.
     setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setMediaStream(stream);
-    } catch (err: any) {
-      const msg =
-        err.name === "NotAllowedError"
-          ? "Camera permission denied. Please allow camera access and try again."
-          : err.name === "NotFoundError"
-          ? "No camera device found on this machine."
-          : `Camera error: ${err.message}`;
-      setCameraError(msg);
-      setSessionActive(false); // roll back so UI shows offline state
-    }
   }, []);
 
-  useEffect(() => {
-    if (!mediaStream || !sessionActive) return;
-
-    const attach = async () => {
-      if (entranceVideoRef.current) {
-        entranceVideoRef.current.srcObject = mediaStream;
-        try { await entranceVideoRef.current.play(); } catch (_) {/* autoPlay policy */}
-      }
-      if (exitVideoRef.current) {
-        exitVideoRef.current.srcObject = mediaStream;
-        try { await exitVideoRef.current.play(); } catch (_) {}
-      }
-    };
-
-    attach();
-  }, [mediaStream, sessionActive]);
-
-  // Camera teardown
+  // Camera teardown is handled automatically by the server closing the HTTP streams when the img is removed
   const stopCamera = useCallback(() => {
     if (captureTimerRef.current) {
       clearInterval(captureTimerRef.current);
       captureTimerRef.current = null;
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (entranceVideoRef.current) entranceVideoRef.current.srcObject = null;
-    if (exitVideoRef.current)     exitVideoRef.current.srcObject     = null;
   }, []);
 
   // Capture + recognise
@@ -254,38 +289,10 @@ export default function LecturerLiveClassMonitoring({
 
       const data: ApiAttendanceResponse = await res.json();
 
-      // Update face boxes 
-      const newEntered: FaceBox[] = [];
-      const newUnknown: FaceBox[] = [];
-
-      data.results.forEach((face, idx) => {
-        const pos = bboxToPercent(face.bbox, W, H);
-        const box: FaceBox = {
-          id:     face.user_id || -(idx + 1),
-          name:   face.label,
-          ...pos,
-        };
-        if (face.is_known) newEntered.push(box);
-        else               newUnknown.push(box);
-      });
-
-      setEntranceFaces(newEntered);
-      setUnknownFaces(newUnknown);
-      // exit panel shows previously exited people
-      setExitFaces(
-        data.results
-          .filter((f) => {
-            const matchingLog = data.logs.find(
-              (l) => l.student?.name === f.label && l.status === "exited"
-            );
-            return !!matchingLog;
-          })
-          .map((face, idx) => ({
-            id:   face.user_id || -(idx + 100),
-            name: face.label,
-            ...bboxToPercent(face.bbox, W, H),
-          }))
-      );
+      // Update the annotated frame stream from backend
+      if ((data as any).annotated_frame_base64) {
+        setAnnotatedFrame((data as any).annotated_frame_base64);
+      }
 
       // Prepend new log entries
       if (data.logs.length > 0) {
@@ -313,36 +320,36 @@ export default function LecturerLiveClassMonitoring({
   }, [isProcessing]);
 
   // Session lifecycle
-  const handleStartSession = useCallback(() => {
-
-    setSessionActive(true);
-    startCamera();
-  }, [startCamera]);
-
-  useEffect(() => {
-    if (sessionActive) {
-      // Start periodic capture after a brief delay for the video to stabilise
-      const delay = setTimeout(() => {
-        captureTimerRef.current = setInterval(captureAndRecognize, CAPTURE_INTERVAL_MS);
-      }, 1500);
-      return () => clearTimeout(delay);
-    } else {
-      if (captureTimerRef.current) {
-        clearInterval(captureTimerRef.current);
-        captureTimerRef.current = null;
-      }
+  const handleStartSession = async () => {
+    if (!inCameraId) {
+      setCameraError("Please select an Entrance camera.");
+      return;
     }
-  }, [sessionActive, captureAndRecognize]);
+    if (!selectedSession) {
+      setCameraError("Please select a Course Session to begin tracking.");
+      return;
+    }
+    await startCamera();
+    setSessionActive(true);
+    setAttendanceToast(null);
+  };
 
-  const handleEndSession = useCallback(() => {
+  // No longer polling the frontend React camera canvas! Wait for backend to perform attendance via stream.
+
+  const handleEndSession = useCallback(async () => {
     stopCamera();
-    setMediaStream(null);  // prevent the attach-effect from re-running
     setSessionActive(false);
-    setEntranceFaces([]);
-    setUnknownFaces([]);
-    setExitFaces([]);
+    setMediaStream(null);  // prevent the attach-effect from re-running
+    setAnnotatedFrame(null);
     setShowEndSessionModal(false);
     setShowSuccessToast(true);
+
+    try {
+      // Force backend hardware teardown explicitly
+      await fetch(`${API_BASE}/api/attendance/stop_cameras`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to release cameras gracefully", err);
+    }
   }, [stopCamera]);
 
   // Cleanup on unmount
@@ -404,7 +411,10 @@ export default function LecturerLiveClassMonitoring({
               </label>
               <select
                 aria-label="Select Course Session"
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                value={selectedSession}
+                onChange={(e) => setSelectedSession(e.target.value)}
+                disabled={sessionActive}
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-75"
               >
                 <option value="">Select Session/Batch...</option>
                 <option value="session1">Today 9:00 AM - Year 2 Semester 1</option>
@@ -414,26 +424,39 @@ export default function LecturerLiveClassMonitoring({
               </select>
             </div>
 
-            {/* Start/End Session Button */}
-            <div className="flex items-end">
-              {!sessionActive ? (
-                <button
-                  onClick={handleStartSession}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors shadow-md whitespace-nowrap"
-                >
-                  <Play className="w-5 h-5 fill-white" />
-                  Start Live Session
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowEndSessionModal(true)}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md whitespace-nowrap"
-                >
-                  <Square className="w-5 h-5 fill-white" />
-                  End Session
-                </button>
-              )}
+            {/* Session Controls */}
+            <div className="flex items-end pl-2">
+              <div className="flex items-center gap-3">
+                {/* Session Button & Timer */}
+                {sessionActive ? (
+                  <div className="flex items-center gap-3">
+                    <LiveTimer isSessionActive={sessionActive} />
+                    <button
+                      onClick={() => setShowEndSessionModal(true)}
+                      className="px-5 py-[9px] bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition"
+                    >
+                      End Session
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleStartSession}
+                    disabled={!inCameraId}
+                    className={`px-5 py-[9px] text-white rounded-lg font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${
+                      !inCameraId 
+                        ? 'bg-green-400 cursor-not-allowed opacity-70' 
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    <Play className="w-4 h-4 fill-white" /> Start Live Session
+                  </button>
+                )}
+              </div>
             </div>
+          </div>
+
+          <div className="px-6 pb-2 text-xs text-gray-500 font-medium italic flex items-center space-x-1">
+            <span>Note: If hardware feeds are swapped, simply reverse your selections in the IN/OUT dropdowns (Browser and OS hardware enumeration order can occasionally differ).</span>
           </div>
 
           {/* Camera permission error banner */}
@@ -460,15 +483,52 @@ export default function LecturerLiveClassMonitoring({
 
               {/* Entrance Camera Feed */}
               <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden flex flex-col">
-                <div className="bg-green-600 px-4 py-3 flex items-center space-x-2">
-                  <Video className="w-5 h-5 text-white" />
-                  <span className="text-white font-bold">📷 Entrance Camera (IN)</span>
-                  {/* Processing indicator */}
-                  {sessionActive && isProcessing && (
-                    <span className="ml-auto text-xs text-green-200 animate-pulse font-medium">
-                      Scanning…
+                <div className="bg-green-600 text-white px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold">
+                    <Video className="w-5 h-5" /> Entrance Camera (IN)
+                    {/* Processing indicator */}
+                    {sessionActive && isProcessing && (
+                      <span className="ml-2 text-xs text-white animate-pulse font-bold">
+                        Scanning…
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Status Indicator Dot */}
+                    <span className="relative flex h-2.5 w-2.5">
+                      {inCameraId && sessionActive ? (
+                        <>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                        </>
+                      ) : inCameraId ? (
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white/60" title="Standby"></span>
+                      ) : (
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-900" title="Offline"></span>
+                      )}
                     </span>
-                  )}
+
+                    {/* Styled Select Dropdown */}
+                    <select 
+                      value={inCameraId} 
+                      onChange={(e) => setInCameraId(e.target.value)}
+                      disabled={sessionActive}
+                      className="bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px]"
+                    >
+                      <option value="" className="text-gray-900 bg-white">Select Camera...</option>
+                      {videoDevices
+                        .filter(cam => cam.deviceId !== outCameraId)
+                        .map(cam => (
+                        <option 
+                          key={`in-${cam.deviceId}`} 
+                          value={cam.deviceId} 
+                          className="text-gray-900 bg-white"
+                        >
+                          {cam.label || `Camera ${cam.deviceId.substring(0,5)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {!sessionActive ? (
@@ -483,58 +543,25 @@ export default function LecturerLiveClassMonitoring({
                 ) : (
                   /* Live Webcam State */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden min-h-[300px]">
-                    {/* Real webcam feed */}
-                    <video
-                      ref={(node) => {
-                        entranceVideoRef.current = node;
-                        if (node && mediaStream && node.srcObject !== mediaStream) {
-                          node.srcObject = mediaStream;
-                          node.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="absolute inset-0 w-full h-full object-cover"
-                      style={{ transform: "scaleX(-1)" /* mirror effect */ }}
-                    />
-
-                    {/* Known face boxes – green */}
-                    {entranceFaces.map((face) => (
-                      <div
-                        key={face.id}
-                        className="absolute border-4 border-green-500 rounded-lg"
-                        style={{ left: face.left, top: face.top, width: face.width, height: face.height }}
-                      >
-                        <div className="absolute -top-8 left-0 bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
-                          ✓ Marked IN
-                        </div>
-                        <div className="absolute -bottom-7 left-0 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
-                          {face.name}
-                        </div>
+                    {/* Backend-Streamed Annotated Frame */}
+                    {sessionActive ? (
+                      <img 
+                        src={`${API_BASE}/api/attendance/video_feed/in?current_class_id=${selectedSession}`} 
+                        className="w-full h-full object-cover rounded-b-lg block" 
+                        alt="Live IN Feed" 
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                         <CameraOff className="w-12 h-12 mb-3 opacity-50" />
+                         <p className="font-medium">Camera Loading...</p>
                       </div>
-                    ))}
-
-                    {/* Unknown faces – amber */}
-                    {unknownFaces.map((face) => (
-                      <div
-                        key={face.id}
-                        className="absolute border-4 border-amber-500 rounded-lg"
-                        style={{ left: face.left, top: face.top, width: face.width, height: face.height }}
-                      >
-                        <div className="absolute -top-8 left-0 bg-amber-500 text-white px-3 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
-                          ⚠ Unidentified
-                        </div>
-                        <div className="absolute -bottom-7 left-0 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
-                          {face.name}
-                        </div>
-                      </div>
-                    ))}
+                    )}
 
                     {/* Live Indicator */}
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-white text-xs font-medium">LIVE</span>
+                      <span className="text-white text-xs font-medium">LIVE ({inCamIndex})</span>
                     </div>
                   </div>
                 )}
@@ -542,9 +569,46 @@ export default function LecturerLiveClassMonitoring({
 
               {/* Exit Camera Feed */}
               <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden flex flex-col">
-                <div className="bg-red-600 px-4 py-3 flex items-center space-x-2">
-                  <Video className="w-5 h-5 text-white" />
-                  <span className="text-white font-bold">📷 Exit Camera (OUT)</span>
+                <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold">
+                    <Video className="w-5 h-5" /> Exit Camera (OUT)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Status Indicator Dot */}
+                    <span className="relative flex h-2.5 w-2.5">
+                      {outCameraId && sessionActive ? (
+                        <>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                        </>
+                      ) : outCameraId ? (
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white/60" title="Standby"></span>
+                      ) : (
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-900" title="Offline"></span>
+                      )}
+                    </span>
+
+                    {/* Styled Select Dropdown */}
+                    <select 
+                      value={outCameraId} 
+                      onChange={(e) => setOutCameraId(e.target.value)}
+                      disabled={sessionActive}
+                      className="bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px]"
+                    >
+                      <option value="" className="text-gray-900 bg-white">Select Camera...</option>
+                      {videoDevices
+                        .filter(cam => cam.deviceId !== inCameraId)
+                        .map(cam => (
+                        <option 
+                          key={`out-${cam.deviceId}`} 
+                          value={cam.deviceId} 
+                          className="text-gray-900 bg-white"
+                        >
+                          {cam.label || `Camera ${cam.deviceId.substring(0,5)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {!sessionActive ? (
@@ -557,43 +621,27 @@ export default function LecturerLiveClassMonitoring({
                     </div>
                   </div>
                 ) : (
-                  /* Mirror of entrance camera (same stream, exit overlay) */
+                  /* Live Webcam State */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden min-h-[300px]">
-                    <video
-                      ref={(node) => {
-                        exitVideoRef.current = node;
-                        if (node && mediaStream && node.srcObject !== mediaStream) {
-                          node.srcObject = mediaStream;
-                          node.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="absolute inset-0 w-full h-full object-cover"
-                      style={{ transform: "scaleX(-1)" }}
-                    />
-
-                    {/* Exit face boxes – red */}
-                    {exitFaces.map((face) => (
-                      <div
-                        key={face.id}
-                        className="absolute border-4 border-red-500 rounded-lg"
-                        style={{ left: face.left, top: face.top, width: face.width, height: face.height }}
-                      >
-                        <div className="absolute -top-8 left-0 bg-red-500 text-white px-3 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
-                          ✓ Marked OUT
-                        </div>
-                        <div className="absolute -bottom-7 left-0 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap">
-                          {face.name}
-                        </div>
+                    {/* Backend-Streamed Annotated Frame */}
+                    {sessionActive ? (
+                      <img 
+                        src={`${API_BASE}/api/attendance/video_feed/out?current_class_id=${selectedSession}`} 
+                        className="w-full h-full object-cover rounded-b-lg block" 
+                        alt="Live OUT Feed"
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                         <CameraOff className="w-12 h-12 mb-3 opacity-50" />
+                         <p className="font-medium">Camera Loading...</p>
                       </div>
-                    ))}
+                    )}
 
                     {/* Live Indicator */}
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-white text-xs font-medium">LIVE</span>
+                      <span className="text-white text-xs font-medium">LIVE ({outCamIndex})</span>
                     </div>
                   </div>
                 )}
@@ -606,6 +654,21 @@ export default function LecturerLiveClassMonitoring({
             <div className="px-5 py-4 border-b border-gray-200 bg-blue-50">
               <h3 className="font-bold text-gray-900">Live Entry/Exit Log</h3>
               <p className="text-xs text-gray-600 mt-1">Real-time activity tracking</p>
+            </div>
+
+            {/* Manual Override */}
+            <div className="px-5 py-4 border-b border-gray-200 bg-gray-50">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">Manual Override</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Index (e.g. CS2026)" 
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-medium"
+                />
+                <button className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
+                  Mark
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">

@@ -161,10 +161,10 @@ export default function Appointments() {
     try {
       // Show immediate feedback
       const refreshToast = toast.loading("Refreshing appointments...");
-      
+
       // Add a small artificial delay to show the spin effect (0.8s)
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       await fetchData();
       toast.success("List updated", { id: refreshToast });
     } catch (error) {
@@ -340,7 +340,7 @@ export default function Appointments() {
                     </div>
                   </div>
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                    <CheckCircle className="w-3 h-3 mr-1" />
+                    <CheckCircle className="w-4 h-4 mr-1" />
                     Confirmed
                   </span>
                 </div>
@@ -391,9 +391,17 @@ export default function Appointments() {
                   <div>
                     <p className="font-bold text-gray-700">{req.studentName}</p>
                     <p className="text-xs text-gray-500">{req.indexNumber}</p>
+
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-500">
+                      <span>{req.studentFaculty}</span>
+                      <span className="text-gray-300">•</span>
+                      <span>{req.studentDepartment}</span>
+                      <span className="text-gray-300">•</span>
+                      <span>{req.studentDegree}</span>
+                    </div>
                   </div>
-                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-600 border border-gray-300">
-                    Declined
+                  <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-600 border border-red-300">
+                    <XCircle className="w-4 h-4" /> Declined
                   </span>
                 </div>
 
