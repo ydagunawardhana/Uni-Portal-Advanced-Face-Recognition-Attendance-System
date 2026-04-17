@@ -42,9 +42,9 @@ class Student(Base):
     is_active         = Column(Boolean, default=True, nullable=False)
 
     # Relationship: one student can have many attendance logs
-    attendance_logs = relationship("AttendanceLog", back_populates="student")
-    notifications   = relationship("Notification", back_populates="student")
-    appointments    = relationship("Appointment", back_populates="student")
+    attendance_logs = relationship("AttendanceLog", back_populates="student", cascade="all, delete-orphan")
+    notifications   = relationship("Notification", back_populates="student", cascade="all, delete-orphan")
+    appointments    = relationship("Appointment", back_populates="student", cascade="all, delete-orphan")
 
 
 class AttendanceLog(Base):

@@ -1288,7 +1288,7 @@ export default function ManageStudents({
                           {studentToCapture.email}
                         </span>
                       </p>
-                      <p className="text-sm text-gray-600 flex justify-between">
+                      <p className="text-xs text-gray-600 flex justify-between">
                         <span>Department:</span>
                         <span className="font-medium text-gray-900">
                           {studentToCapture.department || "N/A"}

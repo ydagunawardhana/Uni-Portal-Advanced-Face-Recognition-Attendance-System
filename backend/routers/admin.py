@@ -33,11 +33,12 @@ from auth import hash_password, get_current_user
 from database import get_db, check_db_connection
 from utils.audit_logger import log_audit_action
 import models
-from services.face_trainer import update_face_model
+from services.face_trainer import update_face_model, retrain_model
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 DATASET_DIR = Path(__file__).resolve().parent.parent / "dataset"
+admin_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
 
 def send_student_credentials_email(personal_email: str, official_email: str, name: str, password: str):
@@ -579,13 +580,26 @@ def register_student(
     folder       = DATASET_DIR / safe_name
     folder.mkdir(parents=True, exist_ok=True)
 
+    valid_count = 0
     for i, b64_frame in enumerate(payload.face_frames):
-        filename = folder / f"img_{i:03d}.jpg"
         try:
             # Handle potential Data URI prefix
             clean_b64 = b64_frame.split(",")[-1]
             img_bytes = base64.b64decode(clean_b64)
-            filename.write_bytes(img_bytes)
+            
+            # --- OpenCV Face ROI Extraction ---
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = admin_face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5)
+            
+            if len(faces) == 1:
+                filename = str(folder / f"img_{valid_count:03d}.jpg")
+                cv2.imwrite(filename, frame)
+                valid_count += 1
+            elif len(faces) > 1:
+                print(f"[Warning] Photobomb detected in frame {i}. Ignored.")
+                
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -724,6 +738,7 @@ def update_student(
 @router.delete("/students/{student_id}")
 def delete_student(
     student_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -765,6 +780,9 @@ def delete_student(
         target_id=student.index_number,
     )
 
+    # Sync AI Model cleanly handling the deleted logic 
+    background_tasks.add_task(retrain_model)
+
     return {"success": True, "message": "Student, user account, attendance logs, and face dataset deleted successfully."}
 
 
@@ -772,6 +790,7 @@ def delete_student(
 def recapture_face(
     student_id: int,
     payload: RecaptureRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -794,13 +813,26 @@ def recapture_face(
         shutil.rmtree(folder)
     folder.mkdir(parents=True, exist_ok=True)
     
-    # Save new frames
+    # Save new frames applying strict verification
+    valid_count = 0
     for i, b64_frame in enumerate(payload.images):
-        filename = folder / f"img_{i:03d}.jpg"
         try:
             clean_b64 = b64_frame.split(",")[-1]
             img_bytes = base64.b64decode(clean_b64)
-            filename.write_bytes(img_bytes)
+            
+            # --- OpenCV Face ROI Extraction ---
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = admin_face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5)
+            
+            if len(faces) == 1:
+                filename = str(folder / f"img_{valid_count:03d}.jpg")
+                cv2.imwrite(filename, frame)
+                valid_count += 1
+            elif len(faces) > 1:
+                print(f"[Warning] Photobomb detected in recapture frame {i}. Ignored.")
+                
         except Exception as e:
             raise HTTPException(status_code=422, detail=f"Failed to save frame {i}: {e}")
             
@@ -826,6 +858,9 @@ def recapture_face(
         description=f"Recaptured face dataset for student '{student.name}'.",
         target_id=student.index_number,
     )
+
+    # Sync AI Model completely pulling entirely fresh frame subsets
+    background_tasks.add_task(retrain_model)
 
     return {"success": True, "message": "Face dataset updated successfully"}
 

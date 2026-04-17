@@ -1,82 +1,94 @@
-import cv2
-import numpy as np
 import os
+import pickle
+import face_recognition
+import cv2
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-TRAINER_PATH = str(BASE_DIR / "trainer.yml")
+ENCODINGS_PATH = str(BASE_DIR / "encodings.pkl")
 DATASET_BASE_DIR = BASE_DIR
-NAMES_FILE_PATH = str(BASE_DIR / "names.txt")
-
-def sync_names_file(index_number: str) -> int:
-    """
-    Appends the new index number to names.txt if it doesn't exist.
-    Returns the integer ID (line index) to be used for LBPH training.
-    """
-    names = []
-    
-    # Read existing names
-    if os.path.exists(NAMES_FILE_PATH):
-        with open(NAMES_FILE_PATH, 'r') as f:
-            names = [line.strip() for line in f.readlines()]
-            
-    # Add new student if not already in the list
-    if index_number not in names:
-        names.append(index_number)
-        with open(NAMES_FILE_PATH, 'w') as f:
-            for name in names:
-                f.write(f"{name}\n")
-                
-    # The LBPH integer ID is the index of the string in the list
-    return names.index(index_number)
 
 def update_face_model(index_number: str, dataset_path: str):
     """
-    Incrementally updates the LBPH face recognition model with new student faces.
+    Incrementally updates the Deep Learning face encodings with new student faces.
     Runs asynchronously in the background.
     """
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    model_exists = os.path.exists(TRAINER_PATH)
+    known_encodings = []
+    known_names = []
     
-    if model_exists:
+    if os.path.exists(ENCODINGS_PATH):
         try:
-            recognizer.read(TRAINER_PATH)
+            with open(ENCODINGS_PATH, "rb") as f:
+                data = pickle.load(f)
+                known_encodings = data["encodings"]
+                known_names = data["names"]
         except Exception as e:
             print(f"[FaceTrainer] Warning: Failed to load existing model: {e}")
-            model_exists = False
-    
-    faces = []
-    ids = []
+            
     folder_path = DATASET_BASE_DIR / dataset_path
-    
     if not folder_path.exists():
         print(f"[FaceTrainer] Dataset path {folder_path} does not exist.")
         return
         
-    lbph_id = sync_names_file(index_number)
-        
+    count = 0
     for file in os.listdir(folder_path):
         if file.lower().endswith(('.png', '.jpg', '.jpeg')):
             img_path = str(folder_path / file)
-            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            if img is not None:
-                # Resize to standard size for LBPH
-                img_resized = cv2.resize(img, (200, 200))
-                faces.append(img_resized)
-                ids.append(lbph_id)
+            try:
+                rgb_img = face_recognition.load_image_file(img_path)
+                encodings = face_recognition.face_encodings(rgb_img)
+                if len(encodings) > 0:
+                    known_encodings.append(encodings[0])
+                    known_names.append(index_number)
+                    count += 1
+            except Exception:
+                continue
                 
-    if not faces:
+    if count == 0:
         print("[FaceTrainer] No valid faces found in directory for background training.")
         return
         
-    print(f"[FaceTrainer] Updating model with {len(faces)} images for Student Index {index_number} (LBPH ID {lbph_id})...")
+    print(f"[FaceTrainer] Updating model with {count} images for Student Index {index_number}...")
     try:
-        if model_exists:
-            recognizer.update(faces, np.array(ids))
-        else:
-            recognizer.train(faces, np.array(ids))
-            
-        recognizer.write(TRAINER_PATH)
-        print(f"[FaceTrainer] Model successfully updated and saved to {TRAINER_PATH}")
+        with open(ENCODINGS_PATH, "wb") as f:
+            pickle.dump({"encodings": known_encodings, "names": known_names}, f)
+        print(f"[FaceTrainer] Model successfully updated and saved to {ENCODINGS_PATH}")
     except Exception as e:
         print(f"[FaceTrainer] Critical Error updating model: {e}")
+
+def retrain_model():
+    """
+    Clears the existing models and rebuilds encodings.pkl
+    from scratch iteratively crawling the dataset/ directories.
+    """
+    known_encodings = []
+    known_names = []
+    
+    if not os.path.exists(DATASET_BASE_DIR / 'dataset'):
+        print("[FaceTrainer] 'dataset' directory not found.")
+        return
+        
+    folders = [f for f in os.listdir(DATASET_BASE_DIR / 'dataset') if os.path.isdir(DATASET_BASE_DIR / 'dataset' / f)]
+    folders.sort() 
+    
+    for folder_name in folders:
+        folder_full_path = DATASET_BASE_DIR / 'dataset' / folder_name
+        for image_name in os.listdir(folder_full_path):
+            image_path = os.path.join(folder_full_path, image_name)
+            try:
+                rgb_img = face_recognition.load_image_file(image_path)
+                encodings = face_recognition.face_encodings(rgb_img)
+                if len(encodings) > 0:
+                    known_encodings.append(encodings[0])
+                    known_names.append(folder_name)
+            except Exception:
+                continue
+
+    if len(known_encodings) == 0:
+        print("[FaceTrainer] Dataset empty. Cannot retrain empty model.")
+        return
+
+    print("\n[FaceTrainer] Retraining AI Model from scratch...")
+    with open(ENCODINGS_PATH, "wb") as f:
+        pickle.dump({"encodings": known_encodings, "names": known_names}, f)
+    print(f"-> Model saved successfully as '{ENCODINGS_PATH}'!")

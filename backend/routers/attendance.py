@@ -31,12 +31,13 @@ import models
 import schemas
 from database import get_db, SessionLocal
 from face_recognition_engine import (
-    FaceResult, recognize_faces, annotate_frame, 
-    CASCADE_PATH, TRAINER_PATH, _load_recognizer
+    FaceResult, recognize_faces, annotate_frame
 )
 from fastapi.responses import StreamingResponse
 import base64
 import time
+import pickle
+import face_recognition
 
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
 
@@ -116,8 +117,8 @@ async def process_attendance_frame(
         if not result.is_known:
             continue  
 
-        # Fetch the student from the database to ensure they are fully registered
-        student = db.query(models.Student).filter(models.Student.id == result.user_id).first()
+        # Fetch the student from the database bypassing legacy integer bindings
+        student = db.query(models.Student).filter(models.Student.index_number == result.label).first()
         if not student:
             result.is_known = False
             result.label = "Unknown"
@@ -216,36 +217,52 @@ def get_today_attendance(db: Session = Depends(get_db)):
 
 active_cameras = {}
 last_seen_times = {}
+blink_state = {}
 
 def generate_frames(cam_id: int, current_class_id: str = None):
     """
     Independently polls the specific hardware ID (0, 1, 2) utilizing OpenCV.
-    Seamlessly processes LBPH recognition and streams the annotated MJPEG output securely to the UI.
+    Seamlessly processes Deep Learning face recognition and streams the annotated MJPEG.
     """
-    # Ensure any existing camera on this ID is released first
     if cam_id in active_cameras:
         if active_cameras[cam_id] is not None:
             active_cameras[cam_id].release()
             
-    cap = cv2.VideoCapture(cam_id)
-    active_cameras[cam_id] = cap
+    # Force native Windows DirectShow (DSHOW) backend to circumvent buggy Obsensor and MSMF DLLs
+    cap = cv2.VideoCapture(cam_id, cv2.CAP_DSHOW)
     
+    # Primary interface fallback
+    if not cap.isOpened() and cam_id == 0:
+        cap = cv2.VideoCapture(-1, cv2.CAP_DSHOW)
+
     if not cap.isOpened():
-        print(f"[Video Feed] Error: Could not open hardware camera index {cam_id}")
+        print(f"[Video Feed] Warning: Camera {cam_id} unavailable. Yielding standby placeholder.")
+        # Graceful handling so FastAPI/browser doesn't abort connections crashing the layout
+        import numpy as np
+        placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(placeholder, f"Camera {cam_id} Offline", (150, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        ret, buffer = cv2.imencode('.jpg', placeholder)
+        frame_bytes = buffer.tobytes()
+        while True:
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(1)
         return
+        
+    active_cameras[cam_id] = cap
 
-    # Create isolated ML instances specifically for this hardware stream
-    local_cascade = cv2.CascadeClassifier(CASCADE_PATH)
-    local_recognizer = _load_recognizer(TRAINER_PATH)
+    local_eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
 
-    mapped_names = []
+    known_encodings = []
+    known_names = []
     try:
-        with open('names.txt', 'r') as f:
-            mapped_names = [line.strip() for line in f.readlines()]
+        with open('encodings.pkl', 'rb') as f:
+            data = pickle.load(f)
+            known_encodings = data["encodings"]
+            known_names = data["names"]
     except Exception as e:
-        print(f"Could not load names.txt: {e}")
+        print(f"Could not load encodings.pkl: {e}")
 
-    # Create an independent local session since generators cannot easily yield ContextManager scoped dependencies
     db = SessionLocal()
     try:
         while cap.isOpened():
@@ -253,57 +270,97 @@ def generate_frames(cam_id: int, current_class_id: str = None):
             if not success:
                 break
                 
-            # EXPLICIT CLEAR: Guarantee no cross-contamination
-            faces = () 
+            # Downscale frame for ultra-fast FaceNet inference
+            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+            rgb_small_frame = small_frame[:, :, ::-1]
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Keep original resolution for Liveness
             
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = local_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=8, minSize=(60, 60))
+            face_locations = face_recognition.face_locations(rgb_small_frame)
+            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-            for (x, y, w, h) in faces:
+            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+                # Scale up predictions to match full-resolution frame
+                top *= 4
+                right *= 4
+                bottom *= 4
+                left *= 4
+                
+                x = left
+                y = top
+                w = right - left
+                h = bottom - top
+                
                 roi_gray = gray[y:y+h, x:x+w]
                 
                 display_name = "Unknown"
                 box_color = (0, 255, 255) # Yellow
+                string_index = "Unknown"
                 
                 try:
-                    id_, confidence = local_recognizer.predict(roi_gray)
+                    face_distances = face_recognition.face_distance(known_encodings, face_encoding)
+                    id_ = "Unknown"
                     
-                    if confidence < 85: 
-                        box_color = (0, 255, 0) # Green
+                    if len(face_distances) > 0:
+                        best_match_index = np.argmin(face_distances)
+                        # Strict 0.5 distance threshold (lower is better)
+                        if face_distances[best_match_index] <= 0.5:
+                            string_index = known_names[best_match_index]
+                            id_ = string_index
+                        
+                    if string_index.lower() == "unknown":
+                        box_color = (0, 255, 255)
+                        display_name = "Unknown"
+                        if id_ in blink_state:
+                            blink_state[id_]['verified'] = False
+                    else:
                         current_time = time.time()
                         
-                        # 1. TRANSLATE ID TO STRING INDEX USING names.txt
-                        try:
-                            string_index = mapped_names[id_] 
-                        except IndexError:
-                            string_index = str(id_)
-                        
-                        # THROTTLING LOGIC (5 seconds cooldown)
-                        if id_ not in last_seen_times or (current_time - last_seen_times.get(id_, 0) > 5):
-                            last_seen_times[id_] = current_time
-                            print(f"[DEBUG] Detected LBPH ID: {id_} -> Index: {string_index} | Conf: {confidence:.2f}")
+                        if id_ not in blink_state:
+                            blink_state[id_] = {'eyes_closed_frames': 0, 'verified': False, 'verified_time': 0}
                             
-                            # 2. QUERY DATABASE USING THE STRING INDEX
-                            try:
-                                # Use existing SessionLocal connection from the generator
-                                student = db.query(models.Student).filter(models.Student.index_number == string_index).first()
-                                if student:
-                                    display_name = str(student.index_number)
-                                    # TODO: Trigger Mark Attendance logic here!
+                        state = blink_state[id_]
+                        
+                        if state['verified'] and (current_time - state['verified_time'] > 5):
+                            state['verified'] = False
+                            state['eyes_closed_frames'] = 0
+                        
+                        if not state['verified']:
+                            if h > 0 and w > 0:
+                                eyes = local_eye_cascade.detectMultiScale(roi_gray[0:h//2, 0:w], scaleFactor=1.1, minNeighbors=5)
+                                if len(eyes) == 0:
+                                    state['eyes_closed_frames'] += 1
                                 else:
-                                    print(f"[WARNING] Index {string_index} found in names.txt, but not in DB!")
+                                    if 3 <= state['eyes_closed_frames'] <= 20: 
+                                        state['verified'] = True
+                                        state['verified_time'] = current_time
+                                        print(f"Liveness Passed for {string_index}!")
+                                    state['eyes_closed_frames'] = 0
+                        
+                        if state['verified']:
+                            box_color = (0, 255, 0)
+                            display_name = f"{string_index} (Verified)"
+                            
+                            if id_ not in last_seen_times or (current_time - last_seen_times.get(id_, 0) > 5):
+                                last_seen_times[id_] = current_time
+                                print(f"[DEBUG] Detected ID: {string_index}")
+                                
+                                try:
+                                    student = db.query(models.Student).filter(models.Student.index_number == string_index).first()
+                                    if student:
+                                        display_name = str(student.index_number)
+                                        # TODO: Trigger Mark Attendance logic here!
+                                    else:
+                                        display_name = string_index
+                                except Exception as db_err:
+                                    print(f"[DB ERROR]: {db_err}")
                                     display_name = string_index
-                            except Exception as db_err:
-                                print(f"[DB ERROR] Failed to fetch student: {db_err}")
-                                display_name = string_index
                         else:
-                            # If we are in the cooldown period, we still want to show the green box and a placeholder name
-                            display_name = string_index 
+                            box_color = (0, 165, 255)
+                            display_name = f"{string_index} - Please Blink!"
                             
                 except Exception as e:
-                    pass # Ignore empty frames
+                    pass
                     
-                # Draw dynamic bounding box and text
                 cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
                 cv2.putText(frame, display_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, box_color, 2)
                 
@@ -330,7 +387,7 @@ def video_feed_in(current_class_id: str = None):
 
 @router.get("/video_feed/out", summary="OUT Hardware Stream")
 def video_feed_out(current_class_id: str = None):
-    """Mounts continuous MJPEG for exit Camera 1"""
+    """Mounts continuous MJPEG for exit Camera 1 gracefully"""
     return StreamingResponse(
         generate_frames(1, current_class_id), 
         media_type="multipart/x-mixed-replace; boundary=frame"

@@ -1,59 +1,31 @@
 """
 face_recognition_engine.py
 ──────────────────────────
-Self-contained face recognition module for the Attendance System.
-
-Public API
-──────────
-    recognize_faces(frame: np.ndarray) -> list[FaceResult]
-
-Each FaceResult contains:
-    - label       : str   – name from names.txt  (or "Unknown")
-    - user_id     : int   – numeric label from the trainer (0 if unknown)
-    - confidence  : float – LBPH confidence (lower = better match)
-    - is_known    : bool  – True when confidence is below CONFIDENCE_THRESHOLD
-    - bbox        : dict  – {x, y, w, h} bounding box in the original frame
+Self-contained face recognition module optimized via Deep Learning mapped 
+structurally to unify video streams and multipart POST API endpoints.
 """
 
 from __future__ import annotations
 
 import os
-import re
+import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
-import cv2
+import face_recognition
 import numpy as np
+import cv2
 
-
-# Paths  (all relative to this file so the module is portable)
-
-_BASE_DIR   = Path(__file__).parent
-CASCADE_PATH = str(_BASE_DIR / "haarcascade_frontalface_default.xml")
-TRAINER_PATH = str(_BASE_DIR / "trainer.yml")
-
+_BASE_DIR = Path(__file__).parent
+ENCODINGS_PATH = str(_BASE_DIR / "encodings.pkl")
 
 # Tuning knobs
-
-# LBPH: confidence < threshold  → face is recognised
-# Typical range: 50 (very strict) … 100 (lenient)
-CONFIDENCE_THRESHOLD: float = float(os.getenv("FR_CONFIDENCE_THRESHOLD", "70"))
-
-# Haar Cascade scaleFactor & minNeighbors
-SCALE_FACTOR:   float = 1.1
-MIN_NEIGHBORS:  int   = 8
-MIN_FACE_SIZE:  tuple = (60, 60)   # stricter detection to ignore objects
-
-
-
-# Result dataclass
+TOLERANCE: float = 0.5 
 
 @dataclass
 class FaceResult:
     label:      str
-    user_id:    int
-    confidence: float
+    user_id:    int   # Kept for strict backward structural parity (default 0)
+    confidence: float # Euclidean Distance
     is_known:   bool
     bbox:       dict = field(default_factory=dict)   # {x, y, w, h}
     is_enrolled: bool = True
@@ -68,161 +40,99 @@ class FaceResult:
             "bbox":       self.bbox,
         }
 
+_known_encodings = []
+_known_names = []
+_last_encodings_mtime = 0.0
 
-
-# Module-level singletons (loaded once, reused for every call)
-
-
-def _load_cascade(path: str) -> cv2.CascadeClassifier:
-    cascade = cv2.CascadeClassifier(path)
-    if cascade.empty():
-        raise RuntimeError(
-            f"[FaceEngine]  Failed to load Haar Cascade from: {path}\n"
-            "Make sure haarcascade_frontalface_default.xml is in the backend folder."
-        )
-    print(f"[FaceEngine]  Haar Cascade loaded from: {path}")
-    return cascade
-
-
-def _load_recognizer(path: str) -> cv2.face.LBPHFaceRecognizer:
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    if not os.path.isfile(path):
-        raise RuntimeError(
-            f"[FaceEngine]  Trainer file not found: {path}\n"
-            "Train the model first and place trainer.yml in the backend folder."
-        )
-    recognizer.read(path)
-    print(f"[FaceEngine]  LBPH recognizer loaded from: {path}")
-    return recognizer
-
-
-_cascade:    Optional[cv2.CascadeClassifier]      = None
-_recognizer: Optional[cv2.face.LBPHFaceRecognizer] = None
-_last_trainer_mtime: float = 0.0
-
-def _get_resources():
-    """Return (cascade, recognizer), loading them on first call or when trainer.yml updates."""
-    global _cascade, _recognizer, _last_trainer_mtime
+def _load_encodings():
+    global _known_encodings, _known_names, _last_encodings_mtime
     
     try:
-        current_mtime = os.path.getmtime(TRAINER_PATH)
+        current_mtime = os.path.getmtime(ENCODINGS_PATH)
     except OSError:
         current_mtime = 0.0
 
-    if _cascade is None:
-        _cascade = _load_cascade(CASCADE_PATH)
-        
-    if _recognizer is None or (current_mtime > _last_trainer_mtime and current_mtime > 0):
-        if _recognizer is not None:
-            print("[FaceEngine] 🔄  Auto-reloading updated trainer.yml")
-        _recognizer = _load_recognizer(TRAINER_PATH)
-        _last_trainer_mtime = current_mtime
+    if current_mtime > _last_encodings_mtime and current_mtime > 0:
+        try:
+            with open(ENCODINGS_PATH, "rb") as f:
+                data = pickle.load(f)
+                _known_encodings = data.get("encodings", [])
+                _known_names = data.get("names", [])
+            _last_encodings_mtime = current_mtime
+            if _last_encodings_mtime > 0:
+                print(f"[FaceEngine] 🔄 Auto-reloading updated {ENCODINGS_PATH}")
+        except Exception as e:
+            print(f"[FaceEngine] Failed to load encodings: {e}")
 
-    return _cascade, _recognizer
-
-
-
-# Core helpers
-
-def _preprocess(frame: np.ndarray) -> np.ndarray:
-    """Convert BGR frame to equalised grayscale for better detection."""
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    return cv2.equalizeHist(gray)   # boost contrast
-
-
-def _detect_faces(cascade: cv2.CascadeClassifier,
-                  gray: np.ndarray) -> list[tuple[int, int, int, int]]:
-    """Run Haar Cascade and return a list of (x, y, w, h) bounding boxes."""
-    faces = cascade.detectMultiScale(
-        gray,
-        scaleFactor=SCALE_FACTOR,
-        minNeighbors=MIN_NEIGHBORS,
-        minSize=MIN_FACE_SIZE,
-        flags=cv2.CASCADE_SCALE_IMAGE,
-    )
-    if len(faces) == 0:
-        return []
-    return [(int(x), int(y), int(w), int(h)) for x, y, w, h in faces]
-
-
-
-# Public API
-
+# The signature accepts optional legacy args to prevent blowing up dependent controllers
 def recognize_faces(frame: np.ndarray, cascade=None, recognizer=None) -> list[FaceResult]:
     """
-    Detect and identify all faces in a single camera frame.
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        BGR image as returned by cv2.VideoCapture.read() or decoded from JPEG.
-    cascade : cv2.CascadeClassifier, optional
-    recognizer : cv2.face_LBPHFaceRecognizer, optional
-
-    Returns
-    -------
-    list[FaceResult]
-        One FaceResult per detected face.  Empty list when no faces are found.
+    Detect and identify all faces in a single camera frame using FaceNet.
+    Downscales processing dynamically ensuring hyper-fast sub-millisecond mappings.
     """
-    if cascade is None or recognizer is None:
-        global_cascade, global_recognizer = _get_resources()
-        cascade = cascade or global_cascade
-        recognizer = recognizer or global_recognizer
+    _load_encodings()
 
-    gray  = _preprocess(frame)
-    boxes = _detect_faces(cascade, gray)
+    # Inference Matrix Acceleration
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    rgb_small_frame = small_frame[:, :, ::-1]
+    
+    face_locations = face_recognition.face_locations(rgb_small_frame)
+    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
     results: list[FaceResult] = []
 
-    for (x, y, w, h) in boxes:
-        roi = gray[y : y + h, x : x + w]
+    for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+        # Scale back the coordinates natively
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
+        
+        y = top
+        x = left
+        h = bottom - top
+        w = right - left
 
-        # Resize ROI to a fixed size (LBPH is not size-invariant)
-        roi_resized = cv2.resize(roi, (200, 200))
+        is_known = False
+        label = "Unknown"
+        distance = 1.0
 
-        user_id, confidence = recognizer.predict(roi_resized)
-
-        is_known = confidence < CONFIDENCE_THRESHOLD
-        label    = f"ID_{user_id}" if is_known else "Unknown"
+        if len(_known_encodings) > 0:
+            face_distances = face_recognition.face_distance(_known_encodings, face_encoding)
+            if len(face_distances) > 0:
+                best_match_index = np.argmin(face_distances)
+                distance = face_distances[best_match_index]
+                
+                # Strict threshold matching
+                if distance <= TOLERANCE:
+                    is_known = True
+                    label = _known_names[best_match_index]
 
         results.append(FaceResult(
             label      = label,
-            user_id    = user_id    if is_known else 0,
-            confidence = confidence,
+            user_id    = 0, # Abandoned structural param
+            confidence = distance, 
             is_known   = is_known,
             bbox       = {"x": x, "y": y, "w": w, "h": h},
         ))
 
     return results
 
-
-def annotate_frame(frame: np.ndarray,
-                   results: list[FaceResult]) -> np.ndarray:
-    """
-    Draw bounding boxes and labels on a copy of the frame.
-    Returns the annotated frame (does NOT mutate the original).
-
-    Useful for debugging or for the video-stream endpoint.
-    """
+def annotate_frame(frame: np.ndarray, results: list[FaceResult]) -> np.ndarray:
     out = frame.copy()
     for r in results:
         x, y, w, h = r.bbox["x"], r.bbox["y"], r.bbox["w"], r.bbox["h"]
         
-        # Yellow (0, 255, 255) for Unknown
-        # Green (0, 255, 0) for Authorized
-        # Red (0, 0, 255) for Unauthorized (wrong class)
         if r.color:
             color = r.color
         elif not r.is_known:
-            color = (0, 255, 255) 
+            color = (0, 255, 255) # Yellow
         elif r.is_enrolled:
-            color = (0, 255, 0)
+            color = (0, 255, 0) # Green 
         else:
-            color = (0, 0, 255)
+            color = (0, 0, 255) # Red 
         
         cv2.rectangle(out, (x, y), (x + w, y + h), color, 2)
-        
-        tag = f"{r.label}"
-        cv2.putText(out, tag, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        cv2.putText(out, str(r.label), (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
     return out
