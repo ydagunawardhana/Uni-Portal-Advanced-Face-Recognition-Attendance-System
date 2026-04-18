@@ -47,6 +47,6 @@ dataset/
 
 # Ignore Pickle files
 *.pkl
-encodings.pkl
+backend/encodings.pkl
 
 
