@@ -11,6 +11,7 @@ import {
   UserCheck,
   EyeOff,
   Move3d,
+  RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "./Sidebar";
@@ -24,6 +25,7 @@ import PendingRegistrations from "./PendingRegistrations";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
+const HALFWAY = 25;
 const FRAME_INTERVAL_MS = 300;
 
 const universityData: Record<string, Record<string, string[]>> = {
@@ -160,6 +162,9 @@ export default function AdminDashboard({
   } | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [wearsGlasses, setWearsGlasses] = useState(false);
+  const [awaitingGlassesRemoval, setAwaitingGlassesRemoval] = useState(false);
+  const capturedFramesRef = useRef<string[]>([]);
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
     [],
@@ -284,7 +289,7 @@ export default function AdminDashboard({
     return dataUrl.split(",")[1];
   }, []);
 
-  //  Kick off the 50-frame capture sequence
+  //  Kick off the 50-frame capture sequence (Hybrid Glasses Support)
   const handleCaptureImages = useCallback(() => {
     if (!camActive) {
       toast.error("Please start the camera first before capturing.");
@@ -299,14 +304,19 @@ export default function AdminDashboard({
     setCapturing(true);
     setImagesCaptured(0);
     setCapturedFrames([]);
+    capturedFramesRef.current = [];
     setFaceStatus(null);
+    setAwaitingGlassesRemoval(false);
     captureActiveRef.current = true;
 
-    let currentFrames: string[] = [];
-    const toastId = toast.loading("Capturing face images… (0/50)");
+    const targetForThisRun = wearsGlasses ? HALFWAY : TOTAL_FRAMES;
+    const toastId = toast.loading(`Capturing face images… (0/${TOTAL_FRAMES})`);
 
     const captureLoop = async () => {
-      while (captureActiveRef.current && currentFrames.length < TOTAL_FRAMES) {
+      while (
+        captureActiveRef.current &&
+        capturedFramesRef.current.length < targetForThisRun
+      ) {
         const b64 = captureFrame();
         if (b64) {
           try {
@@ -318,11 +328,11 @@ export default function AdminDashboard({
             const data = await res.json();
 
             if (data.face_detected) {
-              currentFrames.push(b64);
-              setImagesCaptured(currentFrames.length);
+              capturedFramesRef.current = [...capturedFramesRef.current, b64];
+              setImagesCaptured(capturedFramesRef.current.length);
               setFaceStatus({ isError: false, message: "Face Detected" });
               toast.loading(
-                `Capturing face images… (${currentFrames.length}/${TOTAL_FRAMES})`,
+                `Capturing face images… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`,
                 { id: toastId },
               );
             } else {
@@ -335,14 +345,30 @@ export default function AdminDashboard({
         await new Promise((resolve) => setTimeout(resolve, FRAME_INTERVAL_MS));
       }
 
-      if (currentFrames.length >= TOTAL_FRAMES && captureActiveRef.current) {
-        setCapturedFrames(currentFrames);
-        setCapturing(false);
+      if (
+        capturedFramesRef.current.length >= targetForThisRun &&
+        captureActiveRef.current
+      ) {
         captureActiveRef.current = false;
-        toast.success("All 50 images captured!", {
-          id: toastId,
-          duration: 3000,
-        });
+        setCapturing(false);
+
+        if (wearsGlasses && targetForThisRun === HALFWAY) {
+          // Midpoint pause — ask to remove glasses
+          setCapturedFrames(capturedFramesRef.current);
+          setAwaitingGlassesRemoval(true);
+          toast.success("Phase 1 complete! Remove glasses and click Resume.", {
+            id: toastId,
+            duration: 8000,
+          });
+        } else {
+          // Full capture done
+          setCapturedFrames(capturedFramesRef.current);
+          setAwaitingGlassesRemoval(false);
+          toast.success("All 50 images captured!", {
+            id: toastId,
+            duration: 3000,
+          });
+        }
       } else {
         toast.dismiss(toastId);
         setCapturing(false);
@@ -350,7 +376,66 @@ export default function AdminDashboard({
     };
 
     captureLoop();
-  }, [capturing, captureComplete, captureFrame, studentId, camActive]);
+  }, [capturing, captureComplete, captureFrame, studentId, camActive, wearsGlasses]);
+
+  //  Resume capture: Phase 2 (without glasses)
+  const handleResumeCapture = useCallback(() => {
+    if (!camActive) {
+      toast.error("Camera is offline. Please restart it.");
+      return;
+    }
+    setAwaitingGlassesRemoval(false);
+    setCapturing(true);
+    captureActiveRef.current = true;
+
+    const toastId = toast.loading(`Resuming capture… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`);
+
+    const captureLoop = async () => {
+      while (
+        captureActiveRef.current &&
+        capturedFramesRef.current.length < TOTAL_FRAMES
+      ) {
+        const b64 = captureFrame();
+        if (b64) {
+          try {
+            const res = await fetch(`${API_BASE}/api/admin/validate-face`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ frame_b64: b64 }),
+            });
+            const data = await res.json();
+
+            if (data.face_detected) {
+              capturedFramesRef.current = [...capturedFramesRef.current, b64];
+              setImagesCaptured(capturedFramesRef.current.length);
+              setFaceStatus({ isError: false, message: "Face Detected" });
+              toast.loading(
+                `Resuming capture… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`,
+                { id: toastId },
+              );
+            } else {
+              setFaceStatus({ isError: true, message: `${data.reason}` });
+            }
+          } catch {
+            setFaceStatus({ isError: true, message: "Validation error" });
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, FRAME_INTERVAL_MS));
+      }
+
+      if (capturedFramesRef.current.length >= TOTAL_FRAMES && captureActiveRef.current) {
+        setCapturedFrames(capturedFramesRef.current);
+        setCapturing(false);
+        captureActiveRef.current = false;
+        toast.success("All 50 images captured!", { id: toastId, duration: 3000 });
+      } else {
+        toast.dismiss(toastId);
+        setCapturing(false);
+      }
+    };
+
+    captureLoop();
+  }, [camActive, captureFrame]);
 
   // Derived fields
   const autoEmail = studentId
@@ -482,9 +567,12 @@ export default function AdminDashboard({
     setGender("");
     setImagesCaptured(0);
     setCapturedFrames([]);
+    capturedFramesRef.current = [];
     setFaceStatus(null);
     setAutoGeneratePassword(false);
     setCapturing(false);
+    setWearsGlasses(false);
+    setAwaitingGlassesRemoval(false);
     captureActiveRef.current = false;
     if (captureTimerRef.current) clearInterval(captureTimerRef.current);
   };
@@ -940,6 +1028,28 @@ export default function AdminDashboard({
                         </label>
                       </div>
                     </div>
+
+                    {/* Hybrid Glasses Capture Toggle */}
+                    <div className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          id="wearsGlasses"
+                          checked={wearsGlasses}
+                          onChange={(e) => setWearsGlasses(e.target.checked)}
+                          disabled={capturing || captureComplete}
+                          className="w-4 h-4 mt-1 text-amber-600 bg-gray-100 border-gray-300 rounded-full focus:ring-amber-500 focus:ring-2 cursor-pointer"
+                        />
+                        <label htmlFor="wearsGlasses" className="cursor-pointer">
+                          <span className="text-md font-semibold text-amber-800 block">
+                           Student wears glasses
+                          </span>
+                          <span className="text-xs text-amber-600 mt-1 block">
+                            Enables Hybrid Capture: 25 photos with glasses, then 25 without - for a more accurate biometric dataset.
+                          </span>
+                        </label>
+                      </div>
+                    </div>
                   </form>
                 </div>
 
@@ -1081,11 +1191,50 @@ export default function AdminDashboard({
                     )}
                   </button>
 
+                  {/* Glasses Removal Alert Banner */}
+                  {awaitingGlassesRemoval && (
+                    <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-400 rounded-xl shadow-md animate-pulse">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">🕶️</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-amber-800">
+                            Phase 1 Complete - {HALFWAY}/{TOTAL_FRAMES} images captured!
+                          </p>
+                          <p className="text-xs text-amber-700 mt-1">
+                            Please ask the student to <strong>remove their glasses</strong>, then click Resume to capture Phase 2.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleResumeCapture}
+                        className="mt-3 w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Resume Capture (Without Glasses)
+                      </button>
+                    </div>
+                  )}
+
                   {/* Progress bar */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-sm font-medium text-gray-700">
                         Images Captured: {imagesCaptured}/{TOTAL_FRAMES}
+                        {wearsGlasses && (
+                          <span className={`ml-3 text-sm font-bold px-2 py-0.5 rounded-full ${
+                            imagesCaptured < HALFWAY
+                              ? "bg-gray-200 text-gray-700"
+                              : imagesCaptured < TOTAL_FRAMES
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}>
+                            {imagesCaptured < HALFWAY
+                              ? "Phase 1 - With Glasses"
+                              : imagesCaptured < TOTAL_FRAMES
+                              ? "Phase 2 - Without Glasses"
+                              : "Complete"}
+                          </span>
+                        )}
                       </label>
 
                       {faceStatus && (
@@ -1100,10 +1249,21 @@ export default function AdminDashboard({
                         {Math.round((imagesCaptured / TOTAL_FRAMES) * 100)}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    {/* Segmented progress bar for glasses mode */}
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden relative">
+                      {wearsGlasses && (
+                        <div
+                          className="absolute top-0 bottom-0 w-px bg-white/70 z-10"
+                          style={{ left: "50%" }}
+                        />
+                      )}
                       <div
                         className={`h-full transition-all duration-300 rounded-full ${
-                          captureComplete ? "bg-green-500" : "bg-blue-600"
+                          captureComplete
+                            ? "bg-green-500"
+                            : awaitingGlassesRemoval
+                            ? "bg-amber-500"
+                            : "bg-blue-600"
                         }`}
                         style={{
                           width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,

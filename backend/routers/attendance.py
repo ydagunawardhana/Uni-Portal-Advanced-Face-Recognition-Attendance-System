@@ -2,17 +2,6 @@
 routers/attendance.py
 ──────────────────────
 All routes under /api/attendance.
-
-POST /api/attendance
-    Accepts a JPEG/PNG frame uploaded as multipart form data.
-    Runs face detection + recognition, logs known identities to the DB,
-    and returns a structured JSON response.
-
-GET  /api/attendance/history
-    Returns paginated attendance logs with optional filters.
-
-GET  /api/attendance/today
-    Returns all logs recorded today (server local date).
 """
 
 from __future__ import annotations
@@ -41,88 +30,65 @@ import face_recognition
 
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
 
+# Strict biometric threshold
+FACE_MATCH_THRESHOLD = 0.42
 
-#  Helpers 
+# Global Encodings Cache
+global_known_encodings = []
+global_known_names = []
+
+def load_global_encodings():
+    global global_known_encodings, global_known_names
+    try:
+        import pickle
+        with open('encodings.pkl', 'rb') as f:
+            data = pickle.load(f)
+            global_known_encodings = data.get("encodings", [])
+            global_known_names = data.get("names", [])
+        print(f"[Attendance Stream] Globally loaded {len(global_known_encodings)} FaceNet vector maps.")
+    except Exception as e:
+        print(f"[Attendance Stream] WARNING: encodings.pkl not found or empty. ({e})")
+
+load_global_encodings()
+
 
 def _decode_image(raw: bytes) -> np.ndarray:
-    """Decode raw bytes (JPEG / PNG / BMP / WebP) into a BGR NumPy array."""
     arr = np.frombuffer(raw, dtype=np.uint8)
     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if frame is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Could not decode the uploaded image. "
-                "Ensure it is a valid JPEG, PNG, BMP, or WebP file."
-            ),
-        )
+        raise HTTPException(status_code=400, detail="Could not decode image.")
     return frame
 
 
-
-#  POST /api/attendance 
-
-@router.post(
-    "",
-    response_model=schemas.AttendanceResponse,
-    summary="Process a frame and log attendance",
-    status_code=status.HTTP_200_OK,
-)
+@router.post("", response_model=schemas.AttendanceResponse)
 async def process_attendance_frame(
-    file:         UploadFile = File(...,  description="Camera frame (JPEG / PNG / WebP)"),
-    debounce_min: int        = Form(1,   description="Debounce window in minutes (default 1)"),
-    db:           Session    = Depends(get_db),
+    file: UploadFile = File(...),
+    debounce_min: int = Form(1),
+    db: Session = Depends(get_db),
 ):
-    """
-    **Main attendance endpoint.**
-
-    1. Accepts a single camera frame uploaded as `multipart/form-data`.
-    2. Runs Haar Cascade face detection on the frame.
-    3. Runs LBPH face recognition on each detected face.
-    4. For every *known* face:
-       - Auto-creates the Student record if it does not exist yet.
-       - Determines the correct status (`entered` / `exited`).
-       - Writes an `AttendanceLog` (skipped if a log already exists within
-         `debounce_min` minutes to prevent flooding from video streams).
-    5. Returns detection metadata **and** the DB log entries.
-
-    ### How to call from JavaScript / React
-    ```js
-    const form = new FormData();
-    form.append("file", blob, "frame.jpg");   // blob from canvas.toBlob()
-    const res = await fetch("/api/attendance", { method: "POST", body: form });
-    const data = await res.json();
-    ```
-    """
-    raw   = await file.read()
+    raw = await file.read()
     frame = _decode_image(raw)
-
-    #  Face detection + recognition 
     face_results: list[FaceResult] = recognize_faces(frame)
-
-    logs_created: list = []
-    detection_out: list[schemas.FaceDetectionResult] = []
+    logs_created = []
+    detection_out = []
 
     for result in face_results:
         detection_out.append(
             schemas.FaceDetectionResult(
-                label      = result.label,
-                user_id    = result.user_id,
-                confidence = round(result.confidence, 2),
-                is_known   = result.is_known,
-                bbox       = result.bbox,
+                label=result.label,
+                user_id=result.user_id,
+                confidence=round(result.confidence, 2),
+                is_known=result.is_known,
+                bbox=result.bbox,
             )
         )
 
-        if not result.is_known:
-            continue  
+        if not result.is_known: continue
 
-        # Fetch the student from the database bypassing legacy integer bindings
         student = db.query(models.Student).filter(models.Student.index_number == result.label).first()
         if not student:
             result.is_known = False
             result.label = "Unknown"
-            # Update the detection out object since we just invalidated it
             detection_out[-1].is_known = False
             detection_out[-1].label = "Unknown"
             continue
@@ -130,274 +96,222 @@ async def process_attendance_frame(
         result.label = student.name
         detection_out[-1].label = student.name
 
-        #  Write to DB (with debounce) 
         log_entry, created = crud.log_attendance_for_recognised_face(
-            db           = db,
-            student_id   = student.id,
-            debounce_min = debounce_min,
+            db=db,
+            student_id=student.id,
+            debounce_min=debounce_min,
         )
-        
-        # Populate relationship for fast-path JSON serialization back to frontend
         log_entry.student = student
-
         logs_created.append(log_entry)
 
-        status_word = "logged" if created else "skipped (debounce)"
-        print(
-            f"[Attendance]  {student.name:<30} "
-            f"conf={result.confidence:.1f}  "
-            f"→ {log_entry.status:<8}  {status_word}"
-        )
-
-    # Encode annotated frame to Base64
     annotated_img = annotate_frame(frame, face_results)
     _, buffer = cv2.imencode('.jpg', annotated_img)
     base64_str = base64.b64encode(buffer).decode('utf-8')
     base64_frame = f"data:image/jpeg;base64,{base64_str}"
 
-    known_count = sum(1 for r in face_results if r.is_known)
-
     return schemas.AttendanceResponse(
-        message          = (
-            f"{len(face_results)} face(s) detected, "
-            f"{known_count} recognised."
-        ),
-        faces_detected   = len(face_results),
-        faces_recognised = known_count,
-        results          = detection_out,
-        logs             = logs_created,
-        timestamp        = datetime.utcnow().isoformat() + "Z",
-        annotated_frame_base64 = base64_frame,
+        message=f"{len(face_results)} faces detected.",
+        faces_detected=len(face_results),
+        faces_recognised=sum(1 for r in face_results if r.is_known),
+        results=detection_out,
+        logs=logs_created,
+        timestamp=datetime.utcnow().isoformat() + "Z",
+        annotated_frame_base64=base64_frame,
     )
 
 
-#  GET /api/attendance/history 
-
-@router.get(
-    "/history",
-    response_model=schemas.AttendanceHistoryResponse,
-    summary="Paginated attendance history with optional filters",
-)
+@router.get("/history", response_model=schemas.AttendanceHistoryResponse)
 def get_attendance_history(
-    limit:      int            = 50,
-    offset:     int            = 0,
-    student_id: Optional[int]  = None,
-    date:       Optional[str]  = None,   # "YYYY-MM-DD"
-    db:         Session        = Depends(get_db),
+    limit: int = 50, offset: int = 0, student_id: Optional[int] = None,
+    date: Optional[str] = None, db: Session = Depends(get_db)
 ):
-    """
-    Returns paginated attendance logs.
-
-    - **limit** / **offset** — pagination controls  
-    - **student_id** — filter to a single student  
-    - **date** — filter to a specific day (`YYYY-MM-DD`)
-    """
-    total, records = crud.get_attendance_history(
-        db, limit=limit, offset=offset,
-        student_id=student_id, date=date,
-    )
+    total, records = crud.get_attendance_history(db, limit=limit, offset=offset, student_id=student_id, date=date)
     return schemas.AttendanceHistoryResponse(total=total, records=records)
 
 
-#  GET /api/attendance/today 
+last_seen_times: dict = {}
+blink_state: dict = {}
+active_captures = {}
 
-@router.get(
-    "/today",
-    response_model=schemas.AttendanceHistoryResponse,
-    summary="All attendance records for today",
-)
-def get_today_attendance(db: Session = Depends(get_db)):
-    """Returns every attendance log recorded on the server's current calendar date."""
-    today_str = date.today().strftime("%Y-%m-%d")
-    total, records = crud.get_attendance_history(db, limit=1000, date=today_str)
-    return schemas.AttendanceHistoryResponse(total=total, records=records)
-
-
-#  Simultaneous Video Stream Endpoints & State Manager
-
-active_cameras = {}
-last_seen_times = {}
-blink_state = {}
-
-def generate_frames(cam_id: int, current_class_id: str = None):
-    """
-    Independently polls the specific hardware ID (0, 1, 2) utilizing OpenCV.
-    Seamlessly processes Deep Learning face recognition and streams the annotated MJPEG.
-    """
-    if cam_id in active_cameras:
-        if active_cameras[cam_id] is not None:
-            active_cameras[cam_id].release()
-            
-    # Force native Windows DirectShow (DSHOW) backend to circumvent buggy Obsensor and MSMF DLLs
-    cap = cv2.VideoCapture(cam_id, cv2.CAP_DSHOW)
+def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "entered"):
+    print(f"[DEBUG] Starting stream. Known faces loaded: {len(global_known_encodings)}")
     
-    # Primary interface fallback
+    if cam_id in active_captures:
+        active_captures[cam_id].release()
+        
+    cap = cv2.VideoCapture(cam_id, cv2.CAP_DSHOW)
     if not cap.isOpened() and cam_id == 0:
         cap = cv2.VideoCapture(-1, cv2.CAP_DSHOW)
-
+    
     if not cap.isOpened():
-        print(f"[Video Feed] Warning: Camera {cam_id} unavailable. Yielding standby placeholder.")
-        # Graceful handling so FastAPI/browser doesn't abort connections crashing the layout
-        import numpy as np
-        placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
-        cv2.putText(placeholder, f"Camera {cam_id} Offline", (150, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        ret, buffer = cv2.imencode('.jpg', placeholder)
-        frame_bytes = buffer.tobytes()
-        while True:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(1)
+        print(f"[Video Feed] Warning: Camera {cam_id} unavailable.")
         return
         
-    active_cameras[cam_id] = cap
-
-    local_eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
-
-    known_encodings = []
-    known_names = []
-    try:
-        with open('encodings.pkl', 'rb') as f:
-            data = pickle.load(f)
-            known_encodings = data["encodings"]
-            known_names = data["names"]
-    except Exception as e:
-        print(f"Could not load encodings.pkl: {e}")
-
+    active_captures[cam_id] = cap
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
     db = SessionLocal()
+    
     try:
         while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                break
+            ret, frame = cap.read()
+            if not ret:
+                time.sleep(0.01)
+                continue
                 
-            # Downscale frame for ultra-fast FaceNet inference
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-            rgb_small_frame = small_frame[:, :, ::-1]
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # Keep original resolution for Liveness
+            frame = np.ascontiguousarray(frame)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            now = time.time()
             
-            face_locations = face_recognition.face_locations(rgb_small_frame)
-            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                # Scale up predictions to match full-resolution frame
-                top *= 4
-                right *= 4
-                bottom *= 4
-                left *= 4
+            results = []
+            try:
+                scale = 0.25
+                small = cv2.resize(frame, (0,0), fx=scale, fy=scale)
+                rgb_sm = np.ascontiguousarray(small[:, :, ::-1])
+                locations = face_recognition.face_locations(rgb_sm)
                 
-                x = left
-                y = top
-                w = right - left
-                h = bottom - top
+                if len(locations) > 0:
+                    encodings = face_recognition.face_encodings(rgb_sm, locations)
+                    inv = 1.0/scale
+                    for (top, right, bottom, left), enc in zip(locations, encodings):
+                        name = "Unknown"
+                        if len(global_known_encodings) > 0:
+                            dists = face_recognition.face_distance(global_known_encodings, enc)
+                            if len(dists) > 0:
+                                best = np.argmin(dists)
+                                if dists[best] <= FACE_MATCH_THRESHOLD:
+                                    name = global_known_names[best]
+                        results.append((int(left*inv), int(top*inv), int((right-left)*inv), int((bottom-top)*inv), name))
+            except Exception as e:
+                print(f"[FACE RECOGNITION ERROR]: {e}")
                 
-                roi_gray = gray[y:y+h, x:x+w]
-                
-                display_name = "Unknown"
-                box_color = (0, 255, 255) # Yellow
-                string_index = "Unknown"
-                
-                try:
-                    face_distances = face_recognition.face_distance(known_encodings, face_encoding)
-                    id_ = "Unknown"
+            detected_ids = set()
+            for (x, y, w, h, name) in results:
+                color = (0, 255, 255)
+                label = name
+                if name != "Unknown":
+                    detected_ids.add(name)
+                    if name not in blink_state: blink_state[name] = {'closed': 0, 'verified': False, 'time': 0}
+                    state = blink_state[name]
+                    if state['verified'] and (now - state['time'] > 10): state['verified'] = False
                     
-                    if len(face_distances) > 0:
-                        best_match_index = np.argmin(face_distances)
-                        # Strict 0.5 distance threshold (lower is better)
-                        if face_distances[best_match_index] <= 0.5:
-                            string_index = known_names[best_match_index]
-                            id_ = string_index
-                        
-                    if string_index.lower() == "unknown":
-                        box_color = (0, 255, 255)
-                        display_name = "Unknown"
-                        if id_ in blink_state:
-                            blink_state[id_]['verified'] = False
-                    else:
-                        current_time = time.time()
-                        
-                        if id_ not in blink_state:
-                            blink_state[id_] = {'eyes_closed_frames': 0, 'verified': False, 'verified_time': 0}
-                            
-                        state = blink_state[id_]
-                        
-                        if state['verified'] and (current_time - state['verified_time'] > 5):
-                            state['verified'] = False
-                            state['eyes_closed_frames'] = 0
-                        
-                        if not state['verified']:
-                            if h > 0 and w > 0:
-                                eyes = local_eye_cascade.detectMultiScale(roi_gray[0:h//2, 0:w], scaleFactor=1.1, minNeighbors=5)
-                                if len(eyes) == 0:
-                                    state['eyes_closed_frames'] += 1
-                                else:
-                                    if 3 <= state['eyes_closed_frames'] <= 20: 
-                                        state['verified'] = True
-                                        state['verified_time'] = current_time
-                                        print(f"Liveness Passed for {string_index}!")
-                                    state['eyes_closed_frames'] = 0
-                        
-                        if state['verified']:
-                            box_color = (0, 255, 0)
-                            display_name = f"{string_index} (Verified)"
-                            
-                            if id_ not in last_seen_times or (current_time - last_seen_times.get(id_, 0) > 5):
-                                last_seen_times[id_] = current_time
-                                print(f"[DEBUG] Detected ID: {string_index}")
+                    if not state['verified']:
+                        roi = gray[max(0,y):y+h, max(0,x):x+w]
+                        if roi.shape[0] > 0 and roi.shape[1] > 0:
+                            eyes = eye_cascade.detectMultiScale(roi[0:h//2, 0:w], 1.1, 5)
+                            if len(eyes) == 0: state['closed'] += 1
+                            else:
+                                if 2 <= state['closed'] <= 20:
+                                    state['verified'] = True
+                                    state['time'] = now
+                                state['closed'] = 0
                                 
-                                try:
-                                    student = db.query(models.Student).filter(models.Student.index_number == string_index).first()
-                                    if student:
-                                        display_name = str(student.index_number)
-                                        # TODO: Trigger Mark Attendance logic here!
-                                    else:
-                                        display_name = string_index
-                                except Exception as db_err:
-                                    print(f"[DB ERROR]: {db_err}")
-                                    display_name = string_index
-                        else:
-                            box_color = (0, 165, 255)
-                            display_name = f"{string_index} - Please Blink!"
-                            
-                except Exception as e:
-                    pass
-                    
-                cv2.rectangle(frame, (x, y), (x+w, y+h), box_color, 2)
-                cv2.putText(frame, display_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, box_color, 2)
-                
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame_bytes = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                    if state['verified']:
+                        color = (0, 255, 0)
+                        label = f"{name} (Verified)"
+                        if name not in last_seen_times or (now - last_seen_times.get(name, 0) > 10):
+                            last_seen_times[name] = now
+                            try:
+                                student = db.query(models.Student).filter(models.Student.index_number == name).first()
+                                if student and session_id:
+                                    existing_log = db.query(models.AttendanceLog).filter(
+                                        models.AttendanceLog.student_id == student.id,
+                                        models.AttendanceLog.session_id == session_id,
+                                        models.AttendanceLog.status == mode
+                                    ).first()
+                                    if not existing_log:
+                                        new_log = models.AttendanceLog(
+                                            student_id=student.id,
+                                            session_id=session_id,
+                                            timestamp=datetime.utcnow(),
+                                            status=mode
+                                        )
+                                        db.add(new_log)
+                                        db.commit()
+                                        print(f"[DB] Logged {student.index_number} as {mode}")
+                            except Exception as e:
+                                print(f"[DB ERROR]: {e}")
+                    else:
+                        color = (0, 165, 255)
+                        label = f"{name} - Blink!"
+
+                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+                cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+            for known_id in list(blink_state.keys()):
+                if known_id not in detected_ids:
+                    blink_state[known_id].update({'verified': False, 'closed': 0, 'time': 0})
+            
+            _, buffer = cv2.imencode('.jpg', frame)
+            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
     except Exception as e:
-        pass
+        print(f"[STREAM GENERATOR ERROR]: {e}")
     finally:
-        if cam_id in active_cameras and active_cameras[cam_id] is not None:
-             active_cameras[cam_id].release()
-             active_cameras[cam_id] = None
+        cap.release()
+        if cam_id in active_captures:
+            del active_captures[cam_id]
         db.close()
 
-
-@router.get("/video_feed/in", summary="IN Hardware Stream")
-def video_feed_in(current_class_id: str = None):
-    """Mounts continuous MJPEG for entrance Camera 0"""
-    return StreamingResponse(
-        generate_frames(0, current_class_id), 
-        media_type="multipart/x-mixed-replace; boundary=frame"
+@router.post("/start_session", response_model=schemas.SessionOut)
+def start_session(data: schemas.SessionCreate, db: Session = Depends(get_db)):
+    session_model = models.ClassSession(
+        lecturer_id=data.lecturer_id, subject_id=data.subject_id, batch_id=data.batch_id,
+        session_type=data.session_type, location=data.location, status="Active"
     )
+    return crud.create_session(db, session_model)
 
-@router.get("/video_feed/out", summary="OUT Hardware Stream")
-def video_feed_out(current_class_id: str = None):
-    """Mounts continuous MJPEG for exit Camera 1 gracefully"""
-    return StreamingResponse(
-        generate_frames(1, current_class_id), 
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
+@router.post("/end_session/{session_id}")
+def end_session_endpoint(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if not session: raise HTTPException(status_code=404, detail="Session not found")
+    session.status = 'Closed'
+    session.end_time = datetime.utcnow()
+    db.commit()
+    return {"message": "Session closed", "session_id": session_id}
 
-@router.post("/stop_cameras", summary="Emergency Hardware Release")
+@router.get("/video_feed/in")
+def video_feed_in(session_id: Optional[int] = None, cam_id: int = 0):
+    return StreamingResponse(generate_frames(cam_id, session_id, mode="entered"), media_type="multipart/x-mixed-replace; boundary=frame")
+
+@router.get("/video_feed/out")
+def video_feed_out(session_id: Optional[int] = None, cam_id: int = 0):
+    return StreamingResponse(generate_frames(cam_id, session_id, mode="exited"), media_type="multipart/x-mixed-replace; boundary=frame")
+
+@router.post("/stop_cameras")
 def stop_cameras():
-    """Forces closure of all active hardware connections triggered by UI Stop"""
-    for cam_id, cap in active_cameras.items():
-        if cap is not None:
-            cap.release()
-    active_cameras.clear()
-    return {"message": "All cameras released effectively"}
+    for cap in list(active_captures.values()): cap.release()
+    active_captures.clear()
+    return {"message": "Stopped"}
+
+@router.get("/live_logs/{session_id}")
+def get_live_logs(session_id: int, db: Session = Depends(get_db)):
+    logs = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.session_id == session_id
+    ).order_by(models.AttendanceLog.timestamp.desc()).limit(50).all()
+    
+    res = []
+    for log in logs:
+        res.append({
+            "name": log.student.name if log.student else "Unknown",
+            "index_number": log.student.index_number if log.student else "Unknown",
+            "status": log.status,
+            "timestamp": log.timestamp.strftime("%I:%M %p")
+        })
+    return res
+
+@router.get("/session_stats/{session_id}")
+def get_session_stats(session_id: int, db: Session = Depends(get_db)):
+    entered_count = db.query(models.AttendanceLog.student_id).filter(
+        models.AttendanceLog.session_id == session_id, 
+        models.AttendanceLog.status == "entered"
+    ).distinct().count()
+    
+    exited_count = db.query(models.AttendanceLog.student_id).filter(
+        models.AttendanceLog.session_id == session_id, 
+        models.AttendanceLog.status == "exited"
+    ).distinct().count()
+    
+    return {
+        "total_entered": entered_count,
+        "left_early": exited_count,
+        "currently_inside": entered_count - exited_count
+    }

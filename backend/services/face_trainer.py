@@ -3,6 +3,7 @@ import pickle
 import face_recognition
 import cv2
 from pathlib import Path
+import numpy as np
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENCODINGS_PATH = str(BASE_DIR / "encodings.pkl")
@@ -35,7 +36,10 @@ def update_face_model(index_number: str, dataset_path: str):
         if file.lower().endswith(('.png', '.jpg', '.jpeg')):
             img_path = str(folder_path / file)
             try:
-                rgb_img = face_recognition.load_image_file(img_path)
+                img = cv2.imread(img_path)
+                if img is None: continue
+                rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                rgb_img = np.ascontiguousarray(rgb_img)
                 encodings = face_recognition.face_encodings(rgb_img)
                 if len(encodings) > 0:
                     known_encodings.append(encodings[0])
@@ -53,6 +57,10 @@ def update_face_model(index_number: str, dataset_path: str):
         with open(ENCODINGS_PATH, "wb") as f:
             pickle.dump({"encodings": known_encodings, "names": known_names}, f)
         print(f"[FaceTrainer] Model successfully updated and saved to {ENCODINGS_PATH}")
+        
+        # Immediately overwrite the active Uvicorn inference thread memory 
+        from routers.attendance import load_global_encodings
+        load_global_encodings()
     except Exception as e:
         print(f"[FaceTrainer] Critical Error updating model: {e}")
 
@@ -76,7 +84,10 @@ def retrain_model():
         for image_name in os.listdir(folder_full_path):
             image_path = os.path.join(folder_full_path, image_name)
             try:
-                rgb_img = face_recognition.load_image_file(image_path)
+                img = cv2.imread(image_path)
+                if img is None: continue
+                rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                rgb_img = np.ascontiguousarray(rgb_img)
                 encodings = face_recognition.face_encodings(rgb_img)
                 if len(encodings) > 0:
                     known_encodings.append(encodings[0])
@@ -92,3 +103,10 @@ def retrain_model():
     with open(ENCODINGS_PATH, "wb") as f:
         pickle.dump({"encodings": known_encodings, "names": known_names}, f)
     print(f"-> Model saved successfully as '{ENCODINGS_PATH}'!")
+    
+    # Broadcast native cache reset
+    try:
+        from routers.attendance import load_global_encodings
+        load_global_encodings()
+    except Exception as e:
+        pass

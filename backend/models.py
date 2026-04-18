@@ -52,11 +52,31 @@ class AttendanceLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("class_sessions.id"), nullable=True)
     timestamp = Column(DateTime, nullable=False)
     status = Column(String, nullable=False)  # 'entered' or 'exited'
 
-    # Relationship: each log belongs to one student
+    # Relationship: each log belongs to one student and optionally a session
     student = relationship("Student", back_populates="attendance_logs")
+    session = relationship("ClassSession", back_populates="attendance_logs")
+
+
+class ClassSession(Base):
+    """Specific lecture/lab session tracked by the system."""
+    __tablename__ = "class_sessions"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    lecturer_id  = Column(Integer, ForeignKey("lecturers.id"), nullable=False)
+    subject_id   = Column(String, nullable=False)   # e.g., 'CS-101'
+    batch_id     = Column(String, nullable=False)   # e.g., 'Year 2 Semester 1'
+    session_type = Column(String, nullable=False)   # 'Lecture', 'Lab', etc.
+    location     = Column(String, nullable=False)   # 'Hall A', etc.
+    start_time   = Column(DateTime, default=func.now(), nullable=False)
+    end_time     = Column(DateTime, nullable=True)
+    status       = Column(String, default="Active", nullable=False)  # 'Active' | 'Closed'
+
+    lecturer     = relationship("Lecturer")
+    attendance_logs = relationship("AttendanceLog", back_populates="session")
 
 
 class DeviceSession(Base):
@@ -172,4 +192,3 @@ class Enrollment(Base):
     class_id   = Column(String, index=True, nullable=False) # Maps to session1, session2, etc.
 
     student    = relationship("Student")
-

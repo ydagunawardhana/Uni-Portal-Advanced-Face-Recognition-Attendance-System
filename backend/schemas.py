@@ -110,3 +110,23 @@ class AppointmentOut(AppointmentBase):
 
     model_config = {"from_attributes": True}
 
+
+
+# Class Session
+
+class SessionCreate(BaseModel):
+    lecturer_id: int
+    subject_id: str
+    batch_id: str
+    session_type: str
+    location: str
+
+
+class SessionOut(SessionCreate):
+    id: int
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    status: str
+
+    model_config = {"from_attributes": True}
+

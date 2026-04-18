@@ -86,6 +86,7 @@ def log_attendance(
     db:         Session,
     student_id: int,
     status:     str,
+    session_id: Optional[int] = None,
     timestamp:  Optional[datetime] = None,
 ) -> models.AttendanceLog:
     """
@@ -93,6 +94,7 @@ def log_attendance(
     """
     entry = models.AttendanceLog(
         student_id = student_id,
+        session_id = session_id,
         timestamp  = timestamp or datetime.utcnow(),
         status     = status,
     )
@@ -102,17 +104,40 @@ def log_attendance(
     return entry
 
 
+def create_session(db: Session, session_data: models.ClassSession) -> models.ClassSession:
+    db.add(session_data)
+    db.commit()
+    db.refresh(session_data)
+    return session_data
+
+
+def get_session(db: Session, session_id: int) -> Optional[models.ClassSession]:
+    return db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+
+
+def close_session(db: Session, session_id: int) -> Optional[models.ClassSession]:
+    session = get_session(db, session_id)
+    if session:
+        session.status = "Closed"
+        session.end_time = datetime.utcnow()
+        db.commit()
+        db.refresh(session)
+    return session
+
+
 def log_attendance_for_recognised_face(
     db:           Session,
     student_id:   int,
     debounce_min: int = 1,
+    session_id:   Optional[int] = None,
 ) -> tuple[models.AttendanceLog, bool]:
     """
     High-level helper called by the route handler.
 
     1. Check if a log already exists within *debounce_min* minutes (anti-spam).
-    2. Determine the correct status (entered / exited).
-    3. Write the AttendanceLog and return it.
+    2. Check if attendance already marked for this SPECIFIC session (prevent double-dipping).
+    3. Determine the correct status (entered / exited).
+    4. Write the AttendanceLog and return it.
 
     Returns
     -------
@@ -120,22 +145,32 @@ def log_attendance_for_recognised_face(
         log     – the AttendanceLog ORM object
         created – False if this call was skipped due to debounce
     """
-    now     = datetime.utcnow()
+    now = datetime.utcnow()
 
-    # Debounce: skip if already logged within the window 
+    # 1. Prevent multiple logs within the debounce window (global anti-spam)
     recent = get_latest_log_for_student(db, student_id, within_minutes=debounce_min)
     if recent:
-        return recent, False          # return the existing log, flag as skipped
+        return recent, False
 
-    status = determine_status(
-        # look further back (no time limit) to decide enter/exit toggle
-        db.query(models.AttendanceLog)
-        .filter(models.AttendanceLog.student_id == student_id)
-        .order_by(models.AttendanceLog.timestamp.desc())
-        .first()
-    )
+    # 2. Determine status based on the specific session if provided
+    if session_id:
+        existing_session_log = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.student_id == student_id,
+            models.AttendanceLog.session_id == session_id
+        ).order_by(models.AttendanceLog.timestamp.desc()).first()
+        
+        if existing_session_log:
+            status = "exited" if existing_session_log.status == "entered" else "entered"
+        else:
+            status = "entered"
+    else:
+        # Fallback to general toggle logic if no session_id
+        last_log = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.student_id == student_id
+        ).order_by(models.AttendanceLog.timestamp.desc()).first()
+        status = "entered" if not last_log or last_log.status == "exited" else "exited"
 
-    new_log = log_attendance(db, student_id, status, timestamp=now)
+    new_log = log_attendance(db, student_id, status, session_id=session_id, timestamp=now)
     return new_log, True
 
 

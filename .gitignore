@@ -41,5 +41,12 @@ backend/shape_predictor_68_face_landmarks.dat
 
 # Face Dataset & Uploads
 dataset/
+/uploads/
 *.jpg
 *.png
+
+# Ignore Pickle files
+*.pkl
+encodings.pkl
+
+

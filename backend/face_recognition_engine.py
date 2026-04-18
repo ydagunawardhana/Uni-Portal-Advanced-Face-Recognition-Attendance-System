@@ -18,8 +18,9 @@ import cv2
 _BASE_DIR = Path(__file__).parent
 ENCODINGS_PATH = str(_BASE_DIR / "encodings.pkl")
 
-# Tuning knobs
-TOLERANCE: float = 0.5 
+# Tuning knobs — tightened to 0.42 to reject family-member false positives
+FACE_MATCH_THRESHOLD: float = 0.42
+TOLERANCE = FACE_MATCH_THRESHOLD  # Alias kept for legacy compatibility
 
 @dataclass
 class FaceResult:
@@ -60,7 +61,7 @@ def _load_encodings():
                 _known_names = data.get("names", [])
             _last_encodings_mtime = current_mtime
             if _last_encodings_mtime > 0:
-                print(f"[FaceEngine] 🔄 Auto-reloading updated {ENCODINGS_PATH}")
+                print(f"[FaceEngine] Auto-reloading updated {ENCODINGS_PATH}")
         except Exception as e:
             print(f"[FaceEngine] Failed to load encodings: {e}")
 
@@ -75,6 +76,7 @@ def recognize_faces(frame: np.ndarray, cascade=None, recognizer=None) -> list[Fa
     # Inference Matrix Acceleration
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     rgb_small_frame = small_frame[:, :, ::-1]
+    rgb_small_frame = np.ascontiguousarray(rgb_small_frame)
     
     face_locations = face_recognition.face_locations(rgb_small_frame)
     face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
