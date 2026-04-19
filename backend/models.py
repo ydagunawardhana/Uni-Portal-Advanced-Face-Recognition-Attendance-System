@@ -192,3 +192,16 @@ class Enrollment(Base):
     class_id   = Column(String, index=True, nullable=False) # Maps to session1, session2, etc.
 
     student    = relationship("Student")
+
+
+class Timetable(Base):
+    """University Timetable entries."""
+    __tablename__ = "timetable"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    batch_id    = Column(String, index=True, nullable=False)
+    module_code = Column(String, nullable=False)
+    date        = Column(String, nullable=False) # e.g. "Monday" or "2024-03-25"
+    start_time  = Column(String, nullable=False)
+    end_time    = Column(String, nullable=False)
+    created_at  = Column(DateTime, server_default=func.now())

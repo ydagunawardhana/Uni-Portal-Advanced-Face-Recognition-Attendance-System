@@ -11,6 +11,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LogOut,
+  FileSpreadsheet,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -109,6 +110,11 @@ export default function Sidebar({
       id: "lecturers",
       label: "Manage Lecturers",
       icon: UserCog,
+    },
+    {
+      id: "timetable",
+      label: "Timetable Integration",
+      icon: FileSpreadsheet,
     },
     { id: "reports", label: "Reports", icon: FileText },
     { id: "audit", label: "Audit Logs", icon: History },

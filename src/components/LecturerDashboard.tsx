@@ -34,6 +34,7 @@ export default function LecturerDashboard({
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [lecturerName, setLecturerName] = useState("Lecturer");
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
 
   useEffect(() => {
@@ -157,7 +158,7 @@ export default function LecturerDashboard({
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // Fetch real-time pending appointment count
+  // Fetch real-time pending appointment count + lecturer name
   useEffect(() => {
     const fetchPendingCount = async () => {
       const token = localStorage.getItem("lecturerToken");
@@ -172,6 +173,9 @@ export default function LecturerDashboard({
         );
         if (!profRes.ok) return;
         const profile = await profRes.json();
+
+        // Set lecturer name from profile
+        if (profile.name) setLecturerName(profile.name);
 
         const appRes = await fetch(
           `http://localhost:8000/api/appointments/lecturer/${profile.id}`,
@@ -280,7 +284,7 @@ export default function LecturerDashboard({
                   <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
                     <User className="w-5 h-5 text-gray-600" />
                     <span className="text-sm font-medium text-gray-700">
-                      Dr. Johnson
+                      {lecturerName}
                     </span>
                   </div>
                   <button
@@ -410,7 +414,7 @@ export default function LecturerDashboard({
             <div className="flex items-center space-x-2 bg-gray-700 px-4 py-2 rounded-lg">
               <User className="w-5 h-5 text-gray-300" />
               <span className="text-sm font-medium text-gray-200">
-                Dr. Johnson
+                {lecturerName}
               </span>
             </div>
             <button

@@ -22,6 +22,7 @@ import ManageStudents from "./ManageStudents";
 import AttendanceReports from "./AttendanceReports";
 import SystemAuditLogs from "./SystemAuditLogs";
 import PendingRegistrations from "./PendingRegistrations";
+import TimetableUpload from "./TimetableUpload";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
@@ -590,6 +591,8 @@ export default function AdminDashboard({
         return "Manage Lecturers";
       case "settings":
         return "System Settings";
+      case "timetable":
+        return "Timetable Integration";
       case "reports":
         return "Attendance Reports";
       case "audit":
@@ -611,6 +614,8 @@ export default function AdminDashboard({
         return "View and manage academic staff";
       case "settings":
         return "Configure system preferences and parameters";
+      case "timetable":
+        return "Upload and manage batch timetables";
       case "reports":
         return "Generate and export class attendance records";
       case "audit":
@@ -725,6 +730,7 @@ export default function AdminDashboard({
           {activeTab === "pre_registrations" && (
             <PendingRegistrations onProcess={handleProcessPreRegistration} />
           )}
+          {activeTab === "timetable" && <TimetableUpload />}
 
           {/*  Student Registration  */}
           {activeTab === "students" && (

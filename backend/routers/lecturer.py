@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+from datetime import datetime
 from typing import Optional, List, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
@@ -174,3 +175,209 @@ def update_profile(
         
     db.commit()
     return {"success": True, "message": "Profile updated successfully."}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Dashboard Summary — single unified endpoint for the Lecturer Dashboard
+# ─────────────────────────────────────────────────────────────────────
+
+@router.get("/dashboard_summary/{lecturer_id}")
+def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
+    """
+    Returns a comprehensive JSON object containing all data needed
+    to render the Lecturer Dashboard in a single network call.
+    """
+    from sqlalchemy import func, distinct
+
+    # ── 1. Lecturer identity ──
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.id == lecturer_id).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer not found")
+
+    # ── 2. Aggregate stats ──
+
+    # 2a. Total class sessions conducted by this lecturer
+    total_classes = db.query(func.count(models.ClassSession.id)).filter(
+        models.ClassSession.lecturer_id == lecturer_id
+    ).scalar() or 0
+
+    # 2b. Total unique students enrolled in this lecturer's subjects
+    #     Parse assigned_subjects (comma-separated string → list)
+    assigned_subjects_raw = lecturer.assigned_subjects or ""
+    subject_list = [s.strip() for s in assigned_subjects_raw.split(",") if s.strip()]
+
+    total_students = 0
+    if subject_list:
+        total_students = db.query(func.count(distinct(models.Enrollment.student_id))).filter(
+            models.Enrollment.class_id.in_(subject_list)
+        ).scalar() or 0
+
+    # 2c. Average attendance percentage across all sessions
+    #     Formula per session: (unique entered students / total enrolled students) * 100
+    avg_attendance = 0.0
+    if total_classes > 0 and total_students > 0:
+        sessions = db.query(models.ClassSession).filter(
+            models.ClassSession.lecturer_id == lecturer_id
+        ).all()
+
+        percentages = []
+        for s in sessions:
+            entered = db.query(func.count(distinct(models.AttendanceLog.student_id))).filter(
+                models.AttendanceLog.session_id == s.id,
+                models.AttendanceLog.status == "entered"
+            ).scalar() or 0
+            pct = (entered / total_students) * 100 if total_students > 0 else 0
+            percentages.append(min(pct, 100.0))
+
+        avg_attendance = round(sum(percentages) / len(percentages), 1) if percentages else 0.0
+
+    # ── 3. Recent classes (last 5 closed sessions) ──
+    recent_sessions = db.query(models.ClassSession).filter(
+        models.ClassSession.lecturer_id == lecturer_id
+    ).order_by(models.ClassSession.start_time.desc()).limit(5).all()
+
+    recent_classes = []
+    for s in recent_sessions:
+        entered = db.query(func.count(distinct(models.AttendanceLog.student_id))).filter(
+            models.AttendanceLog.session_id == s.id,
+            models.AttendanceLog.status == "entered"
+        ).scalar() or 0
+        session_pct = round((entered / total_students) * 100, 1) if total_students > 0 else 0
+
+        recent_classes.append({
+            "id": s.id,
+            "subject_id": s.subject_id,
+            "batch_id": s.batch_id,
+            "session_type": s.session_type,
+            "location": s.location,
+            "date": s.start_time.strftime("%Y-%m-%d") if s.start_time else None,
+            "start_time": s.start_time.strftime("%I:%M %p") if s.start_time else None,
+            "end_time": s.end_time.strftime("%I:%M %p") if s.end_time else None,
+            "status": s.status,
+            "students_present": entered,
+            "attendance_percentage": session_pct,
+        })
+
+    # ── 4. Upcoming appointments (next 5, Pending or Approved) ──
+    upcoming_appointments_raw = db.query(models.Appointment).filter(
+        models.Appointment.lecturer_id == lecturer_id,
+        models.Appointment.status.in_(["Pending", "Approved"])
+    ).order_by(models.Appointment.created_at.desc()).limit(5).all()
+
+    upcoming_appointments = []
+    for a in upcoming_appointments_raw:
+        student = db.query(models.Student).filter(models.Student.id == a.student_id).first()
+        upcoming_appointments.append({
+            "id": a.id,
+            "student_name": student.name if student else "Unknown",
+            "student_index": student.index_number if student else "N/A",
+            "date": a.appointment_date,
+            "time_slot": a.time_slot,
+            "reason": a.reason or "No reason provided",
+            "status": a.status,
+        })
+
+    # ── 5. Pending Actions ──
+    pending_appts = db.query(models.Appointment).filter(
+        models.Appointment.lecturer_id == lecturer_id,
+        models.Appointment.status == "Pending"
+    ).order_by(models.Appointment.created_at.desc()).limit(10).all()
+
+    pending_items = []
+    for a in pending_appts:
+        stu = db.query(models.Student).filter(models.Student.id == a.student_id).first()
+        pending_items.append({
+            "id": a.id,
+            "title": f"Consultation with {stu.name if stu else 'Unknown'} ({stu.index_number if stu else 'N/A'})",
+            "type": "Appointment",
+            "date": a.appointment_date,
+            "time_slot": a.time_slot,
+        })
+
+    pending_actions = {
+        "count": len(pending_items),
+        "items": pending_items,
+    }
+
+    # ── 6. At-Risk Students (attendance < 80% across this lecturer's sessions) ──
+    at_risk_students = []
+    all_sessions = db.query(models.ClassSession).filter(
+        models.ClassSession.lecturer_id == lecturer_id
+    ).all()
+    total_session_count = len(all_sessions)
+
+    if total_session_count > 0 and subject_list:
+        # Get all enrolled student IDs for this lecturer's subjects
+        enrolled_rows = db.query(models.Enrollment.student_id).filter(
+            models.Enrollment.class_id.in_(subject_list)
+        ).distinct().all()
+        enrolled_ids = [r[0] for r in enrolled_rows]
+
+        session_ids = [s.id for s in all_sessions]
+
+        for sid in enrolled_ids:
+            sessions_attended = db.query(
+                func.count(distinct(models.AttendanceLog.session_id))
+            ).filter(
+                models.AttendanceLog.student_id == sid,
+                models.AttendanceLog.session_id.in_(session_ids),
+                models.AttendanceLog.status == "entered"
+            ).scalar() or 0
+
+            pct = round((sessions_attended / total_session_count) * 100, 1)
+            if pct < 80:
+                stu = db.query(models.Student).filter(models.Student.id == sid).first()
+                if stu:
+                    at_risk_students.append({
+                        "id": stu.id,
+                        "name": stu.name,
+                        "index_number": stu.index_number,
+                        "attendance_percentage": pct,
+                        "sessions_attended": sessions_attended,
+                        "total_sessions": total_session_count,
+                    })
+
+        # Sort by lowest attendance first, cap at 5
+        at_risk_students.sort(key=lambda x: x["attendance_percentage"])
+        at_risk_students = at_risk_students[:5]
+
+    # ── 7. Today's Schedule ──
+    from datetime import date as date_type
+    today = date_type.today()
+    today_start = datetime(today.year, today.month, today.day, 0, 0, 0)
+    today_end = datetime(today.year, today.month, today.day, 23, 59, 59)
+
+    todays_sessions = db.query(models.ClassSession).filter(
+        models.ClassSession.lecturer_id == lecturer_id,
+        models.ClassSession.start_time >= today_start,
+        models.ClassSession.start_time <= today_end,
+    ).order_by(models.ClassSession.start_time.asc()).all()
+
+    todays_schedule = []
+    for s in todays_sessions:
+        todays_schedule.append({
+            "id": s.id,
+            "time": s.start_time.strftime("%I:%M %p") if s.start_time else "TBD",
+            "end_time": s.end_time.strftime("%I:%M %p") if s.end_time else None,
+            "subject": s.subject_id,
+            "session_type": s.session_type,
+            "location": s.location,
+            "status": s.status,
+        })
+
+    # ── 8. Assemble response ──
+    return {
+        "lecturer_name": lecturer.name,
+        "department": lecturer.department,
+        "employee_id": lecturer.employee_id,
+        "stats": {
+            "total_classes": total_classes,
+            "average_attendance": avg_attendance,
+            "total_students": total_students,
+        },
+        "recent_classes": recent_classes,
+        "upcoming_appointments": upcoming_appointments,
+        "pending_actions": pending_actions,
+        "at_risk_students": at_risk_students,
+        "todays_schedule": todays_schedule,
+    }

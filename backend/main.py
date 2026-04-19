@@ -19,6 +19,7 @@ from routers import student as student_router
 from routers import public as public_router
 from routers import lecturer as lecturer_router
 from routers import appointments as appointments_router
+from routers import timetable as timetable_router
 
 
 # Admin seeder
@@ -99,6 +100,7 @@ app.include_router(student_router.router)
 app.include_router(public_router.router)
 app.include_router(lecturer_router.router)
 app.include_router(appointments_router.router)
+app.include_router(timetable_router.router)
 
 
 # Routes

@@ -95,9 +95,16 @@ const LiveTimer = ({ isSessionActive }: { isSessionActive: boolean }) => {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isSessionActive) {
-      interval = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
+      // Calculate elapsed from absolute start timestamp in localStorage
+      const tick = () => {
+        const startStr = localStorage.getItem("sessionStartTime");
+        if (startStr) {
+          const elapsed = Math.floor((Date.now() - parseInt(startStr, 10)) / 1000);
+          setElapsedTime(Math.max(0, elapsed));
+        }
+      };
+      tick(); // immediate first tick so it doesn't flash 00:00
+      interval = setInterval(tick, 1000);
     } else {
       setElapsedTime(0);
     }
@@ -243,6 +250,29 @@ export default function LecturerLiveClassMonitoring({
     getCameras();
   }, []);
 
+  // Restore active session from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("activeAttendanceSession");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.sessionId) {
+          setCurrentSessionId(parsed.sessionId);
+          setSessionActive(true);
+          if (parsed.selectedSession)
+            setSelectedSession(parsed.selectedSession);
+          if (parsed.selectedSubject)
+            setSelectedSubject(parsed.selectedSubject);
+          if (parsed.sessionDetails) setSessionDetails(parsed.sessionDetails);
+          console.log(`[SESSION RESTORED] ID: ${parsed.sessionId}`);
+        }
+      } catch (e) {
+        console.error("[SESSION RESTORE] Failed to parse stored session:", e);
+        localStorage.removeItem("activeAttendanceSession");
+      }
+    }
+  }, []);
+
   // Fetch Lecturer ID on mount (Auth Context placeholder)
   useEffect(() => {
     const fetchProfile = async () => {
@@ -267,29 +297,35 @@ export default function LecturerLiveClassMonitoring({
   // Live Data Polling for Logs and Stats
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
-    
+
     if (sessionActive && currentSessionId) {
       interval = setInterval(async () => {
         try {
-          const logsRes = await fetch(`${API_BASE}/api/attendance/live_logs/${currentSessionId}`);
+          const logsRes = await fetch(
+            `${API_BASE}/api/attendance/live_logs/${currentSessionId}`,
+          );
           if (logsRes.ok) {
             const logsData = await logsRes.json();
-            setLogEntries(logsData.map((d: any, idx: number) => ({
-              id: `${idx}-${d.time || d.timestamp}`,
-              studentName: d.name,
-              index: d.index_number,
-              time: d.timestamp,
-              status: d.status
-            })));
+            setLogEntries(
+              logsData.map((d: any, idx: number) => ({
+                id: `${idx}-${d.time || d.timestamp}`,
+                studentName: d.name,
+                index: d.index_number,
+                time: d.timestamp,
+                status: d.status,
+              })),
+            );
           }
 
-          const statsRes = await fetch(`${API_BASE}/api/attendance/session_stats/${currentSessionId}`);
+          const statsRes = await fetch(
+            `${API_BASE}/api/attendance/session_stats/${currentSessionId}`,
+          );
           if (statsRes.ok) {
             const statsData = await statsRes.json();
             setLiveStats({
               currentlyInside: statsData.currently_inside || 0,
               totalEntered: statsData.total_entered || 0,
-              leftEarly: statsData.left_early || 0
+              leftEarly: statsData.left_early || 0,
             });
           }
         } catch (error) {
@@ -426,7 +462,7 @@ export default function LecturerLiveClassMonitoring({
     try {
       // 1. Resolve dynamic IDs for foreign key constraints
       const currentLecturerId = lecturerId || 5; // Fallback to 5 for testing if profile fetch fails
-      
+
       if (!selectedSubject) {
         setCameraError("Please select a Course Subject to begin tracking.");
         return;
@@ -448,6 +484,19 @@ export default function LecturerLiveClassMonitoring({
       if (!res.ok) throw new Error("Failed to start backend session");
       const data = await res.json();
       setCurrentSessionId(data.id);
+
+      // Persist session to localStorage for navigation resilience
+      localStorage.setItem(
+        "activeAttendanceSession",
+        JSON.stringify({
+          sessionId: data.id,
+          selectedSession,
+          selectedSubject,
+          sessionDetails,
+        }),
+      );
+      // Save absolute start time so the timer survives navigation
+      localStorage.setItem("sessionStartTime", Date.now().toString());
 
       // 2. Start frontend camera hardware
       await startCamera();
@@ -492,6 +541,10 @@ export default function LecturerLiveClassMonitoring({
   // No longer polling the frontend React camera canvas! Wait for backend to perform attendance via stream.
 
   const handleEndSession = useCallback(async () => {
+    // Clear persisted session immediately
+    localStorage.removeItem("activeAttendanceSession");
+    localStorage.removeItem("sessionStartTime");
+
     stopCamera();
     setSessionActive(false);
     setIsEntranceActive(false);
@@ -500,13 +553,15 @@ export default function LecturerLiveClassMonitoring({
     setAnnotatedFrame(null);
     setShowEndSessionModal(false);
     setShowSuccessToast(true);
+    setLogEntries([]);
+    setLiveStats({ currentlyInside: 0, totalEntered: 0, leftEarly: 0 });
 
     try {
       // 1. Close session in backend
       if (currentSessionId) {
         await fetch(
           `${API_BASE}/api/attendance/end_session/${currentSessionId}`,
-          { method: "POST" }
+          { method: "POST" },
         );
         setCurrentSessionId(null);
       }
@@ -682,14 +737,6 @@ export default function LecturerLiveClassMonitoring({
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="px-6 pb-2 text-xs text-gray-500 font-medium italic flex items-center space-x-1">
-            <span>
-              Note: If hardware feeds are swapped, simply reverse your
-              selections in the IN/OUT dropdowns (Browser and OS hardware
-              enumeration order can occasionally differ).
-            </span>
           </div>
 
           {/* Camera permission error banner */}
