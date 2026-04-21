@@ -12,6 +12,7 @@ import {
   ChevronsRight,
   LogOut,
   FileSpreadsheet,
+  BookOpen,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -110,6 +111,11 @@ export default function Sidebar({
       id: "lecturers",
       label: "Manage Lecturers",
       icon: UserCog,
+    },
+    {
+      id: "modules",
+      label: "Manage Modules",
+      icon: BookOpen,
     },
     {
       id: "timetable",

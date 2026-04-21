@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -16,13 +17,13 @@ import {
   ChevronDown,
   Eye,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function TimetableUpload() {
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedDegree, setSelectedDegree] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -34,60 +35,43 @@ export default function TimetableUpload() {
   // Preview States
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
+  const [fullExtractedData, setFullExtractedData] = useState<any[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  // Mock History Data
-  const recentUploads = [
-    {
-      id: 1,
-      name: "Y2S1_Computing_Timetable.xlsx",
-      batch: "24.1",
-      date: "Oct 24, 2024",
-      status: "Success",
-    },
-    {
-      id: 2,
-      name: "Revised_Y1S2_CS.csv",
-      batch: "25.2",
-      date: "Oct 20, 2024",
-      status: "Success",
-    },
-    {
-      id: 2,
-      name: "Revised_Y1S2_CS.csv",
-      batch: "25.2",
-      date: "Oct 20, 2024",
-      status: "Success",
-    },
-    {
-      id: 2,
-      name: "Revised_Y1S2_CS.csv",
-      batch: "25.2",
-      date: "Oct 20, 2024",
-      status: "Success",
-    },
-    {
-      id: 3,
-      name: "Corrupted_File_Test.xls",
-      batch: "24.2",
-      date: "Oct 18, 2024",
-      status: "Failed",
-    },
-    {
-      id: 3,
-      name: "Corrupted_File_Test.xls",
-      batch: "24.2",
-      date: "Oct 18, 2024",
-      status: "Failed",
-    },
-    {
-      id: 3,
-      name: "Corrupted_File_Test.xls",
-      batch: "24.2",
-      date: "Oct 18, 2024",
-      status: "Failed",
-    },
-  ];
+  // New Validation Error States
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+
+  // Live History & UX States
+  const [recentUploads, setRecentUploads] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteBatchId, setDeleteBatchId] = useState<string | null>(null);
+
+  // View Modal States
+  const [viewBatchId, setViewBatchId] = useState<string | null>(null);
+  const [viewData, setViewData] = useState<any[]>([]);
+  const [isLoadingView, setIsLoadingView] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Fetch recent uploads on mount
+  useEffect(() => {
+    fetchRecentUploads();
+  }, []);
+
+  const fetchRecentUploads = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:8000/api/timetable/recent",
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setRecentUploads(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    }
+  };
 
   const universityData: Record<string, Record<string, string[]>> = {
     "Faculty of Computing": {
@@ -202,19 +186,54 @@ export default function TimetableUpload() {
   const departments = selectedFaculty
     ? Object.keys(universityData[selectedFaculty])
     : [];
-  const degrees =
-    selectedFaculty && selectedDepartment
-      ? universityData[selectedFaculty][selectedDepartment]
-      : [];
+
+  const handleDownloadTemplate = () => {
+    toast.success("Preparing your template...");
+    window.location.href = "http://localhost:8000/api/timetable/template";
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragActive(true);
   };
 
-  const handleDeleteTimetable = (id: number) => {
-    // Mock delete logic
-    toast.success("Timetable deleted successfully");
+  const handleDeleteTimetable = (batch_id: string) => {
+    setDeleteBatchId(batch_id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteBatchId) return;
+
+    setIsDeleting(true);
+    const deleteToast = toast.loading(
+      `Removing schedule for ${deleteBatchId}...`,
+    );
+
+    try {
+      // Artificial UX delay for tactile feedback
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const response = await fetch(
+        `http://localhost:8000/api/timetable/batch/${deleteBatchId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (response.ok) {
+        toast.success(`Batch ${deleteBatchId} deleted successfully!`, {
+          id: deleteToast,
+        });
+        setDeleteBatchId(null);
+        fetchRecentUploads();
+      } else {
+        toast.error("Failed to delete batch", { id: deleteToast });
+      }
+    } catch (error) {
+      toast.error("Error deleting batch", { id: deleteToast });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -254,22 +273,129 @@ export default function TimetableUpload() {
     }
   };
 
+  const handleViewBatch = async (batchId: string) => {
+    setIsLoadingView(true);
+    const viewToast = toast.loading(`Retrieving schedule for ${batchId}...`);
+    try {
+      const response = await fetch(`http://localhost:8000/api/timetable/batch/${batchId}`);
+      if (!response.ok) throw new Error("Failed to load records");
+      const data = await response.json();
+      setViewData(data);
+      setViewBatchId(batchId);
+      toast.success("Schedule loaded!", { id: viewToast });
+    } catch (error) {
+      toast.error("Failed to load timetable details.", { id: viewToast });
+    } finally {
+      setIsLoadingView(false);
+    }
+  };
+
+  const exportToCSV = async () => {
+    if (!viewData || viewData.length === 0) return;
+    
+    setIsExporting(true);
+    const exportToast = toast.loading("Processing dataset for export...");
+
+    try {
+      // UX Delay for tactile feedback
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      
+      const headers = ["Date,Start Time,End Time,Module Code,Module Name,Lecturer,Faculty,Department,Semester"];
+      const csvRows = viewData.map(row => 
+        `"${row.date}","${row.start_time}","${row.end_time}","${row.module_code}","${row.module_name || ''}","${row.lecturer || ''}","${row.faculty || ''}","${row.department || ''}","${row.semester || ''}"`
+      );
+      const csvString = [headers, ...csvRows].join("\n");
+      const blob = new Blob([csvString], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Timetable_Batch_${viewBatchId}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("CSV file downloaded successfully!", { id: exportToast });
+    } catch (error) {
+      toast.error("Failed to generate export.", { id: exportToast });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const removeFile = () => {
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     toast.success("File removed.");
   };
 
-  const handleReset = () => {
+  const resetForm = () => {
     setSelectedFaculty("");
     setSelectedDepartment("");
-    setSelectedDegree("");
     setSelectedBatch("");
     setSelectedSemester("");
     setStartDate("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleManualReset = () => {
+    resetForm();
     toast.success("Form cleared successfully!");
+  };
+
+  const handleConfirmSync = async () => {
+    setIsSyncing(true);
+    const syncToast = toast.loading("Finalizing Timetable Sync...");
+
+    try {
+      // UX Delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const response = await fetch("http://localhost:8000/api/timetable/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batch_id: selectedBatch,
+          faculty: selectedFaculty,
+          department: selectedDepartment,
+          semester: selectedSemester,
+          file_name: file?.name || "extracted_schedule.xlsx",
+          records: fullExtractedData.map((row) => ({
+            ...row,
+            module_name: row.module || row.module_name || "",
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Sync failed");
+      }
+
+      toast.success(`Schedule for ${selectedBatch} synced successfully!`, {
+        id: syncToast,
+      });
+      setIsPreviewModalOpen(false);
+      resetForm();
+      fetchRecentUploads();
+    } catch (error: any) {
+      console.error("Sync Error:", error);
+
+      // Extract and sanitize error message (strip technical prefixes like 400: or Sync failed:)
+      let errorMsg = error.message || "Failed to sync records to database.";
+      if (typeof errorMsg === "string") {
+        errorMsg = errorMsg
+          .replace(/^(Sync failed:?\s*|400:?\s*|Error:?\s*)+/gi, "")
+          .trim();
+      }
+
+      // Increase duration to 6 seconds for better readability of detailed errors
+      toast.error(errorMsg, {
+        id: syncToast,
+        duration: 6000,
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -278,7 +404,6 @@ export default function TimetableUpload() {
       !file ||
       !selectedFaculty ||
       !selectedDepartment ||
-      !selectedDegree ||
       !selectedBatch ||
       !selectedSemester ||
       !startDate
@@ -293,37 +418,87 @@ export default function TimetableUpload() {
     const loadingToast = toast.loading("Extracting timetable data...");
 
     try {
+      // UX Delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // 2. Prepare Form Data
       const formData = new FormData();
       formData.append("file", file);
       formData.append("start_date", startDate);
       formData.append("faculty", selectedFaculty);
       formData.append("department", selectedDepartment);
-      formData.append("degree", selectedDegree);
       formData.append("batch", selectedBatch);
       formData.append("semester", selectedSemester);
 
       // 3. API Call
-      const response = await fetch("http://localhost:8000/api/timetable/extract", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:8000/api/timetable/extract",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Extraction failed");
+
+        // Handle structured validation errors
+        if (errorData.detail?.errors) {
+          setValidationErrors(errorData.detail.errors);
+          setIsErrorModalOpen(true);
+          toast.dismiss(loadingToast);
+          setIsUploading(false);
+          return;
+        }
+
+        // Handle concatenated string fallback
+        if (
+          typeof errorData.detail === "string" &&
+          errorData.detail.includes("|")
+        ) {
+          setValidationErrors(
+            errorData.detail.split("|").map((e: string) => e.trim()),
+          );
+          setIsErrorModalOpen(true);
+          toast.dismiss(loadingToast);
+          setIsUploading(false);
+          return;
+        }
+
+        throw new Error(
+          errorData.detail?.message || errorData.detail || "Extraction failed",
+        );
       }
 
       const result = await response.json();
 
-      // 4. Success Handling
-      setPreviewData(result.preview_data);
+      // 4. Success Handling - Store full data but only show top 5 in preview UI
+      setFullExtractedData(result.full_data);
+      setPreviewData(result.full_data.slice(0, 5));
       setTotalRecords(result.total_records);
       setIsPreviewModalOpen(true);
-      
+
       toast.success("Timetable extracted successfully!", { id: loadingToast });
     } catch (error: any) {
-      toast.error(error.message || "Failed to extract timetable.", { id: loadingToast });
+      console.error("Extraction Error:", error);
+
+      // Attempt to extract structured errors from response
+      try {
+        // Since we're using fetch, we need to handle the error parsing carefully
+        // If it's a validation error, the response.ok was false
+        if (error.response?.data?.detail?.errors) {
+          setValidationErrors(error.response.data.detail.errors);
+          setIsErrorModalOpen(true);
+          toast.dismiss(loadingToast);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse structured error:", e);
+      }
+
+      toast.error(error.message || "Failed to extract timetable.", {
+        id: loadingToast,
+      });
     } finally {
       setIsUploading(false);
     }
@@ -331,27 +506,70 @@ export default function TimetableUpload() {
 
   return (
     <div className="w-full max-w-none p-0 space-y-6">
+      {/* 1. Validation Error Modal */}
+      {isErrorModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-10 h-10 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Validation Errors Found
+                </h3>
+                <p className="text-gray-500 text-sm mb-6">
+                  Please correct the following issues in your Excel file and try
+                  uploading again.
+                </p>
+
+                <div className="max-h-64 overflow-y-auto bg-red-50 rounded-xl p-4 border border-red-100 mb-6 text-left">
+                  <ul className="space-y-2">
+                    {validationErrors.map((err, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-red-700">
+                        <span className="shrink-0 font-bold">•</span>
+                        <span>{err}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => setIsErrorModalOpen(false)}
+                  className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all cursor-pointer shadow-lg shadow-gray-200"
+                >
+                  Close & Fix
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {/* Container matching standard admin grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
         {/* 1. UPLOAD SECTION (Takes 2 columns on large screens) */}
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-10">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
               <UploadCloud className="w-10 h-10 text-blue-600" />
               Upload New Timetable
             </h2>
-            <button className="text-sm font-medium cursor-pointer text-blue-600 hover:text-black hover:bg-blue-100 flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border-2 border-blue-200 transition-colors">
+            <button
+              onClick={handleDownloadTemplate}
+              className="text-sm font-medium cursor-pointer text-blue-600 hover:text-black hover:bg-blue-100 flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border-2 border-blue-200 transition-colors"
+            >
               <Download className="w-5 h-5" />
-              Download Template
+              Download Standard Template
             </button>
           </div>
 
           <div className="flex flex-col gap-y-6 mb-6 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Faculty Dropdown */}
               <div className="space-y-2">
                 <label className="block text-md font-bold text-gray-600 tracking-wider flex items-center gap-3">
-                  <School className="w-5 h-5 text-blue-500" /> Select Faculty
+                  Select Faculty
                 </label>
                 <div className="relative">
                   <select
@@ -359,7 +577,6 @@ export default function TimetableUpload() {
                     onChange={(e) => {
                       setSelectedFaculty(e.target.value);
                       setSelectedDepartment("");
-                      setSelectedDegree("");
                     }}
                     className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer pr-10"
                   >
@@ -381,8 +598,7 @@ export default function TimetableUpload() {
                 <label
                   className={`block text-md font-bold tracking-wider flex items-center gap-3 ${!selectedFaculty ? "text-gray-400" : "text-gray-600"}`}
                 >
-                  <Library className="w-5 h-5 text-blue-500" /> Select
-                  Department
+                  Select Department
                 </label>
                 <div className="relative">
                   <select
@@ -390,7 +606,6 @@ export default function TimetableUpload() {
                     disabled={!selectedFaculty}
                     onChange={(e) => {
                       setSelectedDepartment(e.target.value);
-                      setSelectedDegree("");
                     }}
                     className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed pr-10"
                   >
@@ -408,47 +623,18 @@ export default function TimetableUpload() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {/* Degree Program Dropdown */}
-              <div className="space-y-2 lg:col-span-1">
-                <label
-                  className={`block text-md font-bold tracking-wider flex items-center gap-3 ${!selectedDepartment ? "text-gray-400" : "text-gray-600"}`}
-                >
-                  <GraduationCap className="w-6 h-6 text-blue-500" /> Degree
-                  Program
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedDegree}
-                    disabled={!selectedDepartment}
-                    onChange={(e) => setSelectedDegree(e.target.value)}
-                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed pr-10"
-                  >
-                    <option value="" disabled>
-                      Choose Program...
-                    </option>
-                    {degrees.map((deg) => (
-                      <option key={deg} value={deg}>
-                        {deg}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800 pointer-events-none" />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               {/* Batch Searchable Input */}
               <div className="space-y-2">
                 <label className="block text-md font-bold text-gray-600 tracking-wider flex items-center gap-3">
-                  <Layers className="w-5 h-5 text-blue-500" /> Select Intake /
-                  Batch
+                  Select Intake / Batch
                 </label>
                 <input
                   type="text"
                   list="batch-options"
                   value={selectedBatch}
                   onChange={(e) => setSelectedBatch(e.target.value)}
-                  placeholder="Type or select batch (e.g., 25.1)"
+                  placeholder="Type or select batch"
                   className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 />
                 <datalist id="batch-options">
@@ -458,9 +644,10 @@ export default function TimetableUpload() {
                 </datalist>
               </div>
 
-              <div className="space-y-2 md:col-span-2 lg:col-span-1">
+              {/* Semester Dropdown */}
+              <div className="space-y-2">
                 <label className="block text-md font-bold text-gray-600 tracking-wider flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-blue-500" /> Select Semester
+                  Select Semester
                 </label>
                 <div className="relative">
                   <select
@@ -480,19 +667,19 @@ export default function TimetableUpload() {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-800 pointer-events-none" />
                 </div>
               </div>
-            </div>
-            {/* Semester Start Date Date Picker */}
-            <div className="space-y-2 grid-cols-1 md:grid-cols-3 lg:grid-cols-3 mt-2">
-              <label className="block text-md font-bold text-gray-600 tracking-wider flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-blue-500" /> Semester Start
-                Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer"
-              />
+
+              {/* Semester Start Date Date Picker */}
+              <div className="space-y-2">
+                <label className="block text-md font-bold text-gray-600 tracking-wider flex items-center gap-3">
+                  Semester Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
@@ -519,8 +706,8 @@ export default function TimetableUpload() {
 
             {!file ? (
               <>
-                <div className="w-16 h-16 bg-white border-2 border-blue-200 shadow-sm rounded-full flex items-center justify-center mb-4 mt-6 text-blue-500">
-                  <FileSpreadsheet className="w-8 h-8" />
+                <div className="p-4 bg-white border-2 border-blue-200 shadow-sm rounded-full flex items-center justify-center mb-4 mt-6 text-blue-500">
+                  <FileSpreadsheet className="w-10 h-10" />
                 </div>
                 <h3 className="text-gray-900 font-semibold mb-1">
                   Click to upload or drag and drop
@@ -544,7 +731,7 @@ export default function TimetableUpload() {
                 >
                   <X className="w-5 h-5" />
                 </button>
-                <div className="bg-white p-4 rounded-full shadow-sm mb-4 border-2 border-green-100">
+                <div className="bg-white p-4 rounded-full shadow-sm mb-4 border-2 border-green-200">
                   <FileSpreadsheet className="w-10 h-10 text-green-600" />
                 </div>
                 <p className="text-lg font-bold text-gray-900 text-center truncate max-w-full px-4">
@@ -563,8 +750,8 @@ export default function TimetableUpload() {
 
           <div className="mt-6 flex flex-col md:flex-row gap-4">
             <button
-              onClick={handleReset}
-              className="flex-1 py-3.5 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              onClick={handleManualReset}
+              className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-5 h-5" />
               Reset Form
@@ -576,16 +763,14 @@ export default function TimetableUpload() {
                 !file ||
                 !selectedFaculty ||
                 !selectedDepartment ||
-                !selectedDegree ||
                 !selectedBatch ||
                 !selectedSemester ||
                 !startDate
               }
-              className={`flex-[2] py-3.5 rounded-xl text-white font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 ${
+              className={`flex-[2] py-3 rounded-xl text-white font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 ${
                 !file ||
                 !selectedFaculty ||
                 !selectedDepartment ||
-                !selectedDegree ||
                 !selectedBatch ||
                 !selectedSemester
                   ? "bg-gray-300 shadow-none cursor-not-allowed"
@@ -655,38 +840,40 @@ export default function TimetableUpload() {
                         <div className="flex items-center gap-3">
                           <FileSpreadsheet className="w-7 h-7 text-yellow-600 bg-yellow-100 rounded-lg p-1 shrink-0" />
                           <div>
-                            <p className="text-sm font-medium text-gray-800 truncate max-w-[180px]">
+                            <p className="text-sm font-bold text-gray-800 truncate max-w-[180px]">
                               {record.name}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-xs text-gray-500 mt-1">
                               Batch: {record.batch} • {record.date}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 py-4">
                         {record.status === "Success" ? (
-                          <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full border-2 border-green-200 text-[10px] font-bold uppercase">
-                            <CheckCircle className="w-2 h-2" />
+                          <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border-2 border-green-200 text-xs font-bold uppercase">
+                            <CheckCircle className="w-4 h-4" />
                             {record.status}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full border-2 border-red-200 text-[10px] font-bold uppercase">
-                            <AlertCircle className="w-2 h-2" />
+                          <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-1 rounded-full border-2 border-red-200 text-xs font-bold uppercase">
+                            <AlertCircle className="w-4 h-4" />
                             {record.status}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           <button
-                            className="p-1.5 cursor-pointer text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            onClick={() => handleViewBatch(record.batch)}
+                            disabled={isLoadingView}
+                            className="p-1.5 cursor-pointer text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
                             title="View Details"
                           >
                             <Eye className="w-5 h-5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteTimetable(record.id)}
+                            onClick={() => handleDeleteTimetable(record.batch)}
                             className="p-1.5 cursor-pointer text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                             title="Delete Record"
                           >
@@ -705,15 +892,15 @@ export default function TimetableUpload() {
       {/* Extraction Preview Modal */}
       {isPreviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-6 border-b flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                  <Eye className="w-6 h-6" />
+                  <Eye className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-2xl font-bold text-gray-900">
                     Review Extracted Timetable
                   </h3>
                   <p className="text-sm text-gray-500">
@@ -736,54 +923,79 @@ export default function TimetableUpload() {
 
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider font-bold">
+                  <thead className="bg-gray-100 text-gray-600 text-sm tracking-wider font-bold">
                     <tr>
-                      <th className="px-6 py-4 border-b">Actual Date</th>
+                      <th className="px-4 py-4 border-b">Actual Date</th>
                       <th className="px-6 py-4 border-b">Day</th>
                       <th className="px-6 py-4 border-b">Time Slot</th>
-                      <th className="px-6 py-4 border-b">Module / Description</th>
+                      <th className="px-6 py-4 border-b text-blue-600">
+                        Module Code
+                      </th>
+                      <th className="px-6 py-4 border-b">
+                        Module / Description
+                      </th>
+                      <th className="px-6 py-4 border-b">Lecturer</th>
+                      <th className="px-6 py-4 border-b">Location</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {previewData.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                      <tr
+                        key={idx}
+                        className="hover:bg-blue-50/30 transition-colors"
+                      >
                         <td className="px-6 py-4">
-                          <span className="font-medium text-gray-900">{row.date}</span>
+                          <span className="font-medium text-gray-900">
+                            {row.date}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-gray-600">{row.day}</td>
-                        <td className="px-6 py-4 text-gray-700 font-mono text-sm bg-gray-50/50">
+                        <td className="px-6 py-4 text-gray-800 font-bold text-sm bg-gray-50">
                           {row.time}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-blue-600">
+                          {row.module_code}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                            <span className="text-gray-800 font-medium">{row.module}</span>
+                            <span className="text-gray-800 font-medium">
+                              {row.module}
+                            </span>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {row.lecturer}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {row.location}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4 flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-blue-800 font-medium">
-                    Showing first {previewData.length} records as a preview.
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    All {totalRecords} records will be synchronized to the database upon confirmation.
-                  </p>
+              <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-sm mt-4 border border-blue-200 flex flex-col gap-1 items-center text-center">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-7 h-7 text-blue-600" />
+                  <span className="font-bold text-blue-900 text-sm">
+                    Showing first 5 records as a preview.
+                  </span>
                 </div>
+                <span className="text-blue-600 font-medium italic">
+                  All {fullExtractedData.length} records will be transactionally
+                  synchronized to the registry upon confirmation.
+                </span>
               </div>
             </div>
 
             {/* Modal Footer */}
             <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
-              <p className="text-xs text-gray-500 italic px-2">
-                * Timetable data is mapped relative to the provided Start Date.
+              <p className="text-sm text-gray-500 italic px-2 font-bold">
+                <span className="text-red-500 font-bold text-sm">*</span>{" "}
+                Timetable data is mapped relative to the provided Start Date.
               </p>
               <div className="flex gap-3">
                 <button
@@ -796,15 +1008,15 @@ export default function TimetableUpload() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    toast.success("Synchronizing all records to database...");
-                    setIsPreviewModalOpen(false);
-                    // Placeholder for final save call
-                    handleReset();
-                  }}
-                  className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center gap-2 cursor-pointer"
+                  onClick={handleConfirmSync}
+                  disabled={isSyncing}
+                  className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <CheckCircle className="w-5 h-5" />
+                  {isSyncing ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-5 h-5" />
+                  )}
                   Confirm & Sync All
                 </button>
               </div>
@@ -812,6 +1024,123 @@ export default function TimetableUpload() {
           </div>
         </div>
       )}
+      {/* 4. Custom Delete Confirmation Modal */}
+      {deleteBatchId &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-sm">
+                <Trash2 className="w-10 h-10 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Delete Timetable?
+              </h3>
+              <p className="text-gray-500 mb-8 leading-relaxed">
+                Are you sure you want to permanently delete all records for
+                Batch{" "}
+                <span className="font-bold text-gray-900">{deleteBatchId}</span>
+                ? This action is destructive and cannot be undone.
+              </p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setDeleteBatchId(null)}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl border-2 border-gray-200 hover:bg-gray-200 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-200 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Delete Timetable"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* 5. View Full Timetable Modal */}
+      {viewBatchId &&
+        createPortal(
+          <div className="fixed inset-0 z-[11000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="p-8 border-b flex justify-between items-center bg-gray-50 shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-xl shadow-inner">
+                    <Calendar className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 leading-tight">Academic Schedule</h2>
+                    <p className="text-sm text-gray-500 font-medium mt-1">
+                      Batch: <span className="text-blue-600 mr-3">{viewBatchId}</span> {viewData.length} Active Sessions
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-12">
+                  <button 
+                    onClick={exportToCSV} 
+                    disabled={isExporting}
+                    className="px-6 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isExporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                    {isExporting ? "Processing..." : "Export CSV"}
+                  </button>
+                  <button 
+                    onClick={() => setViewBatchId(null)} 
+                    className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-all cursor-pointer"
+                  >
+                    <X className="w-7 h-7" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto overflow-x-auto p-0 scrollbar-thin scrollbar-thumb-gray-200">
+                <table className="w-full text-left border-collapse border-gray-200 border-2 whitespace-nowrap min-w-full">
+                  <thead className="bg-gray-100 sticky top-0 z-10 border-b-2 border-gray-100">
+                    <tr>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Date</th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Time Slot</th>
+                      <th className="px-8 py-4 text-sm font-bold text-blue-600 tracking-widest">Module Code</th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Module Name</th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Lecturer</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {viewData.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
+                        <td className="px-8 py-4">
+                          <span className="font-bold text-gray-900 underline decoration-blue-200 decoration-2 underline-offset-4">{row.date}</span>
+                        </td>
+                        <td className="px-8 py-4">
+                          <div className="bg-white border border-gray-200 px-3 py-1 rounded-lg shadow-sm font-bold text-gray-700 text-sm inline-block">
+                             {row.start_time} - {row.end_time}
+                          </div>
+                        </td>
+                        <td className="px-8 py-4 text-sm font-bold text-blue-600 tracking-tight">{row.module_code}</td>
+                        <td className="px-8 py-4 text-sm text-gray-800 font-bold">
+                          {row.module_name}
+                        </td>
+                        <td className="px-8 py-4 text-sm text-gray-600 font-medium">{row.lecturer || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-4 border-t bg-gray-50 flex justify-center shrink-0">
+                <p className="text-xs text-gray-500 italic font-bold">
+                   Showing all records retrieved for the academic batch registry.
+                </p>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

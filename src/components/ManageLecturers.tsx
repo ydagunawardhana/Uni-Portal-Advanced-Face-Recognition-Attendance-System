@@ -35,12 +35,15 @@ const universityData: Record<string, string[]> = {
   ],
   "Faculty of Business": [
     "Department of Accounting & Finance",
-    "Department of Business Management",
+    "Department of Management",
+    "Department of Marketing and Tourism",
+    "Department of Operations and Logistics",
+    "Department of Legal Studies",
   ],
   "Faculty of Engineering": [
-    "Department of Civil Engineering",
-    "Department of Mechanical Engineering",
-    "Department of Electronic & Electrical Engineering",
+    "Department of Mechatronic and Industrial Engineering",
+    "Department of Design Studies",
+    "Department of Electrical, Electronic & Systems Engineering",
   ],
   "Faculty of Health and Life Science": [
     "Department of Health Sciences",
@@ -48,61 +51,6 @@ const universityData: Record<string, string[]> = {
   ],
 };
 
-const subjectsByDepartment: Record<string, string[]> = {
-  "Department of Software Engineering & Computer Security": [
-    "Programming",
-    "Database Systems",
-    "Software Engineering",
-    "Cyber Security",
-  ],
-  "Department of Computer and Data Science": [
-    "Data Science",
-    "Artificial Intelligence",
-    "Machine Learning",
-    "Data Mining",
-    "Mathematics",
-  ],
-  "Department of Accounting & Finance": [
-    "Financial Accounting",
-    "Corporate Finance",
-    "Taxation",
-    "Audit",
-  ],
-  "Department of Business Management": [
-    "Marketing",
-    "HR Management",
-    "Business Strategy",
-    "Economics",
-  ],
-  "Department of Civil Engineering": [
-    "Structural Design",
-    "Fluid Mechanics",
-    "Geotechnical Engineering",
-  ],
-  "Department of Mechanical Engineering": [
-    "Thermodynamics",
-    "Robotics",
-    "Manufacturing Systems",
-  ],
-  "Department of Electronic & Electrical Engineering": [
-    "Circuits",
-    "Signal Processing",
-    "Power Systems",
-  ],
-  "Department of Health Sciences": [
-    "Anatomy",
-    "Pathology",
-    "Nursing",
-    "Biomedical Science",
-    "Pharmacology",
-  ],
-  "Department of Life Sciences": [
-    "Psychology",
-    "Biology",
-    "Chemistry",
-    "Genetics",
-  ],
-};
 
 export default function ManageLecturers() {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
@@ -111,6 +59,7 @@ export default function ManageLecturers() {
   const [facultyFilter, setFacultyFilter] = useState("All Faculties");
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
   const [subjectFilter, setSubjectFilter] = useState("All Subjects");
+  const [allModules, setAllModules] = useState<{module_code: string, module_name: string, department: string}[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -122,7 +71,19 @@ export default function ManageLecturers() {
 
   useEffect(() => {
     fetchLecturers();
+    fetchAllModules();
   }, []);
+
+  const fetchAllModules = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/modules`);
+      if (res.ok) {
+        setAllModules(await res.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch all modules:", error);
+    }
+  };
 
   const parseApiError = (data: any) => {
     if (!data || !data.detail) return "An unexpected error occurred.";
@@ -477,26 +438,24 @@ export default function ManageLecturers() {
               aria-label="Filter by Subject"
               value={subjectFilter}
               onChange={(e) => setSubjectFilter(e.target.value)}
-              disabled={
-                departmentFilter !== "All Departments" &&
-                !subjectsByDepartment[departmentFilter]
-              }
-              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate disabled:bg-gray-100 disabled:text-gray-400 appearance-none cursor-pointer"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
             >
               <option value="All Subjects">All Subjects</option>
               {departmentFilter === "All Departments"
                 ? Array.from(
-                    new Set(Object.values(subjectsByDepartment).flat()),
-                  ).map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
+                    new Set(allModules.map((m) => m.module_code)),
+                  ).map((code) => (
+                    <option key={code} value={code}>
+                      {code}
                     </option>
                   ))
-                : (subjectsByDepartment[departmentFilter] || []).map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
+                : allModules
+                    .filter((m) => m.department === departmentFilter)
+                    .map((m) => (
+                      <option key={m.module_code} value={m.module_code}>
+                        {m.module_code}
+                      </option>
+                    ))}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-800">
               <ChevronDown className="w-5 h-5" />

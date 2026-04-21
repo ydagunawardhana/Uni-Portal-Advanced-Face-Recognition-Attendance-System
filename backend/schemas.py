@@ -129,4 +129,30 @@ class SessionOut(SessionCreate):
     status: str
 
     model_config = {"from_attributes": True}
+    
+
+# Modules
+
+class ModuleBase(BaseModel):
+    module_code: str
+    module_name: str
+    faculty: str
+    department: str
+    level: Optional[str] = None
+    degree: Optional[str] = None
+
+class ModuleCreate(ModuleBase):
+    pass
+
+class ModuleOut(ModuleBase):
+    id: int
+    model_config = {"from_attributes": True}
+
+class ModuleUpdate(BaseModel):
+    module_code: Optional[str] = None
+    module_name: Optional[str] = None
+    faculty: Optional[str] = None
+    department: Optional[str] = None
+    level: Optional[str] = None
+    degree: Optional[str] = None
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, ChevronDown, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,6 +23,10 @@ export default function AddLecturerModal({
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
   const [autoGeneratePassword, setAutoGeneratePassword] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [availableModules, setAvailableModules] = useState<
+    { module_code: string; module_name: string }[]
+  >([]);
+  const [isLoadingModules, setIsLoadingModules] = useState(false);
 
   const universityData: Record<string, string[]> = {
     "Faculty of Computing": [
@@ -31,12 +35,15 @@ export default function AddLecturerModal({
     ],
     "Faculty of Business": [
       "Department of Accounting & Finance",
-      "Department of Business Management",
+      "Department of Management",
+      "Department of Marketing and Tourism",
+      "Department of Operations and Logistics",
+      "Department of Legal Studies",
     ],
     "Faculty of Engineering": [
-      "Department of Civil Engineering",
-      "Department of Mechanical Engineering",
-      "Department of Electronic & Electrical Engineering",
+      "Department of Mechatronic and Industrial Engineering",
+      "Department of Design Studies",
+      "Department of Electrical, Electronic & Systems Engineering",
     ],
     "Faculty of Health and Life Science": [
       "Department of Health Sciences",
@@ -44,66 +51,29 @@ export default function AddLecturerModal({
     ],
   };
 
-  const subjectsByDepartment: Record<string, string[]> = {
-    "Department of Software Engineering & Computer Security": [
-      "Programming",
-      "Database Systems",
-      "Software Engineering",
-      "Cyber Security",
-    ],
-    "Department of Computer and Data Science": [
-      "Data Science",
-      "Artificial Intelligence",
-      "Machine Learning",
-      "Data Mining",
-      "Mathematics",
-    ],
-    "Department of Accounting & Finance": [
-      "Financial Accounting",
-      "Corporate Finance",
-      "Taxation",
-      "Audit",
-    ],
-    "Department of Business Management": [
-      "Marketing",
-      "HR Management",
-      "Business Strategy",
-      "Economics",
-    ],
-    "Department of Civil Engineering": [
-      "Structural Design",
-      "Fluid Mechanics",
-      "Geotechnical Engineering",
-    ],
-    "Department of Mechanical Engineering": [
-      "Thermodynamics",
-      "Robotics",
-      "Manufacturing Systems",
-    ],
-    "Department of Electronic & Electrical Engineering": [
-      "Circuits",
-      "Signal Processing",
-      "Power Systems",
-    ],
-    "Department of Health Sciences": [
-      "Anatomy",
-      "Pathology",
-      "Nursing",
-      "Biomedical Science",
-      "Pharmacology",
-    ],
-    "Department of Life Sciences": [
-      "Psychology",
-      "Biology",
-      "Chemistry",
-      "Genetics",
-    ],
-  };
-
-  const availableSubjects =
-    department && subjectsByDepartment[department]
-      ? subjectsByDepartment[department]
-      : [];
+  useEffect(() => {
+    if (department) {
+      const fetchModules = async () => {
+        setIsLoadingModules(true);
+        try {
+          const res = await fetch(
+            `http://localhost:8000/api/modules?department=${encodeURIComponent(department)}`,
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setAvailableModules(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch modules:", error);
+        } finally {
+          setIsLoadingModules(false);
+        }
+      };
+      fetchModules();
+    } else {
+      setAvailableModules([]);
+    }
+  }, [department]);
 
   if (!isOpen) return null;
 
@@ -358,14 +328,16 @@ export default function AddLecturerModal({
               >
                 <option value="" disabled>
                   {department
-                    ? "Select a subject to add..."
+                    ? isLoadingModules
+                      ? "Loading modules..."
+                      : "Select a subject to add..."
                     : "Select a Department first"}
                 </option>
-                {availableSubjects
-                  .filter((subject) => !assignedSubjects.includes(subject))
-                  .map((subject) => (
-                    <option key={subject} value={subject}>
-                      {subject}
+                {availableModules
+                  .filter((mod) => !assignedSubjects.includes(mod.module_code))
+                  .map((mod) => (
+                    <option key={mod.module_code} value={mod.module_code}>
+                      {mod.module_code} - {mod.module_name}
                     </option>
                   ))}
               </select>

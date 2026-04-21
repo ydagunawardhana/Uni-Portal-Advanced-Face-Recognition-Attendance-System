@@ -23,6 +23,7 @@ import AttendanceReports from "./AttendanceReports";
 import SystemAuditLogs from "./SystemAuditLogs";
 import PendingRegistrations from "./PendingRegistrations";
 import TimetableUpload from "./TimetableUpload";
+import ManageModules from "./ManageModules";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
@@ -97,7 +98,6 @@ const universityData: Record<string, Record<string, string[]>> = {
       "BEng (Hons) Robotics and Automation Engineering",
       "BEng (Hons) Civil and Structural Engineering",
       "BSc (Hons) Quantity Surveying",
-      "BSc (Hons) Quantity Surveying Top-Up Degree",
     ],
     "Department of Design Studies": [
       "Bachelor of Interior Design",
@@ -111,7 +111,6 @@ const universityData: Record<string, Record<string, string[]>> = {
       "BSc (Honours) in Pharmaceutical Science",
       "BSc (Hons) Nutrition and Health",
       "BSc (Hons) Nursing",
-      "BSc (Hons) Nursing – Top up",
       "Foundation Programme for Bachelor's Degree",
     ],
     "Department of Life Sciences": ["BSc (Hons) Psychology"],
@@ -377,7 +376,14 @@ export default function AdminDashboard({
     };
 
     captureLoop();
-  }, [capturing, captureComplete, captureFrame, studentId, camActive, wearsGlasses]);
+  }, [
+    capturing,
+    captureComplete,
+    captureFrame,
+    studentId,
+    camActive,
+    wearsGlasses,
+  ]);
 
   //  Resume capture: Phase 2 (without glasses)
   const handleResumeCapture = useCallback(() => {
@@ -389,7 +395,9 @@ export default function AdminDashboard({
     setCapturing(true);
     captureActiveRef.current = true;
 
-    const toastId = toast.loading(`Resuming capture… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`);
+    const toastId = toast.loading(
+      `Resuming capture… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`,
+    );
 
     const captureLoop = async () => {
       while (
@@ -424,11 +432,17 @@ export default function AdminDashboard({
         await new Promise((resolve) => setTimeout(resolve, FRAME_INTERVAL_MS));
       }
 
-      if (capturedFramesRef.current.length >= TOTAL_FRAMES && captureActiveRef.current) {
+      if (
+        capturedFramesRef.current.length >= TOTAL_FRAMES &&
+        captureActiveRef.current
+      ) {
         setCapturedFrames(capturedFramesRef.current);
         setCapturing(false);
         captureActiveRef.current = false;
-        toast.success("All 50 images captured!", { id: toastId, duration: 3000 });
+        toast.success("All 50 images captured!", {
+          id: toastId,
+          duration: 3000,
+        });
       } else {
         toast.dismiss(toastId);
         setCapturing(false);
@@ -589,6 +603,8 @@ export default function AdminDashboard({
         return "Manage Students";
       case "lecturers":
         return "Manage Lecturers";
+      case "modules":
+        return "Manage Modules";
       case "settings":
         return "System Settings";
       case "timetable":
@@ -612,6 +628,8 @@ export default function AdminDashboard({
         return "View all registered students and process re-training requests";
       case "lecturers":
         return "View and manage academic staff";
+      case "modules":
+        return "Configure and manage university subjects";
       case "settings":
         return "Configure system preferences and parameters";
       case "timetable":
@@ -722,6 +740,7 @@ export default function AdminDashboard({
           )}
           {activeTab === "settings" && <SettingsScreen />}
           {activeTab === "lecturers" && <ManageLecturers />}
+          {activeTab === "modules" && <ManageModules />}
           {activeTab === "manage_students" && (
             <ManageStudents onRegisterNew={() => handleTabChange("students")} />
           )}
@@ -1046,12 +1065,16 @@ export default function AdminDashboard({
                           disabled={capturing || captureComplete}
                           className="w-4 h-4 mt-1 text-amber-600 bg-gray-100 border-gray-300 rounded-full focus:ring-amber-500 focus:ring-2 cursor-pointer"
                         />
-                        <label htmlFor="wearsGlasses" className="cursor-pointer">
+                        <label
+                          htmlFor="wearsGlasses"
+                          className="cursor-pointer"
+                        >
                           <span className="text-md font-semibold text-amber-800 block">
-                           Student wears glasses
+                            Student wears glasses
                           </span>
                           <span className="text-xs text-amber-600 mt-1 block">
-                            Enables Hybrid Capture: 25 photos with glasses, then 25 without - for a more accurate biometric dataset.
+                            Enables Hybrid Capture: 25 photos with glasses, then
+                            25 without - for a more accurate biometric dataset.
                           </span>
                         </label>
                       </div>
@@ -1204,10 +1227,13 @@ export default function AdminDashboard({
                         <span className="text-2xl">🕶️</span>
                         <div className="flex-1">
                           <p className="text-sm font-bold text-amber-800">
-                            Phase 1 Complete - {HALFWAY}/{TOTAL_FRAMES} images captured!
+                            Phase 1 Complete - {HALFWAY}/{TOTAL_FRAMES} images
+                            captured!
                           </p>
                           <p className="text-xs text-amber-700 mt-1">
-                            Please ask the student to <strong>remove their glasses</strong>, then click Resume to capture Phase 2.
+                            Please ask the student to{" "}
+                            <strong>remove their glasses</strong>, then click
+                            Resume to capture Phase 2.
                           </p>
                         </div>
                       </div>
@@ -1227,18 +1253,20 @@ export default function AdminDashboard({
                       <label className="text-sm font-medium text-gray-700">
                         Images Captured: {imagesCaptured}/{TOTAL_FRAMES}
                         {wearsGlasses && (
-                          <span className={`ml-3 text-sm font-bold px-2 py-0.5 rounded-full ${
-                            imagesCaptured < HALFWAY
-                              ? "bg-gray-200 text-gray-700"
-                              : imagesCaptured < TOTAL_FRAMES
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                          }`}>
+                          <span
+                            className={`ml-3 text-sm font-bold px-2 py-0.5 rounded-full ${
+                              imagesCaptured < HALFWAY
+                                ? "bg-gray-200 text-gray-700"
+                                : imagesCaptured < TOTAL_FRAMES
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
                             {imagesCaptured < HALFWAY
                               ? "Phase 1 - With Glasses"
                               : imagesCaptured < TOTAL_FRAMES
-                              ? "Phase 2 - Without Glasses"
-                              : "Complete"}
+                                ? "Phase 2 - Without Glasses"
+                                : "Complete"}
                           </span>
                         )}
                       </label>
@@ -1268,8 +1296,8 @@ export default function AdminDashboard({
                           captureComplete
                             ? "bg-green-500"
                             : awaitingGlassesRemoval
-                            ? "bg-amber-500"
-                            : "bg-blue-600"
+                              ? "bg-amber-500"
+                              : "bg-blue-600"
                         }`}
                         style={{
                           width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,

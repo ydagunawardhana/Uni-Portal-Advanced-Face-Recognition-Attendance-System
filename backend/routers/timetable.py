@@ -1,14 +1,58 @@
 import re
+from typing import List
+from pydantic import BaseModel
 from datetime import datetime, timedelta
 import io
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form, File
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 import pandas as pd
 from database import get_db
-from models import Timetable
+from models import Timetable, Module, Lecturer
 from utils.audit_logger import log_audit_action
 
 router = APIRouter(prefix="/api/timetable", tags=["Timetable"])
+
+@router.get("/template")
+async def download_timetable_template():
+    """
+    Generates and serves a standardized Excel template for timetable uploads.
+    """
+    # 1. Define the schema
+    columns = [
+        'Date', 'Day', 'Start Time', 'End Time', 
+        'Module Code', 'Module Name', 'Lecturer', 'Location'
+    ]
+    
+    # 2. Add instructional placeholder data and one guidance row
+    sample_data = [
+        ['[Format: YYYY-MM-DD]', '[e.g., Monday]', '[Format: 09:00 AM]', '[Format: 11:00 AM]', 
+         '[e.g., PUSL2022]', '[e.g., Introduction to IOT]', '[Must match System Name]', '[e.g., Lab 01]'],
+        ['2026-05-04', 'Monday', '09:00 AM', '11:00 AM', 
+         'PUSL2022', 'Introduction to IOT', 'Mr. Lecturer Name', 'Hall A']
+    ]
+    
+    # 3. Create DataFrame
+    df = pd.DataFrame(sample_data, columns=columns)
+    
+    # 4. Save to in-memory buffer
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    
+    output.seek(0)
+    
+    # 5. Serve the file
+    headers = {
+        'Content-Disposition': 'attachment; filename=Standard_Timetable_Template.xlsx'
+    }
+    
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers=headers
+    )
 
 # Mapping for weekday offsets
 DAY_OFFSET = {
@@ -17,19 +61,17 @@ DAY_OFFSET = {
 }
 
 @router.post("/extract")
-async def extract_timetable(
+async def extract_standard_timetable(
     file: UploadFile = File(...),
-    start_date: str = Form(...),
     faculty: str = Form(...),
     department: str = Form(...),
-    degree: str = Form(...),
     batch: str = Form(...),
-    semester: str = Form(...)
+    semester: str = Form(...),
+    db: Session = Depends(get_db)
 ):
     """
-    Advanced Two-Stage ETL:
-    1. Extracts Module Mapping Dictionary (Code -> Name).
-    2. Parses Timetable and injects full module names using Regex.
+    Standardized ETL endpoint for the flat Excel template.
+    Ensures data integrity through strict validation and lecturer existence checks.
     """
     if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
         raise HTTPException(
@@ -38,144 +80,99 @@ async def extract_timetable(
         )
 
     try:
-        # 0. Parse the start date (CRITICAL FOR DATE CALCULATION IN STAGE 3)
-        try:
-            base_date = datetime.strptime(start_date, "%Y-%m-%d")
-            base_weekday = base_date.weekday()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
-
-        # Load raw data
         contents = await file.read()
-        df = pd.read_excel(io.BytesIO(contents), header=None)
+        df = pd.read_excel(io.BytesIO(contents))
 
-        # --- STAGE 1: EXTRACT MODULE & LECTURER MAPPING ---
-        module_mapping = {}
-        mapping_start_idx = -1
-        
-        for i in range(min(20, len(df))):
-            row_str = [str(x).strip().lower() for x in df.iloc[i].tolist()]
-            if "module code" in row_str and "module name" in row_str:
-                mapping_start_idx = i
-                break
+        # 1. Clean column names to avoid trailing space issues
+        df.columns = df.columns.astype(str).str.strip().str.title()
 
-        if mapping_start_idx != -1:
-            header_row = [str(x).strip().lower() for x in df.iloc[mapping_start_idx].tolist()]
-            try:
-                code_col = header_row.index("module code")
-                name_col = header_row.index("module name")
-                # Find lecturer column gracefully
-                lec_col = -1
-                for idx, col_name in enumerate(header_row):
-                    if "lecturer" in col_name:
-                        lec_col = idx
-                        break
+        # 2. Strict Column Validation
+        required_cols = ['Date', 'Day', 'Start Time', 'End Time', 'Module Code', 'Module Name', 'Lecturer', 'Location']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid template format. Missing required columns: {', '.join(missing_cols)}. Please use the Standard Template."
+            )
+
+        validation_errors = []
+
+        # Check each row for valid mapping
+        for index, row in df.iterrows():
+            # Skip validation if critical fields are missing (Extraction loop will skip these later)
+            if pd.isna(row['Module Code']) or pd.isna(row['Lecturer']):
+                continue
                 
-                for i in range(mapping_start_idx + 1, min(mapping_start_idx + 30, len(df))):
-                    code = str(df.iloc[i, code_col]).strip()
-                    name = str(df.iloc[i, name_col]).strip()
-                    lecturer = str(df.iloc[i, lec_col]).strip() if lec_col != -1 else "TBA"
+            raw_lec_name = str(row['Lecturer']).strip()
+            mod_code = str(row['Module Code']).strip().upper()
 
-                    if code and code.lower() != 'nan' and name and name.lower() != 'nan':
-                        module_mapping[code.upper()] = {
-                            "name": name,
-                            "lecturer": lecturer if lecturer.lower() != 'nan' else "TBA"
-                        }
-            except ValueError:
-                pass
+            # Handle TBA explicitly
+            if raw_lec_name.upper() == "TBA":
+                continue
 
-        # --- STAGE 2: FIND TIMETABLE ANCHOR ('MONDAY') ---
-        header_idx = -1
-        for i in range(min(60, len(df))):
-            row_str_list = df.iloc[i].astype(str).str.lower().tolist()
-            if any("monday" in str(val) for val in row_str_list):
-                header_idx = i
-                break
+            # Check 1: Is Lecturer in the system? (Bulletproof Case-Insensitive Query)
+            db_lecturer = db.query(Lecturer).filter(
+                func.lower(func.trim(Lecturer.name)) == raw_lec_name.lower()
+            ).first()
 
-        if header_idx == -1:
-            raise HTTPException(status_code=400, detail="Could not find 'Monday' anchor. Invalid format.")
+            if not db_lecturer:
+                err = f"Lecturer '{raw_lec_name}' (Row {index+2}) is not registered in the system."
+                if err not in validation_errors:
+                    validation_errors.append(err)
+                continue
+            
+            # Check 2: Is Lecturer assigned to this module?
+            # Check the comma-separated assigned_subjects field
+            assigned_list = []
+            if db_lecturer.assigned_subjects:
+                # Assuming comma-separated: "PUSL2022, PUSL2021"
+                assigned_list = [s.strip().upper() for s in db_lecturer.assigned_subjects.split(",")]
 
-        # Identify which columns correspond to which days
-        day_col_map = {}
-        timetable_header_row = df.iloc[header_idx].astype(str).str.lower().str.strip()
-        for col_idx, cell_val in enumerate(timetable_header_row):
-            for day in DAY_OFFSET.keys():
-                if day.lower() in str(cell_val) and day not in day_col_map:
-                    day_col_map[day] = col_idx
+            if mod_code not in assigned_list:
+                err = f"Validation Error (Row {index+2}): '{db_lecturer.name}' is not officially assigned to teach '{mod_code}'."
+                if err not in validation_errors:
+                    validation_errors.append(err)
 
-        # --- STAGE 3: AGGRESSIVE EXTRACT AND MAP DATA ---
+        if validation_errors:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "Validation Failed", "errors": validation_errors}
+            )
+
+        # 4. Extract Data
         extracted_data = []
-        start_row = header_idx + 1 
-        last_seen_time = "TBA"
-
-        for i in range(start_row, len(df)):
-            row = df.iloc[i]
+        for _, row in df.iterrows():
+            # Skip completely empty rows or rows missing heart data
+            if pd.isna(row['Module Code']) or pd.isna(row['Date']):
+                continue
+                
+            # Handle Pandas datetime objects gracefully for the 'Date' column
+            date_val = str(row['Date']).split(' ')[0] if pd.notna(row['Date']) else ""
             
-            raw_start = str(row.iloc[0]).strip() if len(row) > 0 else ""
-            raw_end = str(row.iloc[1]).strip() if len(row) > 1 else ""
-            
-            if raw_start.lower() == "nan": raw_start = ""
-            if raw_end.lower() == "nan": raw_end = ""
+            # Auto-resolve degree from database using module code
+            mod_code = str(row['Module Code']).strip().upper()
+            db_module = db.query(Module).filter(Module.module_code == mod_code).first()
+            resolved_degree = db_module.degree if db_module else "Unknown"
 
-            # Prevent 'Week 1' or purely alphabetic noise from becoming the time slot
-            if "week" in raw_start.lower():
-                raw_start = ""
-
-            if raw_start:
-                time_slot = f"{raw_start} - {raw_end}".strip(" -")
-                last_seen_time = time_slot
-            else:
-                time_slot = last_seen_time
-
-            for day, col_idx in day_col_map.items():
-                if col_idx < len(row):
-                    raw_module = row.iloc[col_idx]
-                    
-                    if pd.notna(raw_module):
-                        raw_module_str = str(raw_module).strip()
-                        
-                        if not raw_module_str or raw_module_str.lower() == "nan":
-                            continue
-                            
-                        # ENHANCED DATE SKIP: Catch both '20-Jan-25' AND Pandas auto-formatted '2025-01-20 00:00:00'
-                        if re.search(r'\d{1,2}-[a-zA-Z]{3}-\d{2,4}', raw_module_str) or re.search(r'\d{4}-\d{2}-\d{2}', raw_module_str):
-                            continue
-
-                        # Extract mapping
-                        code_match = re.search(r'[A-Za-z]{4}\d{4}', raw_module_str)
-                        final_module_name = raw_module_str
-                        final_lecturer = "TBA"
-                        
-                        if code_match:
-                            extracted_code = code_match.group(0).upper()
-                            if extracted_code in module_mapping:
-                                final_module_name = f"{module_mapping[extracted_code]['name']} ({extracted_code})"
-                                final_lecturer = module_mapping[extracted_code]['lecturer']
-                        
-                        days_to_add = (DAY_OFFSET[day] - base_weekday) % 7
-                        actual_date = base_date + timedelta(days=days_to_add)
-
-                        extracted_data.append({
-                            "date": actual_date.strftime("%Y-%m-%d"),
-                            "day": day,
-                            "time": time_slot,
-                            "module": final_module_name,
-                            "lecturer": final_lecturer,  # Added lecturer to payload
-                            "faculty": faculty,
-                            "department": department,
-                            "degree": degree,
-                            "batch": batch,
-                            "semester": semester
-                        })
-
-        if not extracted_data:
-            raise HTTPException(status_code=400, detail="Headers found, but no valid classes extracted.")
+            extracted_data.append({
+                "date": date_val,
+                "day": str(row['Day']).strip(),
+                "time": f"{str(row['Start Time']).strip()} - {str(row['End Time']).strip()}",
+                "module_code": mod_code,
+                "module": str(row['Module Name']).strip(),
+                "lecturer": str(row['Lecturer']).strip(),
+                "location": str(row['Location']).strip(),
+                "faculty": faculty,
+                "department": department,
+                "batch": batch,
+                "semester": semester
+            })
 
         return {
             "status": "success",
-            "message": "Timetable extracted with full module mapping",
+            "message": "Timetable extracted successfully",
             "total_records": len(extracted_data),
-            "preview_data": extracted_data[:5]
+            "full_data": extracted_data # Return everything for final sync
         }
 
     except Exception as e:
@@ -277,3 +274,163 @@ async def upload_timetable(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to parse timetable: {str(e)}"
         )
+
+class TimetableRecord(BaseModel):
+    date: str
+    day: str
+    time: str
+    module_code: str
+    module_name: str = ""
+    lecturer: str = ""
+    location: str = ""
+    batch: str = ""
+    model_config = {"extra": "ignore"}
+
+class SyncPayload(BaseModel):
+    batch_id: str
+    faculty: str
+    department: str
+    semester: str
+    file_name: str
+    records: List[TimetableRecord]
+
+@router.post("/sync")
+async def sync_timetable(payload: SyncPayload, db: Session = Depends(get_db)):
+    """
+    Persists reviewed timetable records into the database.
+    Splits the 'time' range into start_time and end_time.
+    """
+    try:
+        # Check if timetable already exists for this batch and semester to prevent duplicates
+        existing_record = db.query(Timetable).filter(
+            Timetable.batch_id == payload.batch_id,
+            Timetable.semester == payload.semester
+        ).first()
+
+        if existing_record:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Batch '{payload.batch_id}' ({payload.semester}) already exists. Delete the old one first."
+            )
+
+        # Transactional insert
+        for record in payload.records:
+            # Split "09:00 AM - 11:00 AM" or "09:00 - 11:00"
+            time_parts = [p.strip() for p in record.time.split("-")]
+            start_t = time_parts[0] if len(time_parts) > 0 else record.time
+            end_t = time_parts[1] if len(time_parts) > 1 else ""
+
+            new_entry = Timetable(
+                batch_id=payload.batch_id,
+                faculty=payload.faculty,
+                department=payload.department,
+                semester=payload.semester,
+                file_name=payload.file_name,
+                module_code=record.module_code,
+                module_name=record.module_name,
+                date=record.date,
+                start_time=start_t,
+                end_time=end_t,
+                lecturer=record.lecturer,
+                location=record.location
+            )
+            db.add(new_entry)
+        
+        db.commit()
+        log_audit_action(db, "System Operations", f"Synced {len(payload.records)} records for batch {payload.batch_id} (File: {payload.file_name})")
+        
+        return {"status": "success", "message": f"Successfully synced {len(payload.records)} records."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+@router.get("/recent")
+async def get_recent_uploads(db: Session = Depends(get_db)):
+    """
+    Bulletproof retrieval of unique batches. 
+    Groups uniquely in Python to avoid SQLAlchemy/DB-dialect serialization and grouping oddities.
+    """
+    try:
+        # 1. Simple, safe query: Get all records ordered by newest first
+        records = db.query(Timetable.batch_id, Timetable.created_at, Timetable.file_name).order_by(Timetable.created_at.desc()).all()
+
+        # 2. Group uniquely in Python
+        seen_batches = set()
+        recent_uploads = []
+
+        for row in records:
+            if row.batch_id not in seen_batches:
+                seen_batches.add(row.batch_id)
+                
+                # 3. Bulletproof string conversion
+                safe_date = row.created_at.strftime("%b %d, %Y") if hasattr(row.created_at, 'strftime') else str(row.created_at)
+                
+                recent_uploads.append({
+                    "id": row.batch_id,
+                    "name": row.file_name or f"Batch_{row.batch_id}_Schedule.xlsx",
+                    "batch": row.batch_id,
+                    "date": safe_date,
+                    "status": "Success"
+                })
+
+        return recent_uploads
+    
+    except Exception as e:
+        print(f"RECENT UPLOADS ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch recent uploads: {str(e)}")
+
+@router.get("/batch/{batch_id}")
+async def get_timetable_by_batch(batch_id: str, db: Session = Depends(get_db)):
+    """
+    Fetches all timetable records for a specific batch.
+    Used by the frontend View Modal.
+    """
+    try:
+        # Fetch all records for the given batch_id, ordered by date and time
+        records = db.query(Timetable).filter(
+            Timetable.batch_id == batch_id
+        ).order_by(Timetable.date.asc(), Timetable.start_time.asc()).all()
+        
+        if not records:
+            raise HTTPException(status_code=404, detail=f"No records found for batch {batch_id}")
+            
+        # Serialize the records
+        formatted_records = []
+        for rec in records:
+            # We use getattr in case these columns are newly added but might be null in old records
+            formatted_records.append({
+                "id": rec.id,
+                "module_code": rec.module_code,
+                "module_name": getattr(rec, 'module_name', rec.module_code), 
+                "date": rec.date,
+                "start_time": rec.start_time,
+                "end_time": rec.end_time,
+                "lecturer": rec.lecturer,
+                "faculty": rec.faculty,
+                "department": rec.department,
+                "semester": rec.semester
+            })
+            
+        return formatted_records
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"VIEW BATCH ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch batch records: {str(e)}")
+
+@router.delete("/batch/{batch_id}")
+async def delete_timetable_batch(batch_id: str, db: Session = Depends(get_db)):
+    """
+    Deletes all timetable records for a specific academic batch.
+    """
+    try:
+        deleted_count = db.query(Timetable).filter(Timetable.batch_id == batch_id).delete()
+        db.commit()
+        
+        log_audit_action(db, "System Operations", f"Deleted timetable batch {batch_id} ({deleted_count} records purged)")
+        
+        return {"status": "success", "message": f"Deleted {deleted_count} records for batch {batch_id}."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")

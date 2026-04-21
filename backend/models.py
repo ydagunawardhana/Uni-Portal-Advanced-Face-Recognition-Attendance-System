@@ -201,7 +201,27 @@ class Timetable(Base):
     id          = Column(Integer, primary_key=True, index=True)
     batch_id    = Column(String, index=True, nullable=False)
     module_code = Column(String, nullable=False)
-    date        = Column(String, nullable=False) # e.g. "Monday" or "2024-03-25"
+    module_name = Column(String, nullable=True)
+    date        = Column(String, nullable=False)
     start_time  = Column(String, nullable=False)
     end_time    = Column(String, nullable=False)
+    lecturer    = Column(String, nullable=True)
+    location    = Column(String, nullable=True)
+    faculty     = Column(String, nullable=True)
+    department  = Column(String, nullable=True)
+    semester    = Column(String, nullable=True)
+    file_name   = Column(String, nullable=True)
     created_at  = Column(DateTime, server_default=func.now())
+
+
+class Module(Base):
+    """Database-driven subjects/modules management."""
+    __tablename__ = "modules"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    module_code = Column(String, unique=True, index=True, nullable=False) # e.g. "PUSL2022"
+    module_name = Column(String, nullable=False) # e.g. "Introduction to IOT"
+    faculty     = Column(String, nullable=False)
+    department  = Column(String, nullable=False, index=True)
+    level       = Column(String, nullable=True) # e.g. "Year 1", "Level 4"
+    degree      = Column(String, nullable=True) # Optional link to specific degree

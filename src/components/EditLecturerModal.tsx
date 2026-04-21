@@ -23,34 +23,23 @@ const universityData: Record<string, string[]> = {
   "Faculty of Computing": [
     "Department of Software Engineering & Computer Security",
     "Department of Computer and Data Science",
-    "Department of Computer Systems Engineering"
   ],
   "Faculty of Business": [
     "Department of Accounting & Finance",
-    "Department of Business Management"
+    "Department of Management",
+    "Department of Marketing and Tourism",
+    "Department of Operations and Logistics",
+    "Department of Legal Studies",
   ],
   "Faculty of Engineering": [
-    "Department of Civil Engineering",
-    "Department of Mechanical Engineering",
-    "Department of Electronic & Electrical Engineering"
+    "Department of Mechatronic and Industrial Engineering",
+    "Department of Design Studies",
+    "Department of Electrical, Electronic & Systems Engineering",
   ],
   "Faculty of Health and Life Science": [
     "Department of Health Sciences",
-    "Department of Life Sciences"
-  ]
-};
-
-const subjectsByDepartment: Record<string, string[]> = {
-  "Department of Software Engineering & Computer Security": ["Programming", "Database Systems", "Software Engineering", "Cyber Security"],
-  "Department of Computer and Data Science": ["Data Science", "Artificial Intelligence", "Machine Learning", "Data Mining", "Mathematics"],
-  "Department of Computer Systems Engineering": ["Computer Architecture", "Operating Systems", "Embedded Systems", "Network Design"],
-  "Department of Accounting & Finance": ["Financial Accounting", "Corporate Finance", "Taxation", "Audit"],
-  "Department of Business Management": ["Marketing", "HR Management", "Business Strategy", "Economics"],
-  "Department of Civil Engineering": ["Structural Design", "Fluid Mechanics", "Geotechnical Engineering"],
-  "Department of Mechanical Engineering": ["Thermodynamics", "Robotics", "Manufacturing Systems"],
-  "Department of Electronic & Electrical Engineering": ["Circuits", "Signal Processing", "Power Systems"],
-  "Department of Health Sciences": ["Anatomy", "Pathology", "Nursing", "Biomedical Science", "Pharmacology"],
-  "Department of Life Sciences": ["Psychology", "Biology", "Chemistry", "Genetics"],
+    "Department of Life Sciences",
+  ],
 };
 
 export default function EditLecturerModal({
@@ -68,8 +57,11 @@ export default function EditLecturerModal({
   const [isActive, setIsActive] = useState(true);
   const [employeeId, setEmployeeId] = useState("");
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
-  
-  const availableSubjects = department && subjectsByDepartment[department] ? subjectsByDepartment[department] : [];
+
+  const [availableModules, setAvailableModules] = useState<
+    { module_code: string; module_name: string }[]
+  >([]);
+  const [isLoadingModules, setIsLoadingModules] = useState(false);
 
   useEffect(() => {
     if (isOpen && lecturer) {
@@ -80,20 +72,51 @@ export default function EditLecturerModal({
       setDepartment(lecturer.department);
       setIsActive(lecturer.status === "Active");
       setEmployeeId(lecturer.employeeId);
-      
+
       // Safe initialization for subjects
       const subjectsStr = lecturer.assigned_subjects || "";
-      setAssignedSubjects(subjectsStr ? subjectsStr.split(",").map(s => s.trim()).filter(Boolean) : []);
+      setAssignedSubjects(
+        subjectsStr
+          ? subjectsStr
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+      );
     }
   }, [isOpen, lecturer]);
+
+  useEffect(() => {
+    if (department) {
+      const fetchModules = async () => {
+        setIsLoadingModules(true);
+        try {
+          const res = await fetch(
+            `http://localhost:8000/api/modules?department=${encodeURIComponent(department)}`,
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setAvailableModules(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch modules:", error);
+        } finally {
+          setIsLoadingModules(false);
+        }
+      };
+      fetchModules();
+    } else {
+      setAvailableModules([]);
+    }
+  }, [department]);
 
   if (!isOpen) return null;
 
   const handleToggleSubject = (subject: string) => {
-    setAssignedSubjects(prev => 
-      prev.includes(subject) 
-        ? prev.filter(s => s !== subject) 
-        : [...prev, subject]
+    setAssignedSubjects((prev) =>
+      prev.includes(subject)
+        ? prev.filter((s) => s !== subject)
+        : [...prev, subject],
     );
   };
 
@@ -112,7 +135,7 @@ export default function EditLecturerModal({
       faculty,
       department,
       isActive,
-      assignedSubjects
+      assignedSubjects,
     };
 
     onSave(updatedData);
@@ -138,7 +161,9 @@ export default function EditLecturerModal({
             <h2 className="text-2xl font-bold text-gray-900">
               Edit Lecturer Details
             </h2>
-            <p className="text-sm text-gray-500 mt-1">Update profile information and portal access.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Update profile information and portal access.
+            </p>
           </div>
           <button
             aria-label="Close"
@@ -247,7 +272,9 @@ export default function EditLecturerModal({
               >
                 <option value="">Select Faculty</option>
                 {Object.keys(universityData).map((fac) => (
-                  <option key={fac} value={fac}>{fac}</option>
+                  <option key={fac} value={fac}>
+                    {fac}
+                  </option>
                 ))}
               </select>
             </div>
@@ -266,9 +293,12 @@ export default function EditLecturerModal({
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <option value="">Select Department</option>
-                {faculty && universityData[faculty].map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
+                {faculty &&
+                  universityData[faculty].map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
@@ -278,18 +308,22 @@ export default function EditLecturerModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Assigned Subjects
             </label>
-            
+
             {/* Selected Subjects Badges */}
             <div className="flex flex-wrap gap-2 mb-3 px-1">
               {assignedSubjects.map((subject, index) => (
-                <span 
-                  key={index} 
+                <span
+                  key={index}
                   className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full border border-blue-200 group transition-all hover:bg-blue-100"
                 >
                   {subject}
                   <button
                     type="button"
-                    onClick={() => setAssignedSubjects(prev => prev.filter(s => s !== subject))}
+                    onClick={() =>
+                      setAssignedSubjects((prev) =>
+                        prev.filter((s) => s !== subject),
+                      )
+                    }
                     className="p-0.5 hover:bg-blue-200 rounded-full transition-colors text-blue-400 hover:text-blue-600"
                     title={`Remove ${subject}`}
                   >
@@ -298,7 +332,9 @@ export default function EditLecturerModal({
                 </span>
               ))}
               {assignedSubjects.length === 0 && (
-                <p className="text-sm text-gray-400 italic px-1">No subjects assigned yet.</p>
+                <p className="text-sm text-gray-400 italic px-1">
+                  No subjects assigned yet.
+                </p>
               )}
             </div>
 
@@ -311,18 +347,22 @@ export default function EditLecturerModal({
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val && !assignedSubjects.includes(val)) {
-                    setAssignedSubjects(prev => [...prev, val]);
+                    setAssignedSubjects((prev) => [...prev, val]);
                   }
                 }}
               >
                 <option value="" disabled>
-                  {department ? "Select a subject to add..." : "Select a Department first"}
+                  {department
+                    ? isLoadingModules
+                      ? "Loading modules..."
+                      : "Select a subject to add..."
+                    : "Select a Department first"}
                 </option>
-                {availableSubjects
-                  .filter((subject) => !assignedSubjects.includes(subject))
-                  .map((subject) => (
-                    <option key={subject} value={subject}>
-                      {subject}
+                {availableModules
+                  .filter((mod) => !assignedSubjects.includes(mod.module_code))
+                  .map((mod) => (
+                    <option key={mod.module_code} value={mod.module_code}>
+                      {mod.module_code} - {mod.module_name}
                     </option>
                   ))}
               </select>
@@ -339,7 +379,9 @@ export default function EditLecturerModal({
             </label>
             <div className="flex items-center justify-between bg-white px-5 py-4 rounded-xl border border-gray-200 shadow-sm">
               <div>
-                <p className="font-bold text-gray-900">{isActive ? "Account Active" : "Account Suspended"}</p>
+                <p className="font-bold text-gray-900">
+                  {isActive ? "Account Active" : "Account Suspended"}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {isActive
                     ? "Lecturer has full portal access."
@@ -350,7 +392,9 @@ export default function EditLecturerModal({
                 aria-label="Toggle Status"
                 onClick={() => setIsActive(!isActive)}
                 className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
-                  isActive ? "bg-blue-600 shadow-lg shadow-blue-200" : "bg-gray-300"
+                  isActive
+                    ? "bg-blue-600 shadow-lg shadow-blue-200"
+                    : "bg-gray-300"
                 }`}
               >
                 <span
@@ -377,7 +421,7 @@ export default function EditLecturerModal({
             className="px-8 py-2.5 bg-blue-600 cursor-pointer text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
