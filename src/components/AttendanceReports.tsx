@@ -1,206 +1,126 @@
-import { useState } from "react";
-import { FileSpreadsheet, FileText, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  FileSpreadsheet,
+  FileText,
+  Calendar,
+  ArrowLeft,
+  RefreshCw,
+  User,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+  Search,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
-interface AttendanceRecord {
-  id: number;
-  date: string;
-  time: string;
-  studentName: string;
-  indexNo: string;
-  batch: string;
-  subject: string;
-  status: "Present" | "Absent";
-  avatarColor: string;
+interface StudentRecord {
+  student_id: string;
+  name: string;
+  status: string;
+  attendance_percentage: number;
+  academic_year?: string;
+  intake?: string;
+  batch?: string;
 }
 
-export default function AttendanceReports() {
-  const [fromDate, setFromDate] = useState("2026-02-01");
-  const [toDate, setToDate] = useState("2026-02-07");
+interface Subject {
+  module_code: string;
+  module_name: string;
+  students_enrolled: number;
+}
+
+interface AttendanceReportsProps {
+  subject?: Subject;
+  onBack?: () => void;
+}
+
+export default function AttendanceReports({
+  subject,
+  onBack,
+}: AttendanceReportsProps) {
+  const [fromDate, setFromDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
-  const [selectedSubject, setSelectedSubject] = useState("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [showAtRiskOnly, setShowAtRiskOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [batchFilter, setBatchFilter] = useState("");
+  const [subjectDetails, setSubjectDetails] = useState({
+    total_students: 0,
+    total_sessions_held: 0,
+  });
 
-  const attendanceRecords: AttendanceRecord[] = [
-    {
-      id: 1,
-      date: "2026-02-07",
-      time: "09:00 AM",
-      studentName: "Ashan Perera",
-      indexNo: "CS/2024/001",
-      batch: "Year 1",
-      subject: "Database Systems",
-      status: "Present",
-      avatarColor: "bg-blue-500",
-    },
-    {
-      id: 2,
-      date: "2026-02-07",
-      time: "09:00 AM",
-      studentName: "Sanduni Fernando",
-      indexNo: "CS/2024/012",
-      batch: "Year 1",
-      subject: "Database Systems",
-      status: "Present",
-      avatarColor: "bg-purple-500",
-    },
-    {
-      id: 3,
-      date: "2026-02-07",
-      time: "09:00 AM",
-      studentName: "Ravindu Jayawardena",
-      indexNo: "CS/2022/123",
-      batch: "Year 3",
-      subject: "Database Systems",
-      status: "Absent",
-      avatarColor: "bg-orange-500",
-    },
-    {
-      id: 4,
-      date: "2026-02-07",
-      time: "10:30 AM",
-      studentName: "Kamal Silva",
-      indexNo: "EE/2023/045",
-      batch: "Year 2",
-      subject: "Circuit Theory",
-      status: "Present",
-      avatarColor: "bg-green-500",
-    },
-    {
-      id: 5,
-      date: "2026-02-07",
-      time: "10:30 AM",
-      studentName: "Hansini Wickramasinghe",
-      indexNo: "EE/2024/023",
-      batch: "Year 1",
-      subject: "Circuit Theory",
-      status: "Present",
-      avatarColor: "bg-cyan-500",
-    },
-    {
-      id: 6,
-      date: "2026-02-06",
-      time: "02:00 PM",
-      studentName: "Nethmi Wijesinghe",
-      indexNo: "ME/2023/078",
-      batch: "Year 2",
-      subject: "Thermodynamics",
-      status: "Absent",
-      avatarColor: "bg-pink-500",
-    },
-    {
-      id: 7,
-      date: "2026-02-06",
-      time: "11:00 AM",
-      studentName: "Dilini Rajapaksha",
-      indexNo: "BA/2022/089",
-      batch: "Year 3",
-      subject: "Business Analytics",
-      status: "Present",
-      avatarColor: "bg-teal-500",
-    },
-    {
-      id: 8,
-      date: "2026-02-06",
-      time: "09:00 AM",
-      studentName: "Tharindu Dissanayake",
-      indexNo: "CS/2023/067",
-      batch: "Year 2",
-      subject: "Data Structures",
-      status: "Present",
-      avatarColor: "bg-yellow-500",
-    },
-    {
-      id: 9,
-      date: "2026-02-05",
-      time: "01:00 PM",
-      studentName: "Chaminda Bandara",
-      indexNo: "CE/2021/156",
-      batch: "Year 4",
-      subject: "Structural Engineering",
-      status: "Present",
-      avatarColor: "bg-indigo-500",
-    },
-    {
-      id: 10,
-      date: "2026-02-05",
-      time: "03:00 PM",
-      studentName: "Imesha Gamage",
-      indexNo: "AR/2024/007",
-      batch: "Year 1",
-      subject: "Architectural Design",
-      status: "Absent",
-      avatarColor: "bg-red-500",
-    },
-    {
-      id: 11,
-      date: "2026-02-05",
-      time: "09:00 AM",
-      studentName: "Ashan Perera",
-      indexNo: "CS/2024/001",
-      batch: "Year 1",
-      subject: "Programming Fundamentals",
-      status: "Present",
-      avatarColor: "bg-blue-500",
-    },
-    {
-      id: 12,
-      date: "2026-02-04",
-      time: "10:00 AM",
-      studentName: "Sanduni Fernando",
-      indexNo: "CS/2024/012",
-      batch: "Year 1",
-      subject: "Web Development",
-      status: "Present",
-      avatarColor: "bg-purple-500",
-    },
-    {
-      id: 13,
-      date: "2026-02-04",
-      time: "02:00 PM",
-      studentName: "Kamal Silva",
-      indexNo: "EE/2023/045",
-      batch: "Year 2",
-      subject: "Digital Electronics",
-      status: "Absent",
-      avatarColor: "bg-green-500",
-    },
-    {
-      id: 14,
-      date: "2026-02-04",
-      time: "11:00 AM",
-      studentName: "Ravindu Jayawardena",
-      indexNo: "CS/2022/123",
-      batch: "Year 3",
-      subject: "Machine Learning",
-      status: "Present",
-      avatarColor: "bg-orange-500",
-    },
-    {
-      id: 15,
-      date: "2026-02-03",
-      time: "09:00 AM",
-      studentName: "Dilini Rajapaksha",
-      indexNo: "BA/2022/089",
-      batch: "Year 3",
-      subject: "Marketing Management",
-      status: "Present",
-      avatarColor: "bg-teal-500",
-    },
-  ];
+  const fetchAttendance = async () => {
+    if (!subject?.module_code) return;
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("lecturerToken");
+      const res = await fetch(
+        `http://localhost:8000/api/lecturer/attendance/${subject.module_code}?date=${fromDate}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await res.json();
+      setStudents(data.students || []);
+      setSubjectDetails(data.subject_details || { total_students: 0, total_sessions_held: 0 });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load attendance records.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const filteredRecords = attendanceRecords.filter((record) => {
-    const matchesDepartment =
-      selectedDepartment === "all" ||
-      record.indexNo.startsWith(selectedDepartment);
+  useEffect(() => {
+    fetchAttendance();
+  }, [subject?.module_code, fromDate]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAttendance();
+    setIsRefreshing(false);
+    toast.success("Attendance records synced");
+  };
+
+  const totalStudentsCount = students.length;
+  const atRiskStudentsCount = students.filter(
+    (s) => (s.attendance_percentage || 0) < 80,
+  ).length;
+  const avgAttendance =
+    totalStudentsCount > 0
+      ? (
+          students.reduce(
+            (acc, curr) => acc + (curr.attendance_percentage || 0),
+            0,
+          ) / totalStudentsCount
+        ).toFixed(1)
+      : 0;
+
+  const displayedStudents = students.filter((s) => {
+    const matchesRisk = showAtRiskOnly
+      ? (s.attendance_percentage || 0) < 80
+      : true;
+
+    const matchesSearch =
+      !searchQuery ||
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.student_id?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesBatch =
-      selectedBatch === "all" || record.batch === selectedBatch;
+      !batchFilter ||
+      s.academic_year?.toLowerCase().includes(batchFilter.toLowerCase()) ||
+      s.intake?.toLowerCase().includes(batchFilter.toLowerCase()) ||
+      s.batch?.toLowerCase().includes(batchFilter.toLowerCase());
 
-    const matchesSubject =
-      selectedSubject === "all" || record.subject === selectedSubject;
-
-    return matchesDepartment && matchesBatch && matchesSubject;
+    return matchesRisk && matchesSearch && matchesBatch;
   });
+
 
   const handleExportExcel = () => {
     alert("Exporting to Excel... (Feature will download .xlsx file)");
@@ -213,121 +133,189 @@ export default function AttendanceReports() {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-blue-600 transition-colors font-medium group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            Back to Subjects
+          </button>
+        )}
+        {!subject && (
+          <h2 className="text-2xl font-bold text-gray-900">
+            Attendance Reports
+          </h2>
+        )}
+      </div>
+
+      {subject && (
+        <div className="bg-blue-600 rounded-xl p-6 text-white shadow-lg shadow-blue-200">
+          <div className="flex flex-col-2 md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold uppercase tracking-tight mb-4">
+                {subject.module_name}
+              </h2>
+              <div className="flex items-center gap-2 mt-1 text-blue-100 font-medium">
+                <span className="px-2 py-0.5 bg-blue-500 rounded-lg text-white text-md border-2 border-blue-200">
+                  {subject.module_code}
+                </span>
+                <span className="ml-3">• Attendance Overview</span>
+              </div>
+            </div>
+            <div className="bg-white/20 backdrop-blur-md rounded-lg px-6 py-2.5 border-2 border-white/20">
+              <span className="block text-xs text-white uppercase font-bold tracking-wider mb-2">
+                Total Students
+              </span>
+              <span className="text-xl font-bold">
+                {subject.students_enrolled} Enrolled
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subject-Specific At-Risk Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-blue-200 transition-colors">
+          <div>
+            <p className="text-sm font-bold text-gray-500 mb-1">
+              Currently Enrolled
+            </p>
+            <h4 className="text-2xl font-bold text-gray-900 leading-none">
+              {totalStudentsCount}
+            </h4>
+          </div>
+          <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+            <User className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-green-200 transition-colors">
+          <div>
+            <p className="text-sm font-bold text-gray-500 mb-1">
+              Average Attendance
+            </p>
+            <h4 className="text-2xl font-bold text-gray-900 leading-none">
+              {avgAttendance}%
+            </h4>
+          </div>
+          <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600 shrink-0">
+            <CheckCircle className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="bg-red-50 p-5 rounded-xl border border-red-100 shadow-sm flex items-center justify-between hover:border-red-200 transition-colors">
+          <div>
+            <p className="text-sm font-bold text-red-600 mb-1">
+              At-Risk (&lt; 80%)
+            </p>
+            <h4 className="text-2xl font-bold text-red-700 leading-none">
+              {atRiskStudentsCount} Students
+            </h4>
+          </div>
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 shrink-0">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+        </div>
+      </div>
       {/* Filter Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="grid grid-cols-12 gap-4 items-end">
-          {/* Date Range Picker */}
-          <div className="col-span-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              From Date
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-4">
+          {/* 1. Date Filter */}
+          <div>
+            <label className="block text-sm font-bold text-gray-800 tracking-wider mb-1.5">
+              Select Date for Status
             </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
-                aria-label="Select From Date"
+                aria-label="Select Date"
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm h-[42px]"
               />
             </div>
           </div>
 
-          <div className="col-span-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              To Date
+          {/* 2. Search Student */}
+          <div>
+            <label className="block text-sm font-bold text-gray-800 tracking-wider mb-1.5">
+              Search Student
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
-                aria-label="Select To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                type="text"
+                placeholder="Name or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm h-[42px]"
               />
             </div>
           </div>
 
-          {/* Department Dropdown */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Department
+          {/* 3. Batch Filter */}
+          <div>
+            <label className="block text-sm font-bold text-gray-800 tracking-wider mb-1.5">
+              Filter by Batch
             </label>
-            <select
-              aria-label="Select Department"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="all">All Departments</option>
-              <option value="CS">Computer Science</option>
-              <option value="EE">Electrical Engineering</option>
-              <option value="ME">Mechanical Engineering</option>
-              <option value="CE">Civil Engineering</option>
-              <option value="BA">Business Admin</option>
-              <option value="AR">Architecture</option>
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Type batch (e.g., Year 1, 26.1)"
+                value={batchFilter}
+                onChange={(e) => setBatchFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm h-[42px]"
+              />
+            </div>
           </div>
 
-          {/* Batch Dropdown */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Batch / Year
+          {/* 4. Risk Filter */}
+          <div>
+            <label className="block text-sm font-bold text-gray-800 tracking-wider mb-1.5">
+              Risk Filter
             </label>
-            <select
-              aria-label="Select Batch"
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            <button
+              onClick={() => setShowAtRiskOnly(!showAtRiskOnly)}
+              className={`w-full h-[42px] px-4 py-2 cursor-pointer text-sm font-bold rounded-lg border-2 transition-colors flex items-center justify-center gap-2 ${showAtRiskOnly ? "bg-red-50 border-red-200 text-red-700" : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"}`}
             >
-              <option value="all">All Batches</option>
-              <option value="Year 1">Year 1</option>
-              <option value="Year 2">Year 2</option>
-              <option value="Year 3">Year 3</option>
-              <option value="Year 4">Year 4</option>
-            </select>
-          </div>
-
-          {/* Subject Dropdown */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Subject
-            </label>
-            <select
-              aria-label="Select Subject"
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="all">All Subjects</option>
-              <option value="Database Systems">Database Systems</option>
-              <option value="Circuit Theory">Circuit Theory</option>
-              <option value="Data Structures">Data Structures</option>
-              <option value="Machine Learning">Machine Learning</option>
-              <option value="Web Development">Web Development</option>
-              <option value="Business Analytics">Business Analytics</option>
-            </select>
+              <AlertTriangle className="w-5 h-5" />
+              {showAtRiskOnly ? "At-Risk Only" : "All Students"}
+            </button>
           </div>
         </div>
 
-        {/* Export Buttons */}
-        <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-medium"
-          >
-            <FileSpreadsheet className="w-5 h-5" />
-            <span>Export to Excel</span>
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center space-x-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-medium"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Export to CSV</span>
-          </button>
+        {/* Action Bar: Refresh & Export */}
+        <div className="flex flex-wrap items-center justify-end gap-4 mt-6 pt-6 border-t-2 border-gray-100">
+          <div className="flex items-center gap-3 ml-auto">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"}`}
+              />
+              Refresh
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center space-x-2 px-5 cursor-pointer py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md font-bold"
+            >
+              <FileSpreadsheet className="w-5 h-5" />
+              <span>Export to Excel</span>
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center space-x-2 cursor-pointer px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md font-bold"
+            >
+              <FileText className="w-5 h-5" />
+              <span>Export to CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -335,134 +323,118 @@ export default function AttendanceReports() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-100 border-b-1 border-gray-300">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
                   Student Details
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Batch
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
+                  Status ({fromDate})
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Subject
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
+                  Overall Attendance %
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredRecords.map((record) => (
-                <tr
-                  key={record.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  {/* Date & Time */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {record.date}
-                    </div>
-                    <div className="text-sm text-gray-500">{record.time}</div>
-                  </td>
-
-                  {/* Student Details (Avatar + Name + Index) */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div
-                        className={`w-10 h-10 rounded-full ${record.avatarColor} flex items-center justify-center text-white font-semibold mr-3`}
-                      >
-                        {record.studentName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {record.studentName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {record.indexNo}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Batch */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-700">{record.batch}</div>
-                  </td>
-
-                  {/* Subject */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-700">
-                      {record.subject}
-                    </div>
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                        record.status === "Present"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {record.status}
-                    </span>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                    Syncing attendance intelligence...
                   </td>
                 </tr>
-              ))}
+              ) : displayedStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                    No matching student records found for this module.
+                  </td>
+                </tr>
+              ) : (
+                displayedStudents.map((student, idx) => (
+                  <tr
+                    key={student.student_id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    {/* Student Details */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div
+                          className={`w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold mr-3`}
+                        >
+                          {student.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {student.name}
+                          </div>
+                          <div className="text-sm text-gray-500 font-mono">
+                            {student.student_id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                          student.status === "Present"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {student.status}
+                      </span>
+                    </td>
+
+                    {/* Overall Percentage */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 max-w-[100px] h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${student.attendance_percentage >= 80 ? "bg-green-500" : "bg-red-500"}`}
+                            style={{ width: `${student.attendance_percentage}%` }}
+                          ></div>
+                        </div>
+                        <span
+                          className={`text-sm font-bold ${
+                            student.attendance_percentage >= 80
+                              ? "text-green-700"
+                              : "text-red-700"
+                          }`}
+                        >
+                          {student.attendance_percentage}%
+                        </span>
+                        {student.attendance_percentage < 80 && (
+                          <AlertTriangle className="w-4 h-4 text-red-500 animate-pulse" />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* No Results Message */}
-        {filteredRecords.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              No attendance records found.
-            </p>
-            <p className="text-gray-400 text-sm mt-2">
-              Try adjusting your filters or date range.
-            </p>
-          </div>
-        )}
-
         {/* Pagination Footer */}
-        {filteredRecords.length > 0 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Showing{" "}
-              <span className="font-medium">1-{filteredRecords.length}</span> of{" "}
-              <span className="font-medium">500</span> records
-            </div>
-            <div className="flex items-center space-x-2">
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                Previous
-              </button>
-              <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium">
-                1
-              </button>
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                2
-              </button>
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                3
-              </button>
-              <span className="px-2 text-gray-500">...</span>
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                50
-              </button>
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                Next
-              </button>
-            </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Showing{" "}
+            <span className="font-medium">1-{displayedStudents.length}</span> of{" "}
+            <span className="font-medium">{students.length}</span> students
           </div>
-        )}
+          <div className="flex flex-col items-end">
+            <p className="text-xs text-gray-400 italic">
+              Longitudinal analysis based on {subjectDetails.total_sessions_held}{" "}
+              sessions held.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

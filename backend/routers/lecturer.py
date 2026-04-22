@@ -1,7 +1,7 @@
 import os
 import uuid
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
@@ -27,6 +27,7 @@ class LecturerProfileResponse(BaseModel):
     faculty: Optional[str] = None
     department: str
     assigned_subjects: Optional[str] = None
+    assigned_subjects_detailed: Optional[List[dict]] = None
     profile_picture: Optional[str] = None
     office_hours: Optional[Any] = None
 
@@ -56,6 +57,19 @@ def get_lecturer_profile(
     if not lecturer:
         raise HTTPException(status_code=404, detail="Lecturer profile not found.")
         
+    # Fetch detailed subject names
+    subject_details = []
+    if lecturer.assigned_subjects:
+        codes = [code.strip() for code in lecturer.assigned_subjects.split(",") if code.strip()]
+        modules = db.query(models.Module).filter(models.Module.module_code.in_(codes)).all()
+        module_map = {m.module_code: m.module_name for m in modules}
+        
+        for code in codes:
+            subject_details.append({
+                "code": code,
+                "name": module_map.get(code, "Unknown Module")
+            })
+
     return LecturerProfileResponse(
         id=lecturer.id,
         name=lecturer.name,
@@ -65,6 +79,7 @@ def get_lecturer_profile(
         faculty=lecturer.faculty,
         department=lecturer.department,
         assigned_subjects=lecturer.assigned_subjects,
+        assigned_subjects_detailed=subject_details,
         profile_picture=lecturer.profile_picture,
         office_hours=lecturer.office_hours
     )
@@ -381,3 +396,197 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         "at_risk_students": at_risk_students,
         "todays_schedule": todays_schedule,
     }
+
+@router.get("/subjects")
+def get_lecturer_subjects(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Fetch detailed information for all subjects assigned to the logged-in lecturer."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == current_user.email).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer profile not found.")
+        
+    # 1. Parse assigned subjects
+    assigned_subjects_raw = lecturer.assigned_subjects or ""
+    subject_codes = [s.strip() for s in assigned_subjects_raw.split(",") if s.strip()]
+    
+    if not subject_codes:
+        return []
+
+    # 2. Fetch module names
+    modules = db.query(models.Module).filter(models.Module.module_code.in_(subject_codes)).all()
+    module_names = {m.module_code: m.module_name for m in modules}
+
+    # 3. Fetch enrollment counts
+    from sqlalchemy import func
+    enrollment_counts = db.query(
+        models.Enrollment.class_id, 
+        func.count(models.Enrollment.student_id)
+    ).filter(
+        models.Enrollment.class_id.in_(subject_codes)
+    ).group_by(models.Enrollment.class_id).all()
+    
+    enrollment_map = {class_id: count for class_id, count in enrollment_counts}
+
+    # 4. Fetch schedules from Timetable
+    schedules = db.query(models.Timetable).filter(
+        models.Timetable.module_code.in_(subject_codes)
+    ).all()
+    
+    schedule_map = {}
+    for entry in schedules:
+        if entry.module_code not in schedule_map:
+            schedule_map[entry.module_code] = f"{entry.date} - {entry.start_time}"
+
+    # 5. Build final response
+    detailed_subjects = []
+    for code in subject_codes:
+        detailed_subjects.append({
+            "id": code, # Using code as ID for frontend mapping
+            "module_code": code,
+            "module_name": module_names.get(code, "Unknown Module"),
+            "schedule": schedule_map.get(code, "Schedule Pending"),
+            "students_enrolled": enrollment_map.get(code, 0)
+        })
+
+    return detailed_subjects
+
+
+@router.get("/attendance/{subject_id}")
+def get_subject_attendance(
+    subject_id: str,
+    date: Optional[str] = None, # "YYYY-MM-DD"
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Calculates overall attendance percentage for each student in the subject
+    and returns their status for a specific date.
+    """
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    # 1. Subject Details: Total sessions held (sessions that are 'Closed')
+    total_sessions_held = db.query(models.ClassSession).filter(
+        models.ClassSession.subject_id == subject_id,
+        models.ClassSession.status == "Closed"
+    ).count()
+
+    # 2. Get all enrolled student IDs for this subject
+    enrolled_rows = db.query(models.Enrollment.student_id).filter(
+        models.Enrollment.class_id == subject_id
+    ).distinct().all()
+    enrolled_student_ids = [r[0] for r in enrolled_rows]
+
+    total_enrolled = len(enrolled_student_ids)
+
+    # 3. Handle Date Filtering (default to today)
+    target_date_str = date or datetime.now().strftime("%Y-%m-%d")
+    try:
+        target_date = datetime.strptime(target_date_str, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Get closed session IDs for this subject to calculate percentage efficiently
+    closed_sessions = db.query(models.ClassSession.id).filter(
+        models.ClassSession.subject_id == subject_id,
+        models.ClassSession.status == "Closed"
+    ).all()
+    closed_session_ids = [s[0] for s in closed_sessions]
+
+    # Fetch students and their calculated analytics
+    students_data = []
+    for sid in enrolled_student_ids:
+        student = db.query(models.Student).filter(models.Student.id == sid).first()
+        if not student: continue
+
+        # A. Attendance Status for the specific date
+        # Check if there was any session on this date and if the student 'entered'
+        day_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        
+        session_today = db.query(models.ClassSession).filter(
+            models.ClassSession.subject_id == subject_id,
+            models.ClassSession.start_time >= day_start,
+            models.ClassSession.start_time < day_end
+        ).first()
+
+        status = "Absent"
+        if session_today:
+            log_today = db.query(models.AttendanceLog).filter(
+                models.AttendanceLog.student_id == student.id,
+                models.AttendanceLog.session_id == session_today.id,
+                models.AttendanceLog.status == "entered"
+            ).first()
+            if log_today:
+                status = "Present"
+
+        # B. Longitudinal Attendance Percentage
+        attended_count = 0
+        if total_sessions_held > 0 and closed_session_ids:
+            attended_count = db.query(models.AttendanceLog).filter(
+                models.AttendanceLog.student_id == student.id,
+                models.AttendanceLog.session_id.in_(closed_session_ids),
+                models.AttendanceLog.status == "entered"
+            ).distinct(models.AttendanceLog.session_id).count()
+
+        # Calculation logic: return 100.0 if no classes held yet, otherwise float pct
+        percentage = round((attended_count / total_sessions_held) * 100, 1) if total_sessions_held > 0 else 100.0
+
+        students_data.append({
+            "student_id": student.index_number,
+            "name": student.name,
+            "status": status,
+            "attendance_percentage": percentage
+        })
+
+    return {
+        "subject_details": {
+            "total_students": total_enrolled,
+            "total_sessions_held": total_sessions_held
+        },
+        "students": students_data
+    }
+@router.get("/timetable")
+def get_lecturer_timetable(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Fetch all timetable entries assigned to the logged-in lecturer."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    lecturer = (
+        db.query(models.Lecturer)
+        .filter(models.Lecturer.email == current_user.email)
+        .first()
+    )
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer profile not found.")
+
+    # Match based on lecturer name (Timetable.lecturer is a string field)
+    records = (
+        db.query(models.Timetable)
+        .filter(models.Timetable.lecturer == lecturer.name)
+        .order_by(models.Timetable.date.asc(), models.Timetable.start_time.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": r.id,
+            "date": r.date,
+            "start_time": r.start_time,
+            "end_time": r.end_time,
+            "module_code": r.module_code,
+            "module_name": r.module_name,
+            "location": r.location or "TBA",
+            "batch": r.batch_id,
+            "semester": r.semester or "N/A",
+        }
+        for r in records
+    ]

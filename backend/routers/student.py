@@ -349,3 +349,42 @@ def revoke_session(
     db.delete(session_record)
     db.commit()
     return {"message": "Session revoked successfully"}
+
+
+@router.get("/timetable")
+def get_student_timetable(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Fetch timetable records aligned with the student's intake batch."""
+    student = (
+        db.query(models.Student)
+        .filter(models.Student.email == current_user.email)
+        .first()
+    )
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found.")
+
+    if not student.intake:
+        return []
+
+    records = (
+        db.query(models.Timetable)
+        .filter(models.Timetable.batch_id == student.intake)
+        .order_by(models.Timetable.date, models.Timetable.start_time)
+        .all()
+    )
+
+    return [
+        {
+            "id": r.id,
+            "date": r.date,
+            "start_time": r.start_time,
+            "end_time": r.end_time,
+            "module_code": r.module_code,
+            "module_name": r.module_name,
+            "lecturer": r.lecturer,
+            "location": r.location,
+        }
+        for r in records
+    ]

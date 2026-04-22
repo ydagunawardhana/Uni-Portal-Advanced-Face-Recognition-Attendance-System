@@ -345,7 +345,7 @@ export default function BookConsultations() {
 
                   {!selectedLecturer.office_hours ||
                   selectedLecturer.office_hours.length === 0 ? (
-                    <div className="p-8 bg-gray-50 border border-gray-200 border-dashed rounded-xl">
+                    <div className="p-8 bg-gray-50 border-2 border-gray-300 border-dashed rounded-xl">
                       <p className="text-sm text-gray-500 italic text-center">
                         No consultation hours have been set by this lecturer
                         yet.
@@ -357,10 +357,10 @@ export default function BookConsultations() {
                         <button
                           key={slot.id || index}
                           onClick={() => setSelectedSlot(slot)}
-                          className={`flex flex-col p-4 rounded-xl border-2 transition-all text-left ${
+                          className={`flex flex-col p-4 rounded-xl cursor-pointer border-2 transition-all text-left ${
                             selectedSlot === slot
                               ? "bg-red-50 border-red-500 ring-1 ring-red-500/10 shadow-sm"
-                              : "bg-white border-gray-100 hover:border-red-200"
+                              : "bg-white border-gray-200 hover:border-red-200"
                           }`}
                         >
                           <span

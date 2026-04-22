@@ -16,6 +16,7 @@ import {
   Clock,
   Link as LinkIcon,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -42,6 +43,7 @@ interface LecturerData {
   faculty: string;
   department: string;
   assigned_subjects: string;
+  assigned_subjects_detailed?: { code: string; name: string }[];
   profile_picture: string | null;
   office_hours: any;
 }
@@ -272,6 +274,31 @@ export default function LecturerProfile() {
 
   return (
     <div className="w-full mx-auto flex flex-col gap-6">
+      {/* Save Reminder Note */}
+      <div className="bg-gray-100 border border-yellow-500 p-4 mb-2 rounded-lg shadow-md">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <AlertCircle
+              className="h-7 w-7 text-yellow-100 mt-2"
+              aria-hidden="true"
+            />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-bold text-red-600">
+              Don't forget to save your changes!
+            </h3>
+            <div className="mt-1 text-xs text-amber-700 font-medium">
+              <p>
+                Updates made to your profile, educational qualifications, or
+                office hours are <strong>not automatically saved</strong>.
+                Please scroll to the bottom of the page and click the{" "}
+                <strong>"Save Changes"</strong> button to apply them.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Card 1 - Profile & Contact Information */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm w-full">
         <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
@@ -436,24 +463,31 @@ export default function LecturerProfile() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-2.5">
               Assigned Subjects
             </label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {lecturerData?.assigned_subjects ? (
-                lecturerData.assigned_subjects
-                  .split(",")
-                  .map((subject, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                    >
-                      {subject.trim()}
-                    </span>
-                  ))
+            <div className="flex flex-wrap gap-3 mt-2">
+              {lecturerData?.assigned_subjects_detailed &&
+              lecturerData.assigned_subjects_detailed.length > 0 ? (
+                lecturerData.assigned_subjects_detailed.map((subject, index) => (
+                  <span
+                    key={index}
+                    className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm border-2 border-blue-200 flex items-center gap-2 shadow-sm hover:bg-blue-100 transition-colors cursor-default"
+                  >
+                    <span className="font-bold">{subject.code}</span>
+                    {subject.name && subject.name !== "Unknown Module" && (
+                      <>
+                        <span className="text-blue-300 font-bold">-</span>
+                        <span className="font-medium text-gray-700">
+                          {subject.name}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                ))
               ) : (
-                <span className="text-sm text-gray-500">
-                  No subjects assigned yet.
+                <span className="text-gray-500 text-sm italic">
+                  No subjects assigned currently.
                 </span>
               )}
             </div>

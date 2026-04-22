@@ -3,7 +3,8 @@ import {
   Calendar,
   Clock,
   MapPin,
-  User,
+  Users,
+  GraduationCap,
   Loader2,
   RefreshCw,
 } from "lucide-react";
@@ -25,7 +26,7 @@ const getCardColor = (moduleName: string) => {
   for (let i = 0; i < moduleName.length; i++) {
     hash = moduleName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  hash = hash + moduleName.length * 18; // Added salt to prevent collisions
+  hash = hash + moduleName.length * 7; // Added salt to prevent collisions
   return colorPalette[Math.abs(hash) % colorPalette.length];
 };
 
@@ -67,7 +68,7 @@ const getCurrentWeekDates = () => {
   return { weekDates, displayDates };
 };
 
-export default function StudentTimetable() {
+export default function LecturerTimetable() {
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -87,13 +88,15 @@ export default function StudentTimetable() {
 
   const fetchTimetable = async () => {
     try {
-      const token = localStorage.getItem("studentToken");
+      // STRICTLY using lecturerToken
+      const token = localStorage.getItem("lecturerToken");
       if (!token) {
         toast.error("Session expired. Please login again.");
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/student/timetable", {
+      // STRICTLY hitting lecturer endpoint
+      const res = await fetch("http://localhost:8000/api/lecturer/timetable", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -103,7 +106,7 @@ export default function StudentTimetable() {
       setSchedule(data);
     } catch (err) {
       console.error(err);
-      toast.error("Could not load your timetable.");
+      toast.error("Could not load your teaching schedule.");
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +117,7 @@ export default function StudentTimetable() {
     await fetchTimetable();
     setTimeout(() => {
       setIsRefreshing(false);
-      toast.success("Timetable updated successfully!");
+      toast.success("Schedule updated successfully!");
     }, 800);
   };
 
@@ -139,36 +142,23 @@ export default function StudentTimetable() {
       <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
         <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
         <p className="text-gray-500 font-medium animate-pulse">
-          Syncing your weekly schedule...
+          Syncing your teaching schedule...
         </p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-white">
+    <div className="p-3 bg-white">
       {/* Page Header with Refresh Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div className="flex items-center gap-3">
-          <Calendar className="w-10 h-10 text-red-600" />
+          <Calendar className="w-10 h-10 text-blue-600" />
           <div>
-            {/* Title and Badges in one row */}
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-2xl font-bold text-gray-900">Weekly Class Schedule</h2>
-              {schedule.length > 0 && (
-                <div className="flex items-center gap-3 mt-1 mb-1">
-                  <span className="px-2.5 py-0.2 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
-                    {schedule[0]?.academic_year || 'Year 1'}
-                  </span>
-                  <span className="px-2.5 py-0.2 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
-                    {schedule[0]?.semester || 'Semester 1'}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p className="text-gray-500 text-sm mt-2">
-              View your weekly class schedule for{" "}
-              <span className="font-bold text-red-600">
+            <h2 className="text-2xl font-bold text-gray-900">Weekly Teaching Schedule</h2>
+            <p className="text-gray-500 text-md mt-1">
+              View your sessions for the week of{" "}
+              <span className="font-bold text-blue-600">
                 {displayDates["Monday"]} - {displayDates["Sunday"]}
               </span>
             </p>
@@ -193,12 +183,11 @@ export default function StudentTimetable() {
             <Calendar className="w-12 h-12 text-gray-400" />
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-3">
-            No Classes Scheduled
+            No Sessions Scheduled
           </h3>
           <p className="text-gray-500 text-center max-w-md leading-relaxed">
-            You don't have any classes assigned for this week. Enjoy your free
-            time! If you think this is a mistake, please check back later or
-            contact your academic coordinator.
+            You don't have any teaching sessions assigned for this week. Enjoy your free
+            time!
           </p>
           <button
             onClick={async () => {
@@ -206,7 +195,7 @@ export default function StudentTimetable() {
               await fetchTimetable();
               setTimeout(() => setIsLoading(false), 800);
             }}
-            className="mt-8 px-6 py-3 bg-white  cursor-pointer border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 shadow-sm"
+            className="mt-8 px-6 py-3 bg-white cursor-pointer border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 shadow-sm"
           >
             <RefreshCw
               className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : "text-gray-500"}`}
@@ -216,38 +205,50 @@ export default function StudentTimetable() {
         </div>
       ) : (
         <>
-          {/* Horizontal Scroll Container */}
-          <div className="flex flex-nowrap gap-5 overflow-x-auto pb-6 pt-2 w-full items-stretch snap-x custom-scrollbar">
+          {/* 7-Column Grid Layout - ULTRA COMPACT (FORCED 7 COLUMNS) */}
+          <div className="grid grid-cols-5 md:grid-cols-5 gap-4 lg:gap-1.5 w-full items-stretch">
             {Object.keys(groupedSchedule).map((dayName) => {
               const isToday = weekDates[dayName] === todayString;
 
               return (
                 <div
                   key={dayName}
-                  className={`flex-none w-[280px] lg:w-[320px] flex flex-col rounded-2xl overflow-hidden snap-start transition-all ${isToday ? "border-2 border-red-500 bg-white shadow-md transform -translate-y-1" : "border-2 border-gray-200 bg-white shadow-md"}`}
+                  className={`flex flex-col h-full rounded-2xl overflow-hidden transition-all ${
+                    isToday
+                      ? "border-2 border-blue-500 bg-white shadow-md"
+                      : "border-2 border-gray-200 bg-white shadow-md"
+                  }`}
                 >
-                  {/* Day Header */}
+                  {/* Ultra-Compact Day Header */}
                   <div
-                    className={`py-4 flex flex-col items-center justify-center border-b ${isToday ? "bg-red-600 text-white border-red-600" : "bg-gray-200 text-gray-800 border-gray-100"}`}
+                    className={`py-1.5 flex flex-col items-center justify-center border-b ${
+                      isToday
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-gray-200 text-gray-800 border-gray-200"
+                    }`}
                   >
-                    <h3 className="font-bold text-lg tracking-wide">
+                    <h3 className="font-bold text-[11px] xl:text-xs tracking-tight truncate w-full text-center px-1">
                       {dayName}
                     </h3>
                     <p
-                      className={`text-sm mt-0.5 font-bold ${isToday ? "text-red-100" : "text-gray-500"}`}
+                      className={`text-[9px] xl:text-[10px] font-bold mt-0.5 ${
+                        isToday ? "text-blue-100" : "text-gray-500"
+                      }`}
                     >
                       {displayDates[dayName]}
                     </p>
                     {isToday && (
-                      <span className="mt-2 bg-white text-red-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                      <span className="mt-2 bg-white text-blue-600 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-widest shadow-sm leading-none">
                         Today
                       </span>
                     )}
                   </div>
 
-                  {/* Cards Container */}
+                  {/* Ultra-Compact Cards Container */}
                   <div
-                    className={`p-3 flex-1 flex flex-col gap-3 ${isToday ? "bg-white" : "bg-gray-50/30"}`}
+                    className={`p-3 flex-1 flex flex-col gap-3 ${
+                      isToday ? "bg-white" : "bg-gray-50/30"
+                    }`}
                   >
                     {groupedSchedule[dayName].length > 0 ? (
                       groupedSchedule[dayName].map((cls, idx) => (
@@ -255,38 +256,47 @@ export default function StudentTimetable() {
                           key={idx}
                           className={`${getCardColor(
                             cls.module_name,
-                          )} text-white p-4 rounded-xl shadow-sm border border-white/30 flex flex-col gap-2 transition-transform hover:-translate-y-0.5`}
+                          )} text-white p-3 rounded-lg shadow-md border border-white/20 flex flex-col gap-1 cursor-default hover:brightness-105 hover:scale-105 transition-all`}
                         >
-                          <h4 className="font-bold text-sm leading-snug">
-                            {cls.module_name || cls.module_code}
+                          <h4 className="font-bold text-md leading-tight line-clamp-2">
+                            {cls.module_name } - {cls.module_code}
                           </h4>
-                          <div className="space-y-2 text-xs text-white/90 font-medium mt-2">
-                            <p className="flex items-start gap-2">
-                              <Clock className="w-4 h-4 shrink-0 mt-0.5 opacity-80" />
-                              <span>
+                          <div className="space-y-2 text-sm text-white font-medium mt-2">
+                            <p className="flex items-center gap-1">
+                              <Clock className="w-5 h-5 shrink-0 opacity-80" />
+                              <span className="truncate">
                                 {cls.start_time} - {cls.end_time}
                               </span>
                             </p>
-                            <p className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 shrink-0 mt-0.5 opacity-80" />
-                              <span className="leading-tight">
+                            <p className="flex items-center gap-1">
+                              <MapPin className="w-5 h-5 shrink-0 opacity-80" />
+                              <span className="truncate">
                                 {cls.location || "TBA"}
                               </span>
                             </p>
-                            <p className="flex items-start gap-2">
-                              <User className="w-4 h-4 shrink-0 mt-0.5 opacity-80" />
-                              <span className="truncate">
-                                {cls.lecturer || "TBA"}
-                              </span>
-                            </p>
+                            {/* Lecturer Specific Info */}
+                            <div className="flex flex-col pt-1 mt-1">
+                              <p className="flex items-center gap-1">
+                                <Users className="w-5 h-5 shrink-0 opacity-80" />
+                                <span className="truncate">
+                                  {cls.batch || cls.intake || "All Batches"}
+                                </span>
+                              </p>
+                              <p className="flex items-center gap-1 mt-2">
+                                <GraduationCap className="w-6 h-6 shrink-0 opacity-80" />
+                                <span className="truncate">
+                                  {cls.semester || "N/A"}
+                                </span>
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="flex-1 flex p-1">
-                        <div className="flex-1 w-full min-h-[120px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
+                      <div className="flex-1 flex p-2 h-full">
+                        <div className="flex-1 w-full h-full min-h-[130px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
                           <p className="text-gray-400 text-[11px] font-bold tracking-widest uppercase">
-                            No Classes
+                            NO CLASSES
                           </p>
                         </div>
                       </div>

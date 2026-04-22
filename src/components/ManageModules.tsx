@@ -442,7 +442,7 @@ export default function ManageModules() {
       {isDeleteModalOpen &&
         selectedModule &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center animate-in zoom-in duration-200">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-8 h-8 text-red-600" />
@@ -452,8 +452,10 @@ export default function ManageModules() {
               </h3>
               <p className="text-gray-600 mb-8">
                 Are you sure you want to remove{" "}
-                <span className="font-bold">{selectedModule.module_code}</span>?
-                This action cannot be undone.
+                <span className="font-bold">
+                  {selectedModule.module_code} {selectedModule.module_name}
+                </span>
+                ? This action cannot be undone.
               </p>
               <div className="flex gap-4">
                 <button
@@ -542,7 +544,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="px-6 border-b border-gray-100 flex justify-between items-center bg-white">
@@ -613,22 +615,35 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                 </label>
                 <div className="border border-gray-300 rounded-xl p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
                   {!department ? (
-                    <span className="text-sm text-gray-400">Select Department first</span>
+                    <span className="text-sm text-gray-400">
+                      Select Department first
+                    </span>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                      {(degreeMapping[department] || ["BSc (Hons) Generic"]).map((deg) => (
-                        <label key={deg} className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group">
-                          <input 
-                            type="checkbox" 
-                            value={deg} 
-                            checked={selectedDegrees.includes(deg)} 
+                      {(
+                        degreeMapping[department] || ["BSc (Hons) Generic"]
+                      ).map((deg) => (
+                        <label
+                          key={deg}
+                          className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            value={deg}
+                            checked={selectedDegrees.includes(deg)}
                             onChange={(e) => {
-                              if(e.target.checked) setSelectedDegrees([...selectedDegrees, deg]);
-                              else setSelectedDegrees(selectedDegrees.filter(d => d !== deg));
-                            }} 
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                              if (e.target.checked)
+                                setSelectedDegrees([...selectedDegrees, deg]);
+                              else
+                                setSelectedDegrees(
+                                  selectedDegrees.filter((d) => d !== deg),
+                                );
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
-                          <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors font-medium">{deg}</span>
+                          <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors font-medium">
+                            {deg}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -805,7 +820,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
         <div className="px-6 border-b border-gray-100 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-bold text-gray-900 pt-6">
@@ -873,22 +888,35 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                 </label>
                 <div className="border border-gray-300 rounded-xl p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
                   {!department ? (
-                    <span className="text-sm text-gray-400">Select Department first</span>
+                    <span className="text-sm text-gray-400">
+                      Select Department first
+                    </span>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                      {(degreeMapping[department] || ["BSc (Hons) Generic"]).map((deg) => (
-                        <label key={deg} className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group">
-                          <input 
-                            type="checkbox" 
-                            value={deg} 
-                            checked={selectedDegrees.includes(deg)} 
+                      {(
+                        degreeMapping[department] || ["BSc (Hons) Generic"]
+                      ).map((deg) => (
+                        <label
+                          key={deg}
+                          className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            value={deg}
+                            checked={selectedDegrees.includes(deg)}
                             onChange={(e) => {
-                              if(e.target.checked) setSelectedDegrees([...selectedDegrees, deg]);
-                              else setSelectedDegrees(selectedDegrees.filter(d => d !== deg));
-                            }} 
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                              if (e.target.checked)
+                                setSelectedDegrees([...selectedDegrees, deg]);
+                              else
+                                setSelectedDegrees(
+                                  selectedDegrees.filter((d) => d !== deg),
+                                );
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
-                          <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors font-medium">{deg}</span>
+                          <span className="text-sm text-gray-700 group-hover:text-blue-600 transition-colors font-medium">
+                            {deg}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -906,18 +934,32 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Select Level</option>
-                  <option value="Year 1 - Semester 1">Year 1 - Semester 1</option>
-                  <option value="Year 1 - Semester 2">Year 1 - Semester 2</option>
-                  <option value="Year 2 - Semester 1">Year 2 - Semester 1</option>
-                  <option value="Year 2 - Semester 2">Year 2 - Semester 2</option>
-                  <option value="Year 3 - Semester 1">Year 3 - Semester 1</option>
-                  <option value="Year 3 - Semester 2">Year 3 - Semester 2</option>
+                  <option value="Year 1 - Semester 1">
+                    Year 1 - Semester 1
+                  </option>
+                  <option value="Year 1 - Semester 2">
+                    Year 1 - Semester 2
+                  </option>
+                  <option value="Year 2 - Semester 1">
+                    Year 2 - Semester 1
+                  </option>
+                  <option value="Year 2 - Semester 2">
+                    Year 2 - Semester 2
+                  </option>
+                  <option value="Year 3 - Semester 1">
+                    Year 3 - Semester 1
+                  </option>
+                  <option value="Year 3 - Semester 2">
+                    Year 3 - Semester 2
+                  </option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xl font-bold text-gray-800">Module Information</h3>
+              <h3 className="text-xl font-bold text-gray-800">
+                Module Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-bold text-gray-500 mb-1 ml-1">

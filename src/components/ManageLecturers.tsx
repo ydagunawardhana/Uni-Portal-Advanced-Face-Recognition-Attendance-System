@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   Plus,
@@ -659,58 +660,60 @@ export default function ManageLecturers() {
       />
 
       {/* Custom Delete Confirmation Modal */}
-      {isDeleteModalOpen && selectedLecturer && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0"
-            onClick={() => setIsDeleteModalOpen(false)}
-          ></div>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
-            <div className="p-8 flex flex-col items-center text-center">
-              {/* Warning Icon Cluster */}
-              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600" />
+      {isDeleteModalOpen && selectedLecturer &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0"
+              onClick={() => setIsDeleteModalOpen(false)}
+            ></div>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+              <div className="p-8 flex flex-col items-center text-center">
+                {/* Warning Icon Cluster */}
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                  <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  Remove Lecturer Access?
+                </h3>
+                <p className="text-gray-600 mb-8 px-2">
+                  Are you sure you want to delete{" "}
+                  <span className="font-bold text-gray-900">
+                    {selectedLecturer.name}
+                  </span>
+                  ? This will permanently remove their academic profile and revoke
+                  all portal access rights.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4 w-full text-center">
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    disabled={isSaving}
+                    className="px-6 py-3 border border-gray-300 cursor-pointer text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-red-600 cursor-pointer text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash className="w-4 h-4" />
+                    )}
+                    Confirm Delete
+                  </button>
                 </div>
               </div>
-
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Remove Lecturer Access?
-              </h3>
-              <p className="text-gray-600 mb-8 px-2">
-                Are you sure you want to delete{" "}
-                <span className="font-bold text-gray-900">
-                  {selectedLecturer.name}
-                </span>
-                ? This will permanently remove their academic profile and revoke
-                all portal access rights.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 w-full text-center">
-                <button
-                  onClick={() => setIsDeleteModalOpen(false)}
-                  disabled={isSaving}
-                  className="px-6 py-3 border border-gray-300 cursor-pointer text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={isSaving}
-                  className="px-6 py-3 bg-red-600 cursor-pointer text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash className="w-4 h-4" />
-                  )}
-                  Confirm Delete
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

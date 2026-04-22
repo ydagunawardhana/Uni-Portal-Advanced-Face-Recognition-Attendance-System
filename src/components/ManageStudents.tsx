@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   Plus,
@@ -855,13 +856,14 @@ export default function ManageStudents({
       </div>
 
       {/* Edit Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0"
-            onClick={() => setIsEditModalOpen(false)}
-          ></div>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+      {isEditModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0"
+              onClick={() => setIsEditModalOpen(false)}
+            ></div>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -1175,14 +1177,16 @@ export default function ManageStudents({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Recapture Modal - PORTED STRICT LOGIC */}
-      {studentToCapture && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="absolute inset-0" onClick={closeCaptureModal}></div>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative z-[1000] overflow-hidden transform transition-all">
+      {studentToCapture &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="absolute inset-0" onClick={closeCaptureModal}></div>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative overflow-hidden transform transition-all">
             {/* Modal Header */}
             <div className="bg-blue-100 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1395,17 +1399,19 @@ export default function ManageStudents({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Custom Delete Confirmation Modal */}
-      {studentToDelete && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0"
-            onClick={() => setStudentToDelete(null)}
-          ></div>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-[1000] overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+      {studentToDelete &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0"
+              onClick={() => setStudentToDelete(null)}
+            ></div>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               {/* Warning Icon Cluster */}
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
@@ -1443,7 +1449,8 @@ export default function ManageStudents({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

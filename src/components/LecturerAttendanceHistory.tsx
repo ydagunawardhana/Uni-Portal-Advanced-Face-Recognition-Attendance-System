@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Download,
@@ -7,6 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import toast from "react-hot-toast";
 
 interface AttendanceRecord {
   id: number;

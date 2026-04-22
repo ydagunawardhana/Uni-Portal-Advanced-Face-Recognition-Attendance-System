@@ -509,7 +509,7 @@ export default function TimetableUpload() {
       {/* 1. Validation Error Modal */}
       {isErrorModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="p-6 text-center">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -821,71 +821,86 @@ export default function TimetableUpload() {
           </div>
 
           <div className="flex-1 relative min-h-[300px]">
-            <div className="absolute inset-0 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-200">
-              <table className="w-full text-left border-collapse">
-                <thead className="text-xs text-gray-800 bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 font-bold">File Name</th>
-                    <th className="px-4 py-3 font-bold">Status</th>
-                    <th className="px-8 py-3 font-bold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {recentUploads.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="hover:bg-blue-50/50 transition-colors group"
-                    >
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <FileSpreadsheet className="w-7 h-7 text-yellow-600 bg-yellow-100 rounded-lg p-1 shrink-0" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-800 truncate max-w-[180px]">
-                              {record.name}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Batch: {record.batch} • {record.date}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-4">
-                        {record.status === "Success" ? (
-                          <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border-2 border-green-200 text-xs font-bold uppercase">
-                            <CheckCircle className="w-4 h-4" />
-                            {record.status}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-1 rounded-full border-2 border-red-200 text-xs font-bold uppercase">
-                            <AlertCircle className="w-4 h-4" />
-                            {record.status}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleViewBatch(record.batch)}
-                            disabled={isLoadingView}
-                            className="p-1.5 cursor-pointer text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
-                            title="View Details"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTimetable(record.batch)}
-                            className="p-1.5 cursor-pointer text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete Record"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
+            {recentUploads.length === 0 ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 m-8  group hover:bg-gray-50 transition-all">
+                <div className="w-16 h-16 bg-white rounded-full shadow-md flex items-center justify-center mb-4 border-2 border-blue-200 group-hover:scale-110 transition-transform duration-300">
+                  <UploadCloud className="w-8 h-8 text-blue-500 group-hover:text-blue-500 transition-colors" />
+                </div>
+                <h3 className="text-gray-900 font-bold text-base mb-2">No history found</h3>
+                <p className="text-gray-500 text-sm max-w-[220px] leading-relaxed italic font-medium">
+                  Upload Files will appear here once you've uploaded academic schedules. 
+                </p>
+                <div className="mt-6 px-4 py-2 cursor-pointer bg-blue-50 text-blue-600 text-[11px] font-bold shadow-sm tracking-wider rounded-full border-2 border-blue-100">
+                  Ready for Sync
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-200">
+                <table className="w-full text-left border-collapse">
+                  <thead className="text-xs text-gray-800 bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 font-bold">File Name</th>
+                      <th className="px-4 py-3 font-bold">Status</th>
+                      <th className="px-8 py-3 font-bold text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {recentUploads.map((record) => (
+                      <tr
+                        key={record.id}
+                        className="hover:bg-blue-50/50 transition-colors group"
+                      >
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <FileSpreadsheet className="w-7 h-7 text-yellow-600 bg-yellow-100 rounded-lg p-1 shrink-0" />
+                            <div>
+                              <p className="text-sm font-bold text-gray-800 truncate max-w-[180px]">
+                                {record.name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Batch: {record.batch} • {record.date}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-4">
+                          {record.status === "Success" ? (
+                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border-2 border-green-200 text-xs font-bold uppercase">
+                              <CheckCircle className="w-4 h-4" />
+                              {record.status}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-1 rounded-full border-2 border-red-200 text-xs font-bold uppercase">
+                              <AlertCircle className="w-4 h-4" />
+                              {record.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleViewBatch(record.batch)}
+                              disabled={isLoadingView}
+                              className="p-1.5 cursor-pointer text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
+                              title="View Details"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTimetable(record.batch)}
+                              className="p-1.5 cursor-pointer text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1027,7 +1042,7 @@ export default function TimetableUpload() {
       {/* 4. Custom Delete Confirmation Modal */}
       {deleteBatchId &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-sm">
                 <Trash2 className="w-10 h-10 text-red-600" />
@@ -1069,7 +1084,7 @@ export default function TimetableUpload() {
       {/* 5. View Full Timetable Modal */}
       {viewBatchId &&
         createPortal(
-          <div className="fixed inset-0 z-[11000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-8 border-b flex justify-between items-center bg-gray-50 shrink-0">
                 <div className="flex items-center gap-4">

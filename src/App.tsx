@@ -30,14 +30,40 @@ type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
 export default function App() {
   const [userRole, setUserRole] = useState<UserRole>(() => {
-    return (localStorage.getItem("user_role") as UserRole) || null;
+    if (
+      localStorage.getItem("adminToken") &&
+      localStorage.getItem("admin_role") === "Admin"
+    )
+      return "Admin";
+    if (
+      localStorage.getItem("lecturerToken") &&
+      localStorage.getItem("lecturer_role") === "Lecturer"
+    )
+      return "Lecturer";
+    if (
+      localStorage.getItem("studentToken") &&
+      localStorage.getItem("student_role") === "Student"
+    )
+      return "Student";
+    return null;
   });
 
   const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
-    const role = localStorage.getItem("user_role");
-    if (role === "Admin") return "admin";
-    if (role === "Lecturer") return "lecturer";
-    if (role === "Student") return "student";
+    if (
+      localStorage.getItem("adminToken") &&
+      localStorage.getItem("admin_role") === "Admin"
+    )
+      return "admin";
+    if (
+      localStorage.getItem("lecturerToken") &&
+      localStorage.getItem("lecturer_role") === "Lecturer"
+    )
+      return "lecturer";
+    if (
+      localStorage.getItem("studentToken") &&
+      localStorage.getItem("student_role") === "Student"
+    )
+      return "student";
     return "landing";
   });
 
@@ -67,7 +93,13 @@ export default function App() {
       localStorage.removeItem("adminToken");
       localStorage.removeItem("lecturerToken");
       localStorage.removeItem("studentToken");
-      localStorage.removeItem("user_role");
+      localStorage.removeItem("admin_role");
+      localStorage.removeItem("admin_email");
+      localStorage.removeItem("lecturer_role");
+      localStorage.removeItem("lecturer_email");
+      localStorage.removeItem("student_role");
+      localStorage.removeItem("student_email");
+      localStorage.removeItem("user_role"); // Cleanup legacy keys
       localStorage.removeItem("user_email");
       localStorage.removeItem("isAdminLoggedIn");
       localStorage.removeItem("adminActiveTab");

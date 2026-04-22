@@ -4,6 +4,7 @@ import {
   Video,
   History,
   BookOpen,
+  CalendarDays,
   Calendar,
   Settings,
   ClipboardCheck,
@@ -50,6 +51,11 @@ export default function LecturerSidebar({
     },
     { id: "subjects", label: "My Subjects", icon: BookOpen },
     {
+      id: "timetable",
+      label: "My Timetable",
+      icon: CalendarDays,
+    },
+    {
       id: "appointments",
       label: "Appointments",
       icon: Calendar,
@@ -84,12 +90,8 @@ export default function LecturerSidebar({
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-bold text-white">
-                Lecturer Portal
-              </h2>
-              <p className="text-xs text-gray-400 ml-0.5">
-                Attendance System
-              </p>
+              <h2 className="text-lg font-bold text-white">Lecturer Portal</h2>
+              <p className="text-xs text-gray-400 ml-0.5">Attendance System</p>
             </div>
           )}
         </div>
@@ -115,9 +117,7 @@ export default function LecturerSidebar({
               <div className="flex items-center space-x-3">
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {!isCollapsed && (
-                  <span className="text-sm font-medium">
-                    {item.label}
-                  </span>
+                  <span className="text-sm font-medium">{item.label}</span>
                 )}
               </div>
 
@@ -138,9 +138,7 @@ export default function LecturerSidebar({
         <button
           onClick={onToggleCollapse}
           className={`w-full flex cursor-pointer items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"} py-4 hover:bg-gray-800 transition-colors group`}
-          title={
-            isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"
-          }
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           {!isCollapsed && (
             <span className="text-sm font-medium text-gray-300 group-hover:text-white mb-3">

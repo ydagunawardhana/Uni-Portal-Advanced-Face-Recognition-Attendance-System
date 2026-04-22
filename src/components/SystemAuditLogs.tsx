@@ -50,15 +50,15 @@ const deriveSeverity = (log: AuditLog): "Info" | "Warning" | "Critical" => {
 const severityConfig = {
   Info: {
     cls: "bg-blue-100 text-blue-700",
-    icon: <Info className="w-3.5 h-3.5" />,
+    icon: <Info className="w-4 h-4" />,
   },
   Warning: {
-    cls: "bg-amber-100 text-amber-700",
-    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+    cls: "bg-yellow-100 text-yellow-700",
+    icon: <AlertTriangle className="w-4 h-4" />,
   },
   Critical: {
     cls: "bg-red-100 text-red-700",
-    icon: <XCircle className="w-3.5 h-3.5" />,
+    icon: <XCircle className="w-4 h-4" />,
   },
 };
 
@@ -105,11 +105,11 @@ const deriveRole = (log: AuditLog): "Admin" | "Lecturer" | "Student" | null => {
 const getRoleBadgeColor = (role: "Admin" | "Lecturer" | "Student") => {
   switch (role) {
     case "Admin":
-      return "bg-purple-100 text-purple-700 border-purple-200";
+      return "bg-purple-100 text-purple-700 border-purple-200 border-2 rounded-full px-3";
     case "Lecturer":
-      return "bg-blue-100 text-blue-700 border-blue-200";
+      return "bg-blue-100 text-blue-700 border-blue-200 border-2 rounded-full px-3";
     case "Student":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      return "bg-emerald-100 text-emerald-700 border-emerald-200 border-2 rounded-full px-3";
   }
 };
 
@@ -462,7 +462,7 @@ export default function SystemAuditLogs() {
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {status === "Success" ? (
-                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                             <CheckCircle className="w-4 h-4" />
                             <span>Success</span>
                           </span>

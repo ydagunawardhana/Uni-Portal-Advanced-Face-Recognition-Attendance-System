@@ -86,8 +86,13 @@ export default function LoginScreen({
         }
       }
 
-      localStorage.setItem("user_role", data.role || selectedRole);
-      localStorage.setItem("user_email", email);
+      if (selectedRole === "Student") {
+        localStorage.setItem("student_role", data.role || selectedRole);
+        localStorage.setItem("student_email", email);
+      } else {
+        localStorage.setItem("lecturer_role", data.role || selectedRole);
+        localStorage.setItem("lecturer_email", email);
+      }
 
       toast.success("Login Successful!", { id: toastId, duration: 3000 });
       await new Promise((r) => setTimeout(r, 900));

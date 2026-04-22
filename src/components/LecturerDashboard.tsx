@@ -10,6 +10,7 @@ import LecturerLiveClassMonitoring from "./LecturerLiveClassMonitoring";
 import ManualAttendanceMarking from "./ManualAttendanceMarking";
 import LecturerProfile from "./LecturerProfile";
 import Appointments from "./Appointments";
+import LecturerTimetable from "./LecturerTimetable";
 
 interface AttendanceRecord {
   id: number;
@@ -215,6 +216,8 @@ export default function LecturerDashboard({
         return "Attendance History";
       case "subjects":
         return "My Subjects";
+      case "timetable":
+        return "Teaching Schedule";
       case "settings":
         return "Settings";
       case "appointments":
@@ -236,6 +239,8 @@ export default function LecturerDashboard({
         return "View and export past class records";
       case "subjects":
         return "Manage your assigned courses";
+      case "timetable":
+        return "View and manage your weekly teaching schedule";
       case "settings":
         return "Manage your account and preferences";
       case "appointments":
@@ -251,6 +256,7 @@ export default function LecturerDashboard({
     activeTab === "dashboard" ||
     activeTab === "history" ||
     activeTab === "subjects" ||
+    activeTab === "timetable" ||
     activeTab === "settings" ||
     activeTab === "mark-attendance" ||
     activeTab === "appointments"
@@ -345,6 +351,7 @@ export default function LecturerDashboard({
               {activeTab === "dashboard" && <LecturerDashboardHome />}
               {activeTab === "history" && <LecturerAttendanceHistory />}
               {activeTab === "subjects" && <LecturerMySubjects />}
+              {activeTab === "timetable" && <LecturerTimetable />}
               {activeTab === "settings" && <LecturerSettings />}
               {activeTab === "appointments" && <Appointments />}
             </main>

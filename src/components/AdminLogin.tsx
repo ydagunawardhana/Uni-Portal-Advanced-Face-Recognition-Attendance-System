@@ -44,8 +44,8 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
       }
 
       localStorage.setItem("adminToken", data.access_token);
-      localStorage.setItem("user_role", data.role || "Admin");
-      localStorage.setItem("user_email", email);
+      localStorage.setItem("admin_role", data.role || "Admin");
+      localStorage.setItem("admin_email", email);
 
       toast.success("Administrator login successful!", { id: toastId });
 
