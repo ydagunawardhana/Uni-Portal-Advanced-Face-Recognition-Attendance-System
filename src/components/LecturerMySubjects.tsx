@@ -9,6 +9,7 @@ import {
   Filter,
   GraduationCap,
   Layers,
+  Award,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import AttendanceReports from "./AttendanceReports";
@@ -24,6 +25,7 @@ interface Subject {
   batch?: string;
   intake?: string;
   semester?: string;
+  degree?: string;
 }
 
 const topBorderColors = [
@@ -222,18 +224,39 @@ export default function LecturerMySubjects() {
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  {/* Subject Info */}
+                  {/* Subject Info - Dynamic formatting to prevent duplicate text */}
+                  {(() => {
+                    const batchInfo = subject.batch || subject.intake || "All Batches";
+                    const semInfo = subject.semester || "";
+
+                    // Check if the batch string already contains the semester string
+                    let displayString = batchInfo;
+                    if (
+                      semInfo &&
+                      !batchInfo.toLowerCase().includes(semInfo.toLowerCase())
+                    ) {
+                      displayString = `${batchInfo} • ${semInfo}`;
+                    }
+
+                    return (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                        <GraduationCap className="w-5 h-5 text-blue-500 shrink-0" />
+                        <span className="truncate">{displayString}</span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* NEW: Degree / Program Row */}
                   <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                    <GraduationCap className="w-5 h-5 text-blue-500" />
-                    <span>
-                      {subject.batch || subject.intake || "All Batches"}  •{" "}
-                      {subject.semester || "Semester 1"}
+                    <Award className="w-5 h-5 text-blue-500 shrink-0" />
+                    <span className="truncate font-semibold">
+                      {subject.degree || 'Degree Program TBA'}
                     </span>
                   </div>
 
                   {/* Student Count */}
                   <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                    <Users className="w-5 h-5 text-green-500 font-bold" />
+                    <Users className="w-5 h-5 text-green-500 font-bold shrink-0" />
                     <span>{subject.students_enrolled || 0} Students Enrolled</span>
                   </div>
                 </div>

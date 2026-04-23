@@ -153,14 +153,14 @@ export default function StudentTimetable() {
           <Calendar className="w-10 h-10 text-red-600" />
           <div>
             {/* Title and Badges in one row */}
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-4 mb-1">
               <h2 className="text-2xl font-bold text-gray-900">Weekly Class Schedule</h2>
               {schedule.length > 0 && (
                 <div className="flex items-center gap-3 mt-1 mb-1">
-                  <span className="px-2.5 py-0.2 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
+                  <span className="px-2.5 py-0.1 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
                     {schedule[0]?.academic_year || 'Year 1'}
                   </span>
-                  <span className="px-2.5 py-0.2 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
+                  <span className="px-2.5 py-0.1 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
                     {schedule[0]?.semester || 'Semester 1'}
                   </span>
                 </div>

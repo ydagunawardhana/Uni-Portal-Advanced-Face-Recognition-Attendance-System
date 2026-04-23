@@ -30,6 +30,7 @@ class LecturerProfileResponse(BaseModel):
     assigned_subjects_detailed: Optional[List[dict]] = None
     profile_picture: Optional[str] = None
     office_hours: Optional[Any] = None
+    is_visiting: bool = False
 
     class Config:
         from_attributes = True
@@ -41,6 +42,7 @@ class LecturerListOut(BaseModel):
     email: str
     profile_picture: Optional[str] = None
     office_hours: Optional[Any] = None
+    is_visiting: bool = False
 
     class Config:
         from_attributes = True
@@ -81,7 +83,8 @@ def get_lecturer_profile(
         assigned_subjects=lecturer.assigned_subjects,
         assigned_subjects_detailed=subject_details,
         profile_picture=lecturer.profile_picture,
-        office_hours=lecturer.office_hours
+        office_hours=lecturer.office_hours,
+        is_visiting=lecturer.is_visiting
     )
 
 @router.get("/list", response_model=List[LecturerListOut])
@@ -417,9 +420,9 @@ def get_lecturer_subjects(
     if not subject_codes:
         return []
 
-    # 2. Fetch module names
+    # 2. Fetch module details
     modules = db.query(models.Module).filter(models.Module.module_code.in_(subject_codes)).all()
-    module_names = {m.module_code: m.module_name for m in modules}
+    module_details = {m.module_code: m for m in modules}
 
     # 3. Fetch enrollment counts
     from sqlalchemy import func
@@ -445,12 +448,16 @@ def get_lecturer_subjects(
     # 5. Build final response
     detailed_subjects = []
     for code in subject_codes:
+        mod = module_details.get(code)
         detailed_subjects.append({
-            "id": code, # Using code as ID for frontend mapping
+            "id": code, 
             "module_code": code,
-            "module_name": module_names.get(code, "Unknown Module"),
+            "module_name": mod.module_name if mod else "Unknown Module",
+            "degree": mod.degree if mod else None,
             "schedule": schedule_map.get(code, "Schedule Pending"),
-            "students_enrolled": enrollment_map.get(code, 0)
+            "students_enrolled": enrollment_map.get(code, 0),
+            "batch": mod.level if mod else None, # Falling back to level if batch is not in module
+            "semester": "Semester 1" # Default or fetch from somewhere
         })
 
     return detailed_subjects

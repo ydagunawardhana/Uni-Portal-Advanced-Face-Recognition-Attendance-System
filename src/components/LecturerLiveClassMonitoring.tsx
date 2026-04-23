@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Video,
   ArrowUp,
@@ -13,6 +15,9 @@ import {
   CheckCircle,
   X,
   User,
+  ArrowLeft,
+  Info,
+  VideoOff,
 } from "lucide-react";
 
 // Constants
@@ -62,6 +67,9 @@ interface ApiAttendanceResponse {
     timestamp: string;
     status: "entered" | "exited";
     student?: { id: number; index_number: string; name: string };
+    student_name?: string;
+    student_index?: string;
+    time?: string;
   }[];
   timestamp: string;
 }
@@ -99,7 +107,9 @@ const LiveTimer = ({ isSessionActive }: { isSessionActive: boolean }) => {
       const tick = () => {
         const startStr = localStorage.getItem("sessionStartTime");
         if (startStr) {
-          const elapsed = Math.floor((Date.now() - parseInt(startStr, 10)) / 1000);
+          const elapsed = Math.floor(
+            (Date.now() - parseInt(startStr, 10)) / 1000,
+          );
           setElapsedTime(Math.max(0, elapsed));
         }
       };
@@ -125,7 +135,7 @@ const LiveTimer = ({ isSessionActive }: { isSessionActive: boolean }) => {
   if (!isSessionActive) return null;
 
   return (
-    <span className="text-red-600 font-bold text-sm flex items-center gap-1.5 animate-pulse min-w-[100px]">
+    <span className="text-red-600 font-bold text-md flex items-center gap-3 animate-pulse min-w-[100px]">
       <span className="w-2 h-2 rounded-full bg-red-600"></span>
       Live: {formatTime(elapsedTime)}
     </span>
@@ -163,7 +173,23 @@ export default function LecturerLiveClassMonitoring({
   onLogout,
   onNavigate,
 }: LecturerLiveClassMonitoringProps) {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sessionIdParam = searchParams.get("sessionId");
+  const isAdminRoute = location.pathname.includes("/admin");
+  const storageKey = isAdminRoute
+    ? "admin_activeSession"
+    : "lecturer_activeSession";
+
+  const role =
+    localStorage.getItem("lecturer_role") || localStorage.getItem("adminToken")
+      ? "Admin"
+      : "Lecturer";
   // UI state
+  const [activeTab, setActiveTab] = useState<"camera" | "manual">(
+    isAdminRoute ? "manual" : "camera",
+  );
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [selectedSession, setSelectedSession] = useState("");
@@ -201,6 +227,9 @@ export default function LecturerLiveClassMonitoring({
   // Attendance notification toast
   const [attendanceToast, setAttendanceToast] = useState<string | null>(null);
 
+  // Live Elapsed Timer state
+  const [elapsedTime, setElapsedTime] = useState("00:00:00");
+
   // Camera / recognition refs & state
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const exitVideoRef = useRef<HTMLVideoElement>(null);
@@ -214,6 +243,9 @@ export default function LecturerLiveClassMonitoring({
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [inCameraId, setInCameraId] = useState("");
   const [outCameraId, setOutCameraId] = useState("");
+  const [todaySessions, setTodaySessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [manualIndex, setManualIndex] = useState("");
 
   const inCamIndex = videoDevices.findIndex(
     (cam) => cam.deviceId === inCameraId,
@@ -221,6 +253,70 @@ export default function LecturerLiveClassMonitoring({
   const outCamIndex = videoDevices.findIndex(
     (cam) => cam.deviceId === outCameraId,
   );
+
+  // Dynamic status logic
+  const selectedSessionDetails = (todaySessions || []).find(
+    (s) => String(s.id) === String(selectedSession),
+  );
+  // Independent View-Only: Admin AND backend says it's live
+  const isOwner = localStorage.getItem(storageKey) === String(selectedSession);
+  const isViewOnly =
+    isAdminRoute && selectedSessionDetails?.is_live === true && !isOwner;
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    // For Owner (Lecturer), use the absolute start time from localStorage for precision
+    const localStartTime = localStorage.getItem("sessionStartTime");
+
+    // For View-Only (Admin), use the DB timestamp.
+    const dbTimeStr =
+      selectedSessionDetails?.created_at ||
+      selectedSessionDetails?.started_at ||
+      selectedSessionDetails?.start_time;
+
+    let startTimeMs = 0;
+
+    if (localStartTime && !isViewOnly) {
+      startTimeMs = parseInt(localStartTime, 10);
+    } else if (dbTimeStr) {
+      // Fix Python UTC timestamp by stripping microseconds completely
+      // e.g. "2026-04-23 21:18:15.643787" -> "2026-04-23T21:18:15Z"
+      const tStr = String(dbTimeStr);
+      if (tStr.includes("-")) {
+        const cleanStr = tStr.split(".")[0].replace(" ", "T");
+        const finalStr = cleanStr.endsWith("Z") ? cleanStr : `${cleanStr}Z`;
+        startTimeMs = new Date(finalStr).getTime();
+      } else if (tStr.includes(":")) {
+        // Fallback if backend only sends a time string like "08:00:00"
+        const d = new Date();
+        const [h, m, s] = tStr.split(":");
+        d.setHours(parseInt(h), parseInt(m), parseInt(s || "0"));
+        startTimeMs = d.getTime();
+      }
+    }
+
+    if ((sessionActive || isViewOnly) && startTimeMs && !isNaN(startTimeMs)) {
+      interval = setInterval(() => {
+        const now = new Date().getTime();
+        const diff = Math.max(0, now - startTimeMs);
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setElapsedTime(
+          `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+        );
+      }, 1000);
+    } else {
+      setElapsedTime("00:00:00");
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [sessionActive, isViewOnly, selectedSessionDetails]);
 
   useEffect(() => {
     const getCameras = async () => {
@@ -294,50 +390,178 @@ export default function LecturerLiveClassMonitoring({
     fetchProfile();
   }, []);
 
+  // Fetch Today's Sessions (Admin or Lecturer)
+  useEffect(() => {
+    const fetchSessions = async () => {
+      setIsLoadingSessions(true);
+      try {
+        const token =
+          role === "Admin"
+            ? localStorage.getItem("adminToken")
+            : localStorage.getItem("lecturerToken");
+        const endpoint =
+          role === "Admin"
+            ? `${API_BASE}/api/admin/timetable/today`
+            : `${API_BASE}/api/lecturer/timetable`; // Existing lecturer timetable
+
+        const res = await fetch(endpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // For lecturer, filter for today only if not already done by backend
+          if (role === "Lecturer") {
+            const today = new Date().toISOString().split("T")[0];
+            const sessionsArray = Array.isArray(data)
+              ? data
+              : data?.sessions || [];
+            setTodaySessions(
+              sessionsArray.filter((s: any) => s.date === today),
+            );
+          } else {
+            // Admin endpoint returns { stats, sessions }
+            const sessionsArray =
+              data?.sessions || (Array.isArray(data) ? data : []);
+            setTodaySessions(sessionsArray);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch sessions", err);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+    fetchSessions();
+  }, [role]);
+
+  // Auto-select session from URL param
+  useEffect(() => {
+    if (
+      Array.isArray(todaySessions) &&
+      todaySessions.length > 0 &&
+      sessionIdParam
+    ) {
+      const sess = todaySessions.find(
+        (s) => s.id.toString() === sessionIdParam,
+      );
+      if (sess) {
+        setSelectedSession(sessionIdParam);
+        setSelectedSubject(sess.module_code);
+        setSessionDetails((prev) => ({
+          ...prev,
+          location: sess.location || prev.location,
+        }));
+
+        // Optional: Auto-start if it's Live?
+        // For now just pre-selecting is safer.
+      }
+    }
+  }, [todaySessions, sessionIdParam]);
+
+  // Restore session active state if we are the owner
+  useEffect(() => {
+    const savedActiveId = localStorage.getItem(storageKey);
+    if (savedActiveId && String(savedActiveId) === String(selectedSession)) {
+      setSessionActive(true);
+    }
+  }, [selectedSession, storageKey]);
+
+  const handleManualMark = async () => {
+    if (!selectedSession) {
+      toast.error("Please select a session first!");
+      return;
+    }
+    if (!manualIndex.trim()) {
+      toast.error("Please enter a student index!");
+      return;
+    }
+
+    try {
+      const token =
+        localStorage.getItem("adminToken") ||
+        localStorage.getItem("lecturerToken");
+      const res = await fetch(`${API_BASE}/api/attendance/manual-override`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          session_id: parseInt(selectedSession),
+          student_index: manualIndex.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        toast.success(`Attendance marked for ${manualIndex}`);
+        setManualIndex("");
+        // The polling useEffect will pick up the new log entry automatically
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || "Marking failed.");
+      }
+    } catch (error) {
+      toast.error("Network error.");
+    }
+  };
+
   // Live Data Polling for Logs and Stats
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
-    if (sessionActive && currentSessionId) {
-      interval = setInterval(async () => {
-        try {
-          const logsRes = await fetch(
-            `${API_BASE}/api/attendance/live_logs/${currentSessionId}`,
-          );
-          if (logsRes.ok) {
-            const logsData = await logsRes.json();
-            setLogEntries(
-              logsData.map((d: any, idx: number) => ({
-                id: `${idx}-${d.time || d.timestamp}`,
-                studentName: d.name,
-                index: d.index_number,
-                time: d.timestamp,
-                status: d.status,
-              })),
-            );
-          }
+    const targetId =
+      currentSessionId ||
+      (isViewOnly && selectedSession ? selectedSession : null);
 
-          const statsRes = await fetch(
-            `${API_BASE}/api/attendance/session_stats/${currentSessionId}`,
+    const fetchLiveData = async () => {
+      if (!targetId) return;
+      try {
+        // 1. Fetch Logs
+        const logsRes = await fetch(
+          `${API_BASE}/api/attendance/live_logs/${targetId}`,
+        );
+        if (logsRes.ok) {
+          const logsData = await logsRes.json();
+          setLogEntries(
+            logsData.map((d: any, idx: number) => ({
+              id: `${idx}-${d.timestamp || d.time}`,
+              studentName: d.name || d.student_name || "Unknown",
+              indexNumber: d.index_number || d.student_index || d.student_id,
+              time: d.timestamp || d.time,
+              status: d.status,
+            })),
           );
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            setLiveStats({
-              currentlyInside: statsData.currently_inside || 0,
-              totalEntered: statsData.total_entered || 0,
-              leftEarly: statsData.left_early || 0,
-            });
-          }
-        } catch (error) {
-          console.error("Live polling error:", error);
         }
-      }, 2000);
+
+        // 2. Fetch Stats
+        const statsRes = await fetch(
+          `${API_BASE}/api/attendance/session_stats/${targetId}`,
+        );
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setLiveStats({
+            currentlyInside: statsData.currently_inside || 0,
+            totalEntered: statsData.total_entered || 0,
+            leftEarly: statsData.left_early || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Live polling error:", error);
+      }
+    };
+
+    if (targetId) {
+      // Fetch immediately
+      fetchLiveData();
+      // Then poll
+      interval = setInterval(fetchLiveData, 1000);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [sessionActive, currentSessionId]);
+  }, [sessionActive, currentSessionId, isViewOnly, selectedSession]);
 
   // Auto-dismiss toasts
   useEffect(() => {
@@ -428,11 +652,13 @@ export default function LecturerLiveClassMonitoring({
 
       // Prepend new log entries
       if (data.logs.length > 0) {
-        const newEntries: LogEntry[] = data.logs.map((log) => ({
+        const newEntries: LogEntry[] = data.logs.map((log: any) => ({
           id: _logIdCounter++,
-          studentName: log.student?.name ?? `Student #${log.student_id}`,
-          indexNumber: log.student?.index_number,
-          time: nowTimeString(),
+          studentName:
+            log.student?.name || log.student_name || `Student #${log.student_id}`,
+          indexNumber:
+            log.student?.index_number || log.student_index || log.student_id,
+          time: log.timestamp || log.time || nowTimeString(),
           status: log.status,
         }));
 
@@ -486,6 +712,7 @@ export default function LecturerLiveClassMonitoring({
       setCurrentSessionId(data.id);
 
       // Persist session to localStorage for navigation resilience
+      localStorage.setItem(storageKey, String(selectedSession));
       localStorage.setItem(
         "activeAttendanceSession",
         JSON.stringify({
@@ -500,6 +727,16 @@ export default function LecturerLiveClassMonitoring({
 
       // 2. Start frontend camera hardware
       await startCamera();
+
+      // SYNC: Mark timetable session as live for real-time dashboard updates
+      try {
+        await fetch(`${API_BASE}/api/timetable/${selectedSession}/start`, {
+          method: "POST",
+        });
+      } catch (err) {
+        console.error("Failed to sync session start:", err);
+      }
+
       setSessionActive(true);
       setAttendanceToast(null);
 
@@ -543,7 +780,15 @@ export default function LecturerLiveClassMonitoring({
   const handleEndSession = useCallback(async () => {
     // Clear persisted session immediately
     localStorage.removeItem("activeAttendanceSession");
+    localStorage.removeItem(storageKey);
     localStorage.removeItem("sessionStartTime");
+
+    // Optimistic UI update: mark session dead on client so it doesn't flip to ViewOnly
+    setTodaySessions((prev) =>
+      prev.map((s) =>
+        String(s.id) === String(selectedSession) ? { ...s, is_live: false } : s,
+      ),
+    );
 
     stopCamera();
     setSessionActive(false);
@@ -553,6 +798,18 @@ export default function LecturerLiveClassMonitoring({
     setAnnotatedFrame(null);
     setShowEndSessionModal(false);
     setShowSuccessToast(true);
+
+    // SYNC: Mark timetable session as closed for real-time dashboard updates
+    if (selectedSession) {
+      try {
+        await fetch(`${API_BASE}/api/timetable/${selectedSession}/stop`, {
+          method: "POST",
+        });
+      } catch (err) {
+        console.error("Failed to sync session stop:", err);
+      }
+    }
+
     setLogEntries([]);
     setLiveStats({ currentlyInside: 0, totalEntered: 0, leftEarly: 0 });
 
@@ -604,6 +861,35 @@ export default function LecturerLiveClassMonitoring({
   // RENDER
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
+      {/* Admin Back Button */}
+      {isAdminRoute && (
+        <div className="bg-white border-b border-gray-100">
+          <button
+            onClick={() => navigate("/admin/live-class-monitoring")}
+            className="flex items-center gap-2 px-3 py-1.5 text-gray-600 hover:text-blue-600 font-bold cursor-pointer rounded-lg transition-all group text-md"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Sessions Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* View-Only Mode Banner for Admin */}
+      {isViewOnly && (
+        <div className="mx-4 mt-2 bg-blue-50 border-2 border-blue-200 rounded-xl p-3 flex items-start gap-3 shadow-sm">
+          <div className="bg-blue-100 p-2 rounded-lg shrink-0 mt-1">
+            <Info className="w-6 h-6 text-blue-700" />
+          </div>
+          <div>
+            <h4 className="text-blue-800 font-bold text-md">View-Only Mode</h4>
+            <p className="text-blue-600 text-sm mt-0.5 leading-relaxed">
+              This session is currently being managed by the Lecturer. You are
+              viewing the live attendance stream but cannot modify or end the
+              session.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Hidden canvas used for frame capture — never rendered visibly */}
       <canvas ref={canvasRef} className="hidden" />
 
@@ -614,7 +900,7 @@ export default function LecturerLiveClassMonitoring({
           <div className="flex items-center gap-4">
             {/* Subject Selector */}
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
                 Subject
               </label>
               <select
@@ -638,35 +924,50 @@ export default function LecturerLiveClassMonitoring({
 
             {/* Session Selector */}
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
                 Session
               </label>
               <select
                 aria-label="Select Course Session"
                 value={selectedSession}
-                onChange={(e) => setSelectedSession(e.target.value)}
-                disabled={sessionActive}
-                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500  transition-all disabled:opacity-75"
+                onChange={(e) => {
+                  const sessId = e.target.value;
+                  setSelectedSession(sessId);
+                  const sess = todaySessions.find(
+                    (s) => s.id.toString() === sessId,
+                  );
+                  if (sess) {
+                    setSelectedSubject(sess.module_code);
+                    setSessionDetails((prev) => ({
+                      ...prev,
+                      location: sess.location || prev.location,
+                    }));
+                  }
+                }}
+                disabled={sessionActive || isLoadingSessions || isViewOnly}
+                className={`w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500  transition-all disabled:opacity-75 ${
+                  isViewOnly ? "opacity-70 cursor-not-allowed bg-gray-50" : ""
+                }`}
               >
-                <option value="">Select Session/Batch...</option>
-                <option value="session1">
-                  Today 9:00 AM - Year 2 Semester 1
+                <option value="">
+                  {isLoadingSessions
+                    ? "Loading sessions..."
+                    : "Select Session/Batch..."}
                 </option>
-                <option value="session2">
-                  Today 11:00 AM - Year 2 Semester 2
-                </option>
-                <option value="session3">
-                  Today 2:00 PM - Year 3 Semester 1
-                </option>
-                <option value="session4">
-                  Today 4:00 PM - Year 3 Semester 2
-                </option>
+                {Array.isArray(todaySessions) &&
+                  todaySessions.map((sess) => (
+                    <option key={sess.id} value={sess.id}>
+                      {sess.batch} -{" "}
+                      {role === "Admin" ? sess.module_name : sess.module_code}
+                      {role === "Admin" ? ` (${sess.lecturer_name})` : ""}
+                    </option>
+                  ))}
               </select>
             </div>
 
             {/* Session Type */}
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
                 Session Type
               </label>
               <select
@@ -686,7 +987,7 @@ export default function LecturerLiveClassMonitoring({
 
             {/* Location */}
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
                 Location
               </label>
               <select
@@ -710,30 +1011,50 @@ export default function LecturerLiveClassMonitoring({
 
             {/* Session Controls */}
             <div className="flex items-end pl-2">
-              <div className="flex items-center gap-3">
-                {/* Session Button & Timer */}
-                {sessionActive ? (
-                  <div className="flex items-center gap-3">
-                    <LiveTimer isSessionActive={sessionActive} />
-                    <button
-                      onClick={() => setShowEndSessionModal(true)}
-                      className="px-5 py-2.5 cursor-pointer bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition"
-                    >
-                      End Session
-                    </button>
-                  </div>
-                ) : (
+              <div className="flex items-center gap-3 mt-4">
+                {/* START: Only show if NOT view-only and NOT active */}
+                {!isViewOnly && !sessionActive && (
                   <button
                     onClick={handleStartSession}
                     disabled={!inCameraId}
                     className={`px-5 py-2.5 cursor-pointer text-white rounded-lg font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${
                       !inCameraId
-                        ? "bg-green-400 cursor-not-allowed opacity-70"
-                        : "bg-green-600 hover:bg-green-700"
+                        ? "bg-green-500 cursor-not-allowed opacity-70"
+                        : "bg-green-600 hover:bg-green-700 shadow-md"
                     }`}
                   >
                     <Play className="w-4 h-4 fill-white" /> Start Live Session
                   </button>
+                )}
+
+                {/* STOP: Only show if NOT view-only AND active */}
+                {!isViewOnly && sessionActive && (
+                  <div className="flex items-center gap-3">
+                    <LiveTimer isSessionActive={sessionActive} />
+                    <button
+                      onClick={() => setShowEndSessionModal(true)}
+                      className="px-6 py-2.5 cursor-pointer bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition shadow-md"
+                    >
+                      End Session
+                    </button>
+                  </div>
+                )}
+
+                {/* VIEW-ONLY Badge: For admins joining an existing session */}
+                {isViewOnly && (
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="bg-blue-50 text-blue-600 border border-blue-200 px-5 py-2 rounded-lg font-bold flex items-center gap-3 shadow-sm cursor-default">
+                      <span className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></span>
+                      Viewing Live Stream
+                    </div>
+
+                    {/* NEW: Admin Live Timer */}
+                    <div className="bg-red-50 text-gray-800 border-2 border-red-200 px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
+                      <Clock className="w-4 h-4 text-red-500 animate-pulse" />
+                      <span className="text-red-700 mr-1">Live:</span>{" "}
+                      {elapsedTime}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -746,7 +1067,7 @@ export default function LecturerLiveClassMonitoring({
               <span>{cameraError}</span>
               <button
                 onClick={() => setCameraError(null)}
-                className="ml-auto hover:text-red-900"
+                className="ml-auto hover:text-red-900 cursor-pointer"
                 aria-label="Dismiss error"
               >
                 <X className="w-4 h-4" />
@@ -761,7 +1082,7 @@ export default function LecturerLiveClassMonitoring({
           <div className="flex-1 p-6 overflow-auto">
             <div className="grid grid-cols-2 gap-6 h-full">
               {/* Entrance Camera Feed */}
-              <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden flex flex-col">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col">
                 <div className="bg-green-600 text-white px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold">
                     <Video className="w-5 h-5" /> Entrance Camera (IN)
@@ -797,8 +1118,10 @@ export default function LecturerLiveClassMonitoring({
                     <select
                       value={inCameraId}
                       onChange={(e) => setInCameraId(e.target.value)}
-                      disabled={sessionActive}
-                      className="bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px]"
+                      disabled={sessionActive || isViewOnly}
+                      className={`bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px] ${
+                        isViewOnly ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
                       <option value="" className="text-gray-900 bg-white">
                         Select Camera...
@@ -819,7 +1142,7 @@ export default function LecturerLiveClassMonitoring({
                   </div>
                 </div>
 
-                {!sessionActive ? (
+                {!(sessionActive || isViewOnly) ? (
                   /* Offline State */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden flex items-center justify-center">
                     <div className="text-center">
@@ -832,7 +1155,7 @@ export default function LecturerLiveClassMonitoring({
                       </p>
                     </div>
                   </div>
-                ) : !isEntranceActive ? (
+                ) : !isEntranceActive && !isViewOnly ? (
                   /* Standby Overlay */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden flex items-center justify-center">
                     <div className="text-center">
@@ -850,33 +1173,53 @@ export default function LecturerLiveClassMonitoring({
                   </div>
                 ) : (
                   /* Live Webcam State */
-                  <div className="flex-1 bg-gray-800 relative overflow-hidden min-h-[300px]">
-                    {/* Backend-Streamed Annotated Frame */}
-                    <img
-                      src={`${API_BASE}/api/attendance/video_feed/in?session_id=${currentSessionId}&cam_id=0`}
-                      className="w-full h-full object-cover rounded-b-lg block"
-                      alt="Live IN Feed"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
+                  <div className="flex-1 bg-gray-900 relative overflow-hidden min-h-[300px] flex items-center justify-center">
+                    {isViewOnly ? (
+                      /* ADMIN VIEW-ONLY PLACEHOLDER (No Video) */
+                      <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center z-10">
+                        <VideoOff className="w-12 h-12 mb-3 opacity-40 text-gray-500" />
+                        <p className="text-md font-bold text-gray-300">
+                          View-Only Mode
+                        </p>
+                        <p className="text-sm mt-1 opacity-80 font-medium leading-relaxed max-w-[200px]">
+                          Live video feed is disabled for monitoring. Real-time
+                          attendance logs are updating on the right panel.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Backend-Streamed Annotated Frame (Lecturer Only) */}
+                        <img
+                          src={`${API_BASE}/api/attendance/video_feed/in?session_id=${currentSessionId || selectedSession}&cam_id=0`}
+                          className="w-full h-full object-cover rounded-b-lg block relative z-10"
+                          alt="Live IN Feed"
+                          onError={(e) =>
+                            (e.currentTarget.style.display = "none")
+                          }
+                        />
 
-                    {/* Live Indicator */}
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-white text-xs font-medium">
-                        LIVE ({inCamIndex})
-                      </span>
-                    </div>
+                        {/* Live Indicator */}
+                        <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          <span className="text-white text-xs font-medium">
+                            LIVE ({inCamIndex})
+                          </span>
+                        </div>
+                      </>
+                    )}
 
-                    {/* Stop Camera Button Over Live Feed */}
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20">
-                      <button
-                        onClick={() => toggleEntranceCamera(false)}
-                        className="bg-black/80 cursor-pointer hover:bg-black text-white text-sm font-bold py-2 px-6 rounded-full transition-colors border border-gray-600 flex items-center gap-2"
-                      >
-                        <Square className="w-4 h-4 text-red-500 fill-current" />{" "}
-                        Stop Camera
-                      </button>
-                    </div>
+                    {/* Stop Camera Button Over Live Feed (Hidden for View-Only) */}
+                    {!isViewOnly && (
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20">
+                        <button
+                          onClick={() => toggleEntranceCamera(false)}
+                          className="bg-black/80 cursor-pointer hover:bg-black text-white text-sm font-bold py-2 px-6 rounded-full transition-colors border border-gray-600 flex items-center gap-2"
+                        >
+                          <Square className="w-4 h-4 text-red-500 fill-current" />{" "}
+                          Stop Camera
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -912,8 +1255,10 @@ export default function LecturerLiveClassMonitoring({
                     <select
                       value={outCameraId}
                       onChange={(e) => setOutCameraId(e.target.value)}
-                      disabled={sessionActive}
-                      className="bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px]"
+                      disabled={sessionActive || isViewOnly}
+                      className={`bg-transparent text-white font-semibold text-sm border-none focus:ring-0 cursor-pointer outline-none min-w-[150px] ${
+                        isViewOnly ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
                       <option value="" className="text-gray-900 bg-white">
                         Select Camera...
@@ -934,7 +1279,7 @@ export default function LecturerLiveClassMonitoring({
                   </div>
                 </div>
 
-                {!sessionActive ? (
+                {!(sessionActive || isViewOnly) ? (
                   /* Offline State */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden flex items-center justify-center">
                     <div className="text-center">
@@ -947,7 +1292,7 @@ export default function LecturerLiveClassMonitoring({
                       </p>
                     </div>
                   </div>
-                ) : !isExitActive ? (
+                ) : !isExitActive && !isViewOnly ? (
                   /* Standby Overlay */
                   <div className="flex-1 bg-gray-800 relative overflow-hidden flex items-center justify-center">
                     <div className="text-center">
@@ -965,33 +1310,53 @@ export default function LecturerLiveClassMonitoring({
                   </div>
                 ) : (
                   /* Live Webcam State */
-                  <div className="flex-1 bg-gray-800 relative overflow-hidden min-h-[300px]">
-                    {/* Backend-Streamed Annotated Frame */}
-                    <img
-                      src={`${API_BASE}/api/attendance/video_feed/out?session_id=${currentSessionId}&cam_id=0`}
-                      className="w-full h-full object-cover rounded-b-lg block"
-                      alt="Live OUT Feed"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                    />
+                  <div className="flex-1 bg-gray-900 relative overflow-hidden min-h-[300px] flex items-center justify-center">
+                    {isViewOnly ? (
+                      /* ADMIN VIEW-ONLY PLACEHOLDER (No Video) */
+                      <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center z-10">
+                        <VideoOff className="w-12 h-12 mb-3 opacity-40 text-gray-500" />
+                        <p className="text-md font-bold text-gray-300">
+                          View-Only Mode
+                        </p>
+                        <p className="text-sm mt-1 opacity-80 font-medium leading-relaxed max-w-[200px]">
+                          Live video feed is disabled for monitoring. Real-time
+                          attendance logs are updating on the right panel.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Backend-Streamed Annotated Frame (Lecturer Only) */}
+                        <img
+                          src={`${API_BASE}/api/attendance/video_feed/out?session_id=${currentSessionId || selectedSession}&cam_id=0`}
+                          className="w-full h-full object-cover rounded-b-lg block relative z-10"
+                          alt="Live OUT Feed"
+                          onError={(e) =>
+                            (e.currentTarget.style.display = "none")
+                          }
+                        />
 
-                    {/* Live Indicator */}
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-white text-xs font-medium">
-                        LIVE ({outCamIndex})
-                      </span>
-                    </div>
+                        {/* Live Indicator */}
+                        <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full z-20">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                          <span className="text-white text-xs font-medium">
+                            LIVE ({outCamIndex})
+                          </span>
+                        </div>
+                      </>
+                    )}
 
-                    {/* Stop Camera Button Over Live Feed */}
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20">
-                      <button
-                        onClick={() => toggleExitCamera(false)}
-                        className="bg-black/80 cursor-pointer hover:bg-black text-white text-sm font-bold py-2 px-6 rounded-full transition-colors border border-gray-600 flex items-center gap-2"
-                      >
-                        <Square className="w-4 h-4 text-red-500 fill-current" />{" "}
-                        Stop Camera
-                      </button>
-                    </div>
+                    {/* Stop Camera Button Over Live Feed (Hidden for View-Only) */}
+                    {!isViewOnly && (
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20">
+                        <button
+                          onClick={() => toggleExitCamera(false)}
+                          className="bg-black/80 cursor-pointer hover:bg-black text-white text-sm font-bold py-2 px-6 rounded-full transition-colors border border-gray-600 flex items-center gap-2"
+                        >
+                          <Square className="w-4 h-4 text-red-500 fill-current" />{" "}
+                          Stop Camera
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -999,30 +1364,37 @@ export default function LecturerLiveClassMonitoring({
           </div>
 
           {/* Real-Time Log Panel - Right Sidebar */}
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-200 bg-blue-50">
+          <div className="w-80 bg-white border border-gray-1200 flex flex-col">
+            <div className="px-5 py-4  border-gray-300 bg-gray-200">
               <h3 className="font-bold text-gray-900">Live Entry/Exit Log</h3>
               <p className="text-xs text-gray-600 mt-1">
                 Real-time activity tracking
               </p>
             </div>
 
-            {/* Manual Override */}
-            <div className="px-5 py-4 border-b border-gray-200 bg-gray-50">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Manual Override
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Index (e.g. CS2026)"
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-medium"
-                />
-                <button className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
-                  Mark
-                </button>
+            {/* Manual Override (Hidden for View-Only) */}
+            {!isViewOnly && (
+              <div className="px-5 py-4 border-b border-gray-300 bg-gray-50">
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Manual Override
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Index (e.g. CS202601)"
+                    value={manualIndex}
+                    onChange={(e) => setManualIndex(e.target.value)}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-medium transition-all"
+                  />
+                  <button
+                    onClick={handleManualMark}
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer rounded-lg text-sm font-bold transition shadow-sm"
+                  >
+                    Mark
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex-1 overflow-y-auto">
               {!sessionActive ? (
@@ -1057,30 +1429,75 @@ export default function LecturerLiveClassMonitoring({
                       className="px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-gray-900 text-sm">
-                          {entry.studentName}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="font-bold text-gray-800 text-sm truncate max-w-[140px]"
+                            title={entry.studentName}
+                          >
+                            {entry.studentName}
+                          </span>
+                          <span className="text-gray-800 font-bold text-xs bg-gray-100 px-2 py-0.5 rounded-full border-2 border-gray-200">
+                            {entry.indexNumber || "N/A"}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           {entry.status === "entered" ? (
-                            <ArrowUp className="w-4 h-4 text-green-600" />
+                            <ArrowUp className="w-5 h-5 text-green-600" />
                           ) : (
-                            <ArrowDown className="w-4 h-4 text-red-600" />
+                            <ArrowDown className="w-5 h-5 text-red-600" />
                           )}
-                          <button
-                            className="hover:bg-gray-200 p-1 rounded transition-colors"
-                            title="Edit entry"
-                            onClick={() => handleEditEntry(entry)}
-                          >
-                            <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-                          </button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {entry.time}
+                        <span className="text-xs text-gray-800">
+                          {entry.time
+                            ? (() => {
+                                const t = String(entry.time);
+
+                                // Scenario A: Backend sent formatted UTC (e.g., "09:52 PM")
+                                // We must manually add 5.5 hours (330 mins) for local time
+                                if (t.match(/[AP]M/i) && !t.includes("-")) {
+                                  const match = t.match(
+                                    /(\d+):(\d+)\s*([AP]M)/i,
+                                  );
+                                  if (match) {
+                                    let h = parseInt(match[1]);
+                                    const m = parseInt(match[2]);
+                                    const isPM = match[3].toUpperCase() === "PM";
+                                    if (isPM && h !== 12) h += 12;
+                                    if (!isPM && h === 12) h = 0;
+
+                                    const totalMinutes = h * 60 + m + 330; // +5.5 hours
+                                    let newH = Math.floor(totalMinutes / 60) % 24;
+                                    const newM = totalMinutes % 60;
+
+                                    const newAmPm = newH >= 12 ? "PM" : "AM";
+                                    newH = newH % 12;
+                                    if (newH === 0) newH = 12;
+
+                                    return `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")} ${newAmPm}`;
+                                  }
+                                }
+
+                                // Scenario B: Backend sent raw DB timestamp (e.g., "2026-04-23 21:18:15.643787")
+                                let cleanStr = t.split(".")[0].replace(" ", "T");
+                                if (cleanStr.includes("-") && !cleanStr.endsWith("Z"))
+                                  cleanStr += "Z";
+
+                                const d = new Date(cleanStr);
+
+                                // If still invalid, fallback to raw string
+                                if (isNaN(d.getTime())) return t;
+
+                                return d.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                });
+                              })()
+                            : "N/A"}
                         </span>
                         <span
-                          className={`text-xs font-bold ${
+                          className={`text-sm font-bold ${
                             entry.status === "entered"
                               ? "text-green-600"
                               : "text-red-600"
@@ -1098,18 +1515,18 @@ export default function LecturerLiveClassMonitoring({
         </div>
 
         {/* Bottom Stats Bar */}
-        <div className="bg-white border-t-2 border-gray-200 px-6 py-4 shadow-lg">
+        <div className="bg-white border-t-2 border-gray-200 px-6 py-4 shadow-md">
           <div className="grid grid-cols-3 gap-6">
             <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="p-3 bg-blue-600 rounded-lg">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-md text-gray-600 font-medium">
                   Currently Inside
                 </p>
                 <p className="text-3xl font-bold text-blue-600">
-                  {sessionActive ? liveStats.currentlyInside : 0}
+                  {sessionActive || isViewOnly ? liveStats.currentlyInside : 0}
                 </p>
               </div>
             </div>
@@ -1119,11 +1536,11 @@ export default function LecturerLiveClassMonitoring({
                 <ArrowUp className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-md text-gray-600 font-medium">
                   Total Entered
                 </p>
                 <p className="text-3xl font-bold text-green-600">
-                  {sessionActive ? liveStats.totalEntered : 0}
+                  {sessionActive || isViewOnly ? liveStats.totalEntered : 0}
                 </p>
               </div>
             </div>
@@ -1133,9 +1550,9 @@ export default function LecturerLiveClassMonitoring({
                 <UserMinus className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 font-medium">Left Early</p>
+                <p className="text-md text-gray-600 font-medium">Left Early</p>
                 <p className="text-3xl font-bold text-red-600">
-                  {sessionActive ? liveStats.leftEarly : 0}
+                  {sessionActive || isViewOnly ? liveStats.leftEarly : 0}
                 </p>
               </div>
             </div>
@@ -1198,112 +1615,6 @@ export default function LecturerLiveClassMonitoring({
                 className="px-6 py-2.5 cursor-pointer bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
               >
                 Confirm &amp; Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Entry Modal */}
-      {showEditModal && selectedEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={() => setShowEditModal(false)}
-          />
-          <div className="relative bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 animate-fade-in">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Edit Attendance Log
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Manual correction for system entry
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label="Close modal"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-            <div className="px-6 py-5">
-              <div className="bg-blue-50 rounded-lg p-4 mb-5 border border-blue-200">
-                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                  Student Information
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-lg">
-                      {selectedEntry.studentName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Index: {selectedEntry.indexNumber || "CS/2021/001"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    aria-label="Select Status"
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                  >
-                    <option value="Present">Present</option>
-                    <option value="Late">Late</option>
-                    <option value="Left Early">Left Early</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Time Entry
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    value={editTime}
-                    onChange={(e) => setEditTime(e.target.value)}
-                    placeholder="09:05 AM"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Reason for change
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    value={editReason}
-                    onChange={(e) => setEditReason(e.target.value)}
-                    placeholder="System error / Forgot ID card"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex items-center justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
-              >
-                Update Record
               </button>
             </div>
           </div>

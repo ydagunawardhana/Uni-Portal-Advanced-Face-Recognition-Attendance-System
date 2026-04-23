@@ -156,3 +156,8 @@ class ModuleUpdate(BaseModel):
     level: Optional[str] = None
     degree: Optional[str] = None
 
+
+class ManualOverride(BaseModel):
+    session_id: int
+    student_index: str
+

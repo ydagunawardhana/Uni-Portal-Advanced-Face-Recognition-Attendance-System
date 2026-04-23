@@ -6,7 +6,7 @@ import StudentTimetable from "./StudentTimetable";
 import AttendanceCorrectionRequest from "./AttendanceCorrectionRequest";
 import StudentProfileSecurity from "./StudentProfileSecurity";
 import StudentHelpSupport from "./StudentHelpSupport";
-import BookConsultations from "./BookConsultations";
+import BookAppointments from "./BookAppointments";
 import { Bell, LogOut, CheckCircle, AlertTriangle, Info } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -232,8 +232,8 @@ export default function StudentDashboard({
         return <StudentProfileSecurity notifications={notifications} />;
       case "help":
         return <StudentHelpSupport />;
-      case "book-consultations":
-        return <BookConsultations />;
+      case "book-appointments":
+        return <BookAppointments />;
       default:
         return <DashboardOverview />;
     }
@@ -344,9 +344,9 @@ export default function StudentDashboard({
             {/* Logout Button */}
             <button
               onClick={handleLogoutClick}
-              className="flex items-center cursor-pointer space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center cursor-pointer space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold shadow-sm"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               <span>Logout</span>
             </button>
           </div>

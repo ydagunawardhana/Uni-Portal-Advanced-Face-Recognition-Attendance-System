@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import {
   LogOut,
   Camera,
@@ -24,6 +25,8 @@ import SystemAuditLogs from "./SystemAuditLogs";
 import PendingRegistrations from "./PendingRegistrations";
 import TimetableUpload from "./TimetableUpload";
 import ManageModules from "./ManageModules";
+import LecturerLiveClassMonitoring from "./LecturerLiveClassMonitoring";
+import LiveSessionsDashboard from "./LiveSessionsDashboard";
 
 const API_BASE = "http://localhost:8000";
 const TOTAL_FRAMES = 50;
@@ -127,9 +130,19 @@ export default function AdminDashboard({
   onNavigate,
 }: AdminDashboardProps) {
   //  UI state
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(
     () => localStorage.getItem("adminActiveTab") || "dashboard",
   );
+
+  // Sync tab with URL for routed dashboard actions
+  useEffect(() => {
+    if (location.pathname.includes("live-camera")) {
+      setActiveTab("live_camera");
+    } else if (location.pathname.includes("live-class-monitoring")) {
+      setActiveTab("live_attendance");
+    }
+  }, [location.pathname]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   //  Form fields
@@ -613,6 +626,10 @@ export default function AdminDashboard({
         return "Attendance Reports";
       case "audit":
         return "System Audit Logs";
+      case "live_attendance":
+        return "Live Academic Overview";
+      case "live_camera":
+        return "Live Camera Monitoring";
       default:
         return "Admin Dashboard";
     }
@@ -638,6 +655,8 @@ export default function AdminDashboard({
         return "Generate and export class attendance records";
       case "audit":
         return "View system audit logs";
+      case "live_attendance":
+        return "Oversee real-time attendance sessions for Lecturers";
       default:
         return "Manage your university attendance system";
     }
@@ -716,17 +735,17 @@ export default function AdminDashboard({
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
+              <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg border-2 border-gray-200 shadow-sm transition-all hover:bg-gray-200 cursor-default">
                 <User className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-bold text-gray-700">
                   Admin User
                 </span>
               </div>
               <button
                 onClick={handleLogoutClick}
-                className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold shadow-sm"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
                 <span>Logout</span>
               </button>
             </div>
@@ -749,6 +768,19 @@ export default function AdminDashboard({
           {activeTab === "pre_registrations" && (
             <PendingRegistrations onProcess={handleProcessPreRegistration} />
           )}
+          {/* Live Attendance Dashboard */}
+          {activeTab === "live_attendance" && <LiveSessionsDashboard />}
+
+          {/* Live Camera (Routed from Dashboard) */}
+          {activeTab === "live_camera" && (
+            <div className="-mt-6 -mx-8 h-[calc(100vh-80px)]">
+              <LecturerLiveClassMonitoring
+                onLogout={onLogout}
+                onNavigate={() => {}}
+              />
+            </div>
+          )}
+
           {activeTab === "timetable" && <TimetableUpload />}
 
           {/*  Student Registration  */}

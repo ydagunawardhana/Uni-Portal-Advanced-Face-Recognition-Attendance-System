@@ -19,6 +19,7 @@ import shutil
 import base64
 import secrets
 from email.message import EmailMessage
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -466,6 +467,81 @@ class LecturerUpdateRequest(BaseModel):
     department: str
     assigned_subjects: Optional[str] = None
     is_active: bool
+    
+class VisitingLecturerRequest(BaseModel):
+    name: str
+    faculty: Optional[str] = None
+    department: str
+
+
+@router.post("/lecturers/visiting")
+async def create_visiting_lecturer(
+    payload: VisitingLecturerRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    # 1. Generate unique VIS-ID
+    # Find all visiting lecturers to count
+    visitor_count = db.query(models.Lecturer).filter(models.Lecturer.employee_id.like("VIS%")).count()
+    new_vis_id = f"VIS-{visitor_count + 1:03d}"
+    
+    # Ensure uniqueness just in case
+    while db.query(models.Lecturer).filter(models.Lecturer.employee_id == new_vis_id).first():
+        visitor_count += 1
+        new_vis_id = f"VIS-{visitor_count + 1:03d}"
+
+    # 2. Generate dummy email and password
+    dummy_email = f"visiting_{int(time.time())}@temp.edu"
+    temp_pw = secrets.token_urlsafe(16)
+    hashed_pw = hash_password(temp_pw)
+
+    # 3. Create Lecturer Record
+    new_lecturer = models.Lecturer(
+        name=payload.name,
+        employee_id=new_vis_id,
+        email=dummy_email,
+        faculty=payload.faculty,
+        department=payload.department,
+        is_active=True,
+        is_visiting=True
+    )
+    db.add(new_lecturer)
+    
+    # 4. Create User Record (Required for some relationships, though login is disabled)
+    # We set is_active=False here to prevent ANY login attempts for visiting lecturers
+    new_user = models.User(
+        email=dummy_email,
+        hashed_password=hashed_pw,
+        role="Lecturer",
+        is_active=False 
+    )
+    db.add(new_user)
+    
+    db.commit()
+    db.refresh(new_lecturer)
+
+    # Audit log
+    log_audit_action(
+        db=db,
+        action_type="Lecturer Management",
+        description=f"Created Visiting Lecturer '{payload.name}' ({new_vis_id}).",
+        target_id=new_vis_id,
+    )
+
+    return {
+        "success": True, 
+        "message": f"Visiting Lecturer '{payload.name}' added with ID {new_vis_id}.",
+        "lecturer": {
+            "id": new_lecturer.id,
+            "name": new_lecturer.name,
+            "employee_id": new_vis_id,
+            "is_visiting": True
+        }
+    }
+
 
 
 @router.get("/pre-registrations", response_model=List[dict])
@@ -986,6 +1062,85 @@ def update_lecturer(
     )
 
     return {"success": True, "message": "Lecturer profile updated successfully."}
+
+
+@router.get("/timetable/today")
+def get_today_timetable_admin(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Fetch all timetable sessions scheduled for the current day with status and stats."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    current_time = now.time()
+
+    def parse_time_str(t_str):
+        try:
+            return datetime.strptime(t_str, "%I:%M %p").time()
+        except:
+            return None
+
+    # Logic to fetch today's sessions and include is_visiting flag
+    results = (
+        db.query(models.Timetable, models.Lecturer.is_visiting)
+        .outerjoin(models.Lecturer, models.Timetable.lecturer == models.Lecturer.name)
+        .filter(models.Timetable.date == today_str)
+        .all()
+    )
+
+    sessions_data = []
+    live_count = 0
+    visiting_count = 0
+
+    for entry, is_visiting in results:
+        visiting = is_visiting if is_visiting is not None else False
+        if visiting:
+            visiting_count += 1
+
+        start_t = parse_time_str(entry.start_time)
+        end_t = parse_time_str(entry.end_time)
+        
+        # Priority 1: Check explicit DB flag (Manually toggled)
+        # Priority 2: Check time window (Auto-inference)
+        status = "Pending"
+        if entry.is_live:
+            status = "Live"
+            live_count += 1
+        elif start_t and end_t:
+            if start_t <= current_time <= end_t:
+                status = "Live"
+                live_count += 1
+            elif current_time > end_t:
+                status = "Completed"
+
+        sessions_data.append({
+            "id": entry.id,
+            "module_code": entry.module_code,
+            "module_name": entry.module_name,
+            "start_time": entry.start_time,
+            "end_time": entry.end_time,
+            "location": entry.location,
+            "batch": entry.batch_id,
+            "lecturer_name": entry.lecturer,
+            "is_visiting": visiting,
+            "faculty": entry.faculty,
+            "department": entry.department,
+            "semester": entry.semester,
+            "is_live": entry.is_live,
+            "status": status
+        })
+
+    return {
+        "stats": {
+            "total_sessions": len(sessions_data),
+            "live_now": live_count,
+            "visiting_lecturers": visiting_count
+        },
+        "sessions": sessions_data
+    }
 
 
 @router.delete("/lecturers/{lecturer_id}")

@@ -33,7 +33,7 @@ interface Lecturer {
   office_hours: OfficeHour[];
 }
 
-export default function BookConsultations() {
+export default function BookAppointments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(
@@ -268,7 +268,7 @@ export default function BookConsultations() {
                       setSelectedLecturer(lecturer);
                       setSelectedSlot(null);
                     }}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
+                    className={`w-full text-left p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                       selectedLecturer?.id === lecturer.id
                         ? "bg-red-50 border-red-300 ring-1 ring-red-300 shadow-sm"
                         : "border-gray-100 hover:bg-gray-50 hover:border-gray-200"
@@ -282,7 +282,7 @@ export default function BookConsultations() {
                             : "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        <User className="w-5 h-5" />
+                        <User className="w-6 h-6" />
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 leading-tight">
@@ -410,16 +410,13 @@ export default function BookConsultations() {
                       e.preventDefault();
                       handleSendRequest();
                     }}
-                    disabled={
-                      !selectedSlot ||
-                      !reason.trim() ||
-                      isSubmitting ||
-                      isSuccess
-                    }
+                    disabled={isSubmitting || isSuccess}
                     className={`flex items-center gap-2 px-8 py-3 cursor-pointer rounded-xl font-bold transition-all shadow-lg ${
                       isSuccess
                         ? "bg-green-600 text-white cursor-default"
-                        : "bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white shadow-red-600/20 active:scale-95"
+                        : isSubmitting
+                          ? "bg-red-400 cursor-not-allowed text-white"
+                          : "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20 active:scale-95"
                     }`}
                   >
                     {isSubmitting ? (

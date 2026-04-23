@@ -6,11 +6,11 @@ import LecturerDashboardHome from "./LecturerDashboardHome";
 import LecturerAttendanceHistory from "./LecturerAttendanceHistory";
 import LecturerMySubjects from "./LecturerMySubjects";
 import LecturerSettings from "./LecturerSettings";
-import LecturerLiveClassMonitoring from "./LecturerLiveClassMonitoring";
 import ManualAttendanceMarking from "./ManualAttendanceMarking";
 import LecturerProfile from "./LecturerProfile";
 import Appointments from "./Appointments";
 import LecturerTimetable from "./LecturerTimetable";
+import LecturerDailySessions from "./LecturerDailySessions";
 
 interface AttendanceRecord {
   id: number;
@@ -287,17 +287,17 @@ export default function LecturerDashboard({
                   </p>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
+                  <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg border-2 border-gray-200 shadow-sm transition-all hover:bg-gray-200 cursor-default">
                     <User className="w-5 h-5 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-bold text-gray-700">
                       {lecturerName}
                     </span>
                   </div>
                   <button
                     onClick={onLogout}
-                    className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold shadow-sm"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-5 h-5" />
                     <span>Logout</span>
                   </button>
                 </div>
@@ -361,7 +361,7 @@ export default function LecturerDashboard({
     );
   }
 
-  // Live class monitoring view (new dual camera system)
+  // Live class overview (Replaces immediate camera view)
   if (activeTab === "live-class") {
     return (
       <div className="flex min-h-screen bg-gray-50">
@@ -375,10 +375,7 @@ export default function LecturerDashboard({
         <div
           className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"}`}
         >
-          <LecturerLiveClassMonitoring
-            onLogout={onLogout}
-            onNavigate={(screen) => console.log("Navigate to:", screen)}
-          />
+          <LecturerDailySessions />
         </div>
       </div>
     );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
 import LoginScreen from "./components/LoginScreen";
 import AdminDashboard from "./components/AdminDashboard";
@@ -9,126 +10,43 @@ import StudentDashboard from "./components/StudentDashboard";
 import ForgotPasswordScreen from "./components/ForgotPasswordScreen";
 import StudentCorrectionRequestScreen from "./components/AttendanceCorrectionRequest";
 import LecturerLiveClassMonitoring from "./components/LecturerLiveClassMonitoring";
+import LecturerDailySessions from "./components/LecturerDailySessions";
 import AdminLogin from "./components/AdminLogin";
 import StudentEnrollment from "./components/StudentEnrollment";
 
-type Screen =
-  | "landing"
-  | "login"
-  | "admin"
-  | "lecturer"
-  | "reporting"
-  | "student"
-  | "forgot-password"
-  | "sidebar-demo"
-  | "start-live-session"
-  | "live-monitoring"
-  | "student-correction"
-  | "admin-login"
-  | "enroll";
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
 export default function App() {
-  const [userRole, setUserRole] = useState<UserRole>(() => {
-    if (
-      localStorage.getItem("adminToken") &&
-      localStorage.getItem("admin_role") === "Admin"
-    )
-      return "Admin";
-    if (
-      localStorage.getItem("lecturerToken") &&
-      localStorage.getItem("lecturer_role") === "Lecturer"
-    )
-      return "Lecturer";
-    if (
-      localStorage.getItem("studentToken") &&
-      localStorage.getItem("student_role") === "Student"
-    )
-      return "Student";
-    return null;
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
-    if (
-      localStorage.getItem("adminToken") &&
-      localStorage.getItem("admin_role") === "Admin"
-    )
-      return "admin";
-    if (
-      localStorage.getItem("lecturerToken") &&
-      localStorage.getItem("lecturer_role") === "Lecturer"
-    )
-      return "lecturer";
-    if (
-      localStorage.getItem("studentToken") &&
-      localStorage.getItem("student_role") === "Student"
-    )
-      return "student";
-    return "landing";
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    if (localStorage.getItem("adminToken") && localStorage.getItem("admin_role") === "Admin") return "Admin";
+    if (localStorage.getItem("lecturerToken") && localStorage.getItem("lecturer_role") === "Lecturer") return "Lecturer";
+    if (localStorage.getItem("studentToken") && localStorage.getItem("student_role") === "Student") return "Student";
+    return null;
   });
 
   const [loginRole, setLoginRole] = useState<"Lecturer" | "Student">("Student");
 
   const handleLogin = (role: "Admin" | "Lecturer" | "Student") => {
     setUserRole(role);
-    if (role === "Admin") {
-      setCurrentScreen("admin");
-    } else if (role === "Lecturer") {
-      setCurrentScreen("lecturer");
-    } else if (role === "Student") {
-      setCurrentScreen("student");
-    }
+    if (role === "Admin") navigate("/admin");
+    else if (role === "Lecturer") navigate("/lecturer");
+    else if (role === "Student") navigate("/student");
   };
 
   const handleLogout = () => {
-    // 1. Show the toast immediately
-    toast.success("Logged out successfully", {
-      icon: "👋",
-      duration: 3000,
-    });
-
-    // 2. Add a slight delay before actual logout and redirect
+    toast.success("Logged out successfully", { icon: "👋", duration: 3000 });
     setTimeout(() => {
-      // Completely destroy the local session cache
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("lecturerToken");
-      localStorage.removeItem("studentToken");
-      localStorage.removeItem("admin_role");
-      localStorage.removeItem("admin_email");
-      localStorage.removeItem("lecturer_role");
-      localStorage.removeItem("lecturer_email");
-      localStorage.removeItem("student_role");
-      localStorage.removeItem("student_email");
-      localStorage.removeItem("user_role"); // Cleanup legacy keys
-      localStorage.removeItem("user_email");
-      localStorage.removeItem("isAdminLoggedIn");
-      localStorage.removeItem("adminActiveTab");
-
-      // Cleanup security warning flags
-      localStorage.removeItem("lecturerRequiresPasswordChange");
-      localStorage.removeItem("requiresPasswordChange");
-      sessionStorage.removeItem("passwordWarningToastShown");
-
-      setCurrentScreen("landing");
+      localStorage.clear();
       setUserRole(null);
-    }, 1500); // 1.5 seconds delay
-  };
-
-  const handleNavigate = (screen: Screen) => {
-    setCurrentScreen(screen);
-  };
-
-  const handleForgotPassword = () => {
-    setCurrentScreen("forgot-password");
-  };
-
-  const handleBackToLogin = () => {
-    setCurrentScreen("login");
+      navigate("/");
+    }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Global toast container — sits above all screens */}
       <Toaster
         position="top-center"
         containerStyle={{ zIndex: 2147483647 }}
@@ -138,63 +56,78 @@ export default function App() {
           error:   { iconTheme: { primary: "#dc2626", secondary: "#fff" } },
         }}
       />
-      {currentScreen === "landing" && (
-        <LandingPage 
-          onNavigateToLogin={(role) => {
-            if (role === "Admin") {
-              setCurrentScreen("admin-login");
-            } else {
-              setLoginRole(role ?? "Student");
-              setCurrentScreen("login");
-            }
-          }} 
-          onNavigateToEnroll={() => setCurrentScreen("enroll")}
+      
+      <Routes>
+        <Route path="/" element={
+          <LandingPage 
+            onNavigateToLogin={(role) => {
+              if (role === "Admin") navigate("/admin-login");
+              else {
+                setLoginRole(role ?? "Student");
+                navigate("/login");
+              }
+            }} 
+            onNavigateToEnroll={() => navigate("/enroll")}
+          />
+        } />
+
+        <Route path="/login" element={<LoginScreen initialRole={loginRole} onLogin={handleLogin} onForgotPassword={() => navigate("/forgot-password")} onBackToHome={() => navigate("/")} />} />
+        <Route path="/admin-login" element={<AdminLogin onLogin={handleLogin} onBackToHome={() => navigate("/")} />} />
+        <Route path="/enroll" element={<StudentEnrollment onBackToHome={() => navigate("/")} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordScreen onBackToLogin={() => navigate("/login")} />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
+        <Route path="/admin/live-class-monitoring" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
+        <Route path="/admin/live-camera" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
+        
+        {/* Lecturer Routes */}
+        <Route
+          path="/lecturer"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
-      )}
-      {currentScreen === "login" && (
-        <LoginScreen
-          initialRole={loginRole}
-          onLogin={handleLogin}
-          onForgotPassword={handleForgotPassword}
-          onBackToHome={() => setCurrentScreen("landing")}
+        <Route
+          path="/lecturer/mark-attendances"
+          element={
+            userRole === "Lecturer" ? (
+              <div className="flex min-h-screen bg-gray-50">
+                <LecturerDailySessions />
+              </div>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
-      )}
-      {currentScreen === "admin-login" && (
-        <AdminLogin
-          onLogin={handleLogin}
-          onBackToHome={() => setCurrentScreen("landing")}
+        <Route
+          path="/lecturer/live-class-monitoring"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerLiveClassMonitoring
+                onLogout={handleLogout}
+                onNavigate={() => navigate("/lecturer")}
+              />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
         />
-      )}
-      {currentScreen === "enroll" && (
-        <StudentEnrollment onBackToHome={() => setCurrentScreen("landing")} />
-      )}
-      {currentScreen === "forgot-password" && (
-        <ForgotPasswordScreen onBackToLogin={handleBackToLogin} />
-      )}
-      {currentScreen === "admin" && (
-        <AdminDashboard onLogout={handleLogout} onNavigate={handleNavigate} />
-      )}
-      {currentScreen === "lecturer" && (
-        <LecturerDashboard onLogout={handleLogout} />
-      )}
-      {currentScreen === "reporting" && (
-        <AttendanceReporting />
-      )}
-      {currentScreen === "student" && (
-        <StudentDashboard onLogout={handleLogout} />
-      )}
-      {currentScreen === "live-monitoring" && (
-        <LecturerLiveClassMonitoring
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-        />
-      )}
-      {currentScreen === "student-correction" && (
-        <StudentCorrectionRequestScreen
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-        />
-      )}
+        
+        {/* Student Routes */}
+        <Route path="/student" element={userRole === "Student" ? <StudentDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/student-correction" element={userRole === "Student" ? <StudentCorrectionRequestScreen onLogout={handleLogout} onNavigate={() => navigate("/student")} /> : <Navigate to="/login" />} />
+
+        {/* Global Reporting */}
+        <Route path="/reporting" element={<AttendanceReporting />} />
+        
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
     </div>
   );
 }

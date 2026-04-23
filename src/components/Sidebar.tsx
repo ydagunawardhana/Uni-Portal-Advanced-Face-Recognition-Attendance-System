@@ -13,6 +13,7 @@ import {
   LogOut,
   FileSpreadsheet,
   BookOpen,
+  Video,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -121,6 +122,11 @@ export default function Sidebar({
       id: "timetable",
       label: "Timetable Integration",
       icon: FileSpreadsheet,
+    },
+    {
+      id: "live_attendance",
+      label: "Live Class Monitoring",
+      icon: Video,
     },
     { id: "reports", label: "Reports", icon: FileText },
     { id: "audit", label: "Audit Logs", icon: History },

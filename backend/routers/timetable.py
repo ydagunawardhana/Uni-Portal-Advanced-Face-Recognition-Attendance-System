@@ -434,3 +434,22 @@ async def delete_timetable_batch(batch_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e)}")
+@router.post("/{session_id}/start")
+async def start_timetable_session(session_id: int, db: Session = Depends(get_db)):
+    """Sets a timetable session as active/live."""
+    session = db.query(Timetable).filter(Timetable.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.is_live = True
+    db.commit()
+    return {"status": "success", "message": f"Session {session_id} is now LIVE."}
+
+@router.post("/{session_id}/stop")
+async def stop_timetable_session(session_id: int, db: Session = Depends(get_db)):
+    """Ends a live timetable session."""
+    session = db.query(Timetable).filter(Timetable.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.is_live = False
+    db.commit()
+    return {"status": "success", "message": f"Session {session_id} is now CLOSED."}

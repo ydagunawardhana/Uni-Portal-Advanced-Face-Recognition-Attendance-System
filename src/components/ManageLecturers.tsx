@@ -13,6 +13,7 @@ import {
 import toast from "react-hot-toast";
 import AddLecturerModal from "./AddLecturerModal";
 import EditLecturerModal from "./EditLecturerModal";
+import AddVisitingLecturerModal from "./AddVisitingLecturerModal";
 
 const API_BASE = "http://localhost:8000";
 
@@ -26,6 +27,7 @@ interface Lecturer {
   personal_email?: string;
   assigned_subjects?: string;
   is_active: boolean;
+  is_visiting?: boolean;
   avatarColor?: string; // Optional local UI state
 }
 
@@ -63,12 +65,14 @@ export default function ManageLecturers() {
   const [allModules, setAllModules] = useState<{module_code: string, module_name: string, department: string}[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isVisitingModalOpen, setIsVisitingModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(
     null,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isVisitingSaving, setIsVisitingSaving] = useState(false);
 
   useEffect(() => {
     fetchLecturers();
@@ -198,6 +202,35 @@ export default function ManageLecturers() {
       toast.error(error.message || "Network error", { id: toastId });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRegisterVisitingLecturer = async (formData: any) => {
+    setIsVisitingSaving(true);
+    const toastId = toast.loading("Adding visiting lecturer...");
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/visiting`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        toast.success("Visiting lecturer added successfully!", { id: toastId });
+        setIsVisitingModalOpen(false);
+        fetchLecturers();
+      } else {
+        const data = await res.json();
+        toast.error(parseApiError(data), { id: toastId });
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Network error", { id: toastId });
+    } finally {
+      setIsVisitingSaving(false);
     }
   };
 
@@ -463,14 +496,23 @@ export default function ManageLecturers() {
             </div>
           </div>
 
-          {/* Add New Lecturer Button */}
-          <button
-            onClick={handleAddLecturer}
-            className="inline-flex items-center cursor-pointer space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add New Lecturer</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsVisitingModalOpen(true)}
+              className="inline-flex items-center cursor-pointer space-x-2 px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Visiting Lecturer</span>
+            </button>
+            <button
+              onClick={handleAddLecturer}
+              className="inline-flex items-center cursor-pointer space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md whitespace-nowrap"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add New Lecturer</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -577,18 +619,23 @@ export default function ManageLecturers() {
                       </span>
                     </td>
 
-                    {/* Status with Toggle */}
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleToggleStatus(lecturer)}
-                        className={`inline-flex px-3 py-1 text-sm font-bold rounded-full cursor-pointer transition-all ${
-                          lecturer.is_active
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-red-100 text-red-700 hover:bg-red-200"
-                        }`}
-                      >
-                        {lecturer.is_active ? "Active" : "Inactive"}
-                      </button>
+                      {lecturer.is_visiting ? (
+                        <span className="px-2 py-0.5 inline-flex text-sm leading-5 font-bold rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                          Visiting
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleStatus(lecturer)}
+                          className={`inline-flex px-3 py-1 text-sm font-bold rounded-full cursor-pointer transition-all ${
+                            lecturer.is_active
+                              ? "bg-green-100 text-green-700 hover:bg-green-200"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
+                        >
+                          {lecturer.is_active ? "Active" : "Inactive"}
+                        </button>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -596,7 +643,7 @@ export default function ManageLecturers() {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEditLecturer(lecturer)}
-                          className="p-2 text-blue-600 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 cursor-pointer hover:bg-blue-100 rounded-lg transition-colors"
                           title="Edit Lecturer"
                         >
                           <Edit2 className="w-5 h-5" />
@@ -657,6 +704,14 @@ export default function ManageLecturers() {
             : null
         }
         onSave={handleUpdateLecturer}
+      />
+
+      {/* Add Visiting Lecturer Modal */}
+      <AddVisitingLecturerModal
+        isOpen={isVisitingModalOpen}
+        onClose={() => setIsVisitingModalOpen(false)}
+        onSave={handleRegisterVisitingLecturer}
+        isSaving={isVisitingSaving}
       />
 
       {/* Custom Delete Confirmation Modal */}

@@ -54,7 +54,8 @@ class AttendanceLog(Base):
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
     session_id = Column(Integer, ForeignKey("class_sessions.id"), nullable=True)
     timestamp = Column(DateTime, nullable=False)
-    status = Column(String, nullable=False)  # 'entered' or 'exited'
+    status = Column(String, nullable=False)  # 'entered', 'exited', or 'Present'
+    remarks = Column(String, nullable=True)   # e.g., 'Admin/Manual'
 
     # Relationship: each log belongs to one student and optionally a session
     student = relationship("Student", back_populates="attendance_logs")
@@ -131,6 +132,7 @@ class Lecturer(Base):
     is_active         = Column(Boolean, default=True, nullable=False)
     profile_picture   = Column(String, nullable=True)
     office_hours      = Column(Text, nullable=True) # JSON array of {day, startTime, endTime, location}
+    is_visiting       = Column(Boolean, default=False, nullable=False)
     requires_password_change = Column(Boolean, default=True, nullable=False)
 
     appointments      = relationship("Appointment", back_populates="lecturer")
@@ -210,6 +212,7 @@ class Timetable(Base):
     faculty     = Column(String, nullable=True)
     department  = Column(String, nullable=True)
     semester    = Column(String, nullable=True)
+    is_live     = Column(Boolean, default=False, nullable=False)
     file_name   = Column(String, nullable=True)
     created_at  = Column(DateTime, server_default=func.now())
 

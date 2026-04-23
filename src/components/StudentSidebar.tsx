@@ -40,7 +40,7 @@ export default function StudentSidebar({
       icon: FileText,
     },
     {
-      id: "book-consultations",
+      id: "book-appointments",
       label: "Book Appointments",
       icon: Users,
     },

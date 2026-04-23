@@ -208,28 +208,44 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
                     if state['verified']:
                         color = (0, 255, 0)
                         label = f"{name} (Verified)"
-                        if name not in last_seen_times or (now - last_seen_times.get(name, 0) > 10):
-                            last_seen_times[name] = now
-                            try:
-                                student = db.query(models.Student).filter(models.Student.index_number == name).first()
-                                if student and session_id:
-                                    existing_log = db.query(models.AttendanceLog).filter(
-                                        models.AttendanceLog.student_id == student.id,
-                                        models.AttendanceLog.session_id == session_id,
-                                        models.AttendanceLog.status == mode
-                                    ).first()
-                                    if not existing_log:
-                                        new_log = models.AttendanceLog(
-                                            student_id=student.id,
-                                            session_id=session_id,
-                                            timestamp=datetime.utcnow(),
-                                            status=mode
-                                        )
-                                        db.add(new_log)
-                                        db.commit()
-                                        print(f"[DB] Logged {student.index_number} as {mode}")
-                            except Exception as e:
-                                print(f"[DB ERROR]: {e}")
+                        
+                        # Determine current status based on camera mode
+                        current_status = mode # "entered" or "exited"
+                        
+                        try:
+                            student = db.query(models.Student).filter(models.Student.index_number == name).first()
+                            if student and session_id:
+                                # Fetch the last log for this student in this session
+                                last_log = db.query(models.AttendanceLog).filter(
+                                    models.AttendanceLog.student_id == student.id,
+                                    models.AttendanceLog.session_id == session_id
+                                ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+                                should_log = False
+                                if not last_log:
+                                    should_log = True
+                                elif last_log.status != current_status:
+                                    # Always allow logging if status changed (e.g. entered -> exited)
+                                    should_log = True
+                                else:
+                                    # Cooldown for same status: 60 seconds
+                                    time_diff = (datetime.utcnow() - last_log.timestamp).total_seconds()
+                                    if time_diff > 60:
+                                        should_log = True
+
+                                if should_log:
+                                    new_log = models.AttendanceLog(
+                                        student_id=student.id,
+                                        session_id=session_id,
+                                        timestamp=datetime.utcnow(),
+                                        status=current_status
+                                    )
+                                    db.add(new_log)
+                                    db.commit()
+                                    db.refresh(new_log)
+                                    print(f"[DB] Logged {student.index_number} as {current_status}")
+                        except Exception as e:
+                            print(f"[DB ERROR]: {e}")
                     else:
                         color = (0, 165, 255)
                         label = f"{name} - Blink!"
@@ -314,4 +330,37 @@ def get_session_stats(session_id: int, db: Session = Depends(get_db)):
         "total_entered": entered_count,
         "left_early": exited_count,
         "currently_inside": entered_count - exited_count
+    }
+@router.post("/manual-override")
+def manual_override_attendance(
+    data: schemas.ManualOverride,
+    db: Session = Depends(get_db)
+):
+    """Manually mark a student as present for a given session by index number."""
+    # Look up student by index number
+    student = db.query(models.Student).filter(models.Student.index_number == data.student_index).first()
+    if not student:
+        raise HTTPException(status_code=404, detail=f"Student with index {data.student_index} not found.")
+
+    # Check if session exists
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == data.session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    # Create AttendanceLog entry
+    new_log = models.AttendanceLog(
+        student_id=student.id,
+        session_id=data.session_id,
+        timestamp=datetime.utcnow(),
+        status="Present",  # Categorized as Present for manual marking
+        remarks="Admin/Manual"
+    )
+    db.add(new_log)
+    db.commit()
+    db.refresh(new_log)
+
+    return {
+        "success": True, 
+        "message": f"Successfully marked {student.name} ({student.index_number}) as present.",
+        "log_id": new_log.id
     }
