@@ -132,6 +132,8 @@ def get_attendance_history(
 last_seen_times: dict = {}
 blink_state: dict = {}
 active_captures = {}
+last_marked_time: dict = {}
+COOLDOWN_SECONDS = 60
 
 def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "entered"):
     print(f"[DEBUG] Starting stream. Known faces loaded: {len(global_known_encodings)}")
@@ -209,43 +211,59 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
                         color = (0, 255, 0)
                         label = f"{name} (Verified)"
                         
-                        # Determine current status based on camera mode
+                        # Strict IN/OUT Logic & Debounce Execution
                         current_status = mode # "entered" or "exited"
+                        current_time = time.time()
+                        student_id = name
                         
-                        try:
-                            student = db.query(models.Student).filter(models.Student.index_number == name).first()
-                            if student and session_id:
-                                # Fetch the last log for this student in this session
-                                last_log = db.query(models.AttendanceLog).filter(
-                                    models.AttendanceLog.student_id == student.id,
-                                    models.AttendanceLog.session_id == session_id
-                                ).order_by(models.AttendanceLog.timestamp.desc()).first()
+                        # 1. Debounce check based on Time Dictionary (prevent spam)
+                        if student_id not in last_marked_time:
+                            last_marked_time[student_id] = {}
+                            
+                        # If the student was recently marked for this specific status, skip
+                        if current_status in last_marked_time[student_id]:
+                            if (current_time - last_marked_time[student_id][current_status]) < COOLDOWN_SECONDS:
+                                pass # Skip entirely, they were just marked
+                            else:
+                                should_log = True
+                        else:
+                            should_log = True
 
-                                should_log = False
-                                if not last_log:
-                                    should_log = True
-                                elif last_log.status != current_status:
-                                    # Always allow logging if status changed (e.g. entered -> exited)
-                                    should_log = True
-                                else:
-                                    # Cooldown for same status: 60 seconds
-                                    time_diff = (datetime.utcnow() - last_log.timestamp).total_seconds()
-                                    if time_diff > 60:
-                                        should_log = True
-
-                                if should_log:
-                                    new_log = models.AttendanceLog(
-                                        student_id=student.id,
+                        # 2. Strike DB only if perfectly verified and past cooldown
+                        if 'should_log' in locals() and should_log:
+                            try:
+                                student = db.query(models.Student).filter(models.Student.index_number == name).first()
+                                if student and session_id:
+                                    # 1. Fetch ONLY the most recent log for this student in this session
+                                    latest_record = db.query(models.AttendanceLog).filter_by(
                                         session_id=session_id,
-                                        timestamp=datetime.utcnow(),
-                                        status=current_status
-                                    )
-                                    db.add(new_log)
-                                    db.commit()
-                                    db.refresh(new_log)
-                                    print(f"[DB] Logged {student.index_number} as {current_status}")
-                        except Exception as e:
-                            print(f"[DB ERROR]: {e}")
+                                        student_id=student.id
+                                    ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+                                    # 2. Block ONLY if the consecutive status is exactly the same
+                                    latest_status = latest_record.status if latest_record else None
+                                    
+                                    if latest_status == current_status:
+                                        last_marked_time[student_id][current_status] = current_time # Re-sync memory quietly
+                                    else:
+                                        # 3. Normal Insertion (Safe)
+                                        new_log = models.AttendanceLog(
+                                            student_id=student.id,
+                                            session_id=session_id,
+                                            timestamp=datetime.utcnow(),
+                                            status=current_status
+                                        )
+                                        db.add(new_log)
+                                        db.commit()
+                                        
+                                        # Update Cooldown Timer instantly
+                                        last_marked_time[student_id][current_status] = current_time
+                                        print(f"[DB] Logged {student.index_number} as {current_status}")
+                            except Exception as e:
+                                print(f"[DB ERROR]: {e}")
+                            
+                            # Clean up the variable for the next loop
+                            del should_log
                     else:
                         color = (0, 165, 255)
                         label = f"{name} - Blink!"

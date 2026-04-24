@@ -190,7 +190,7 @@ export default function EditLecturerModal({
               id="fullName"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="Enter lecturer's full name"
             />
           </div>
@@ -209,7 +209,7 @@ export default function EditLecturerModal({
                 id="employeeId"
                 value={employeeId}
                 disabled
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold bg-gray-100 text-gray-500 cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Employee ID cannot be changed
@@ -229,7 +229,7 @@ export default function EditLecturerModal({
                 id="email"
                 value={email}
                 disabled
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold bg-gray-100 text-gray-500 cursor-not-allowed outline-none"
                 placeholder="lecturer@university.edu"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -250,7 +250,7 @@ export default function EditLecturerModal({
                 id="personalEmail"
                 value={personalEmail}
                 onChange={(e) => setPersonalEmail(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 placeholder="Enter personal email for notifications"
               />
             </div>
@@ -269,7 +269,7 @@ export default function EditLecturerModal({
                   setDepartment("");
                   setAssignedSubjects([]); // Flush mismatch constraints
                 }}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">Select Faculty</option>
                 {Object.keys(universityData).map((fac) => (
@@ -291,7 +291,7 @@ export default function EditLecturerModal({
                   setAssignedSubjects([]); // Flush on cascade hop
                 }}
                 disabled={!faculty}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <option value="">Select Department</option>
                 {faculty &&
@@ -342,7 +342,7 @@ export default function EditLecturerModal({
             {/* Subject Selector */}
             <div className="relative">
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 value=""
                 disabled={!department}
                 onChange={(e) => {

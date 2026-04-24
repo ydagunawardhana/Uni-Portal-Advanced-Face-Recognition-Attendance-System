@@ -13,7 +13,6 @@ import {
   User,
   LogOut,
 } from "lucide-react";
-import LecturerHeader from "./LecturerHeader";
 
 const API_BASE = "http://localhost:8000";
 
@@ -28,6 +27,9 @@ interface Session {
   is_live: boolean;
   status?: string;
   date: string;
+  degree?: string;
+  semester?: string;
+  level?: string;
 }
 
 export default function LecturerDailySessions() {
@@ -35,6 +37,12 @@ export default function LecturerDailySessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [degreeFilter, setDegreeFilter] = useState("");
+  const [semesterFilter, setSemesterFilter] = useState("");
+  const [batchFilter, setBatchFilter] = useState("");
+  const [startingSessionId, setStartingSessionId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     const fetchTodayTimetable = async () => {
@@ -45,7 +53,14 @@ export default function LecturerDailySessions() {
         });
         if (res.ok) {
           const data = await res.json();
-          const today = new Date().toISOString().split("T")[0];
+          const getLocalDateString = () => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+          const today = getLocalDateString();
           const todaySessions = Array.isArray(data)
             ? data.filter((s: Session) => s.date === today)
             : [];
@@ -60,12 +75,32 @@ export default function LecturerDailySessions() {
     fetchTodayTimetable();
   }, []);
 
-  const filteredSessions = sessions.filter(
-    (s) =>
-      s.module_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.module_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.location.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Extract unique values for the dropdowns dynamically based on today's sessions
+  const uniqueDegrees = Array.from(
+    new Set(sessions.map((s) => s.degree).filter(Boolean)),
+  ) as string[];
+  const uniqueSemesters = Array.from(
+    new Set(sessions.map((s) => s.semester || s.level).filter(Boolean)),
+  ) as string[];
+  const uniqueBatches = Array.from(
+    new Set(sessions.map((s) => s.batch).filter(Boolean)),
+  ) as string[];
+
+  const filteredSessions = sessions.filter((s) => {
+    const matchesSearch =
+      s.module_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.module_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.location?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesDegree = degreeFilter ? s.degree === degreeFilter : true;
+    const sessionSem = s.semester || s.level;
+    const matchesSemester = semesterFilter
+      ? sessionSem === semesterFilter
+      : true;
+    const matchesBatch = batchFilter ? s.batch === batchFilter : true;
+
+    return matchesSearch && matchesDegree && matchesSemester && matchesBatch;
+  });
 
   const totalSessions = sessions.length;
   const liveSessions = sessions.filter((s) => s.is_live).length;
@@ -73,52 +108,78 @@ export default function LecturerDailySessions() {
     (s) => s.status === "completed",
   ).length;
 
-  return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-gray-50 text-gray-900">
-      {/* 1. Global Header Component */}
-      <LecturerHeader />
+  const activeSessionStr = typeof window !== 'undefined' ? localStorage.getItem("activeAttendanceSession") : null;
+  let activeSessionId: string | null = null;
+  try {
+    if (activeSessionStr) {
+      activeSessionId = String(JSON.parse(activeSessionStr).selectedSession);
+    }
+  } catch (e) {}
 
-      {/* 2. Content Wrapper with Padding */}
-      <div className="p-8">
+  const handleStartSession = (session: Session) => {
+    if (String(session.id) === activeSessionId) {
+      navigate(`/lecturer/live-class-monitoring?sessionId=${session.id}`, {
+        state: { sessionStarted: true, moduleName: session.module_name },
+      });
+      return;
+    }
+
+    setStartingSessionId(session.id);
+
+    // Simulate a brief loading delay for UX
+    setTimeout(() => {
+      navigate(`/lecturer/live-class-monitoring?sessionId=${session.id}`, {
+        state: {
+          sessionStarted: true,
+          moduleName: session.module_name,
+        },
+      });
+    }, 3000);
+  };
+
+  return (
+    <div className="flex-1">
+      {/* 2. Content Wrapper with Padding removed as parent handles it */}
+      <div>
         {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-6 flex items-center gap-5 shadow-sm">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 flex items-center gap-5 shadow-sm">
             <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
               <Calendar className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-600 mb-1">
+              <p className="text-md font-bold text-gray-600 mb-1 tracking-wider">
                 My Sessions Today
               </p>
-              <h3 className="text-3xl font-black text-gray-900 uppercase">
+              <h3 className="text-3xl font-bold text-gray-900 uppercase">
                 {totalSessions}
               </h3>
             </div>
           </div>
 
-          <div className="bg-green-50/50 border border-green-100 rounded-xl p-6 flex items-center gap-5 shadow-sm">
+          <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-6 flex items-center gap-5 shadow-sm">
             <div className="bg-green-100 p-4 rounded-xl text-green-600">
-              <Video className="w-8 h-8" />
+              <Video className="w-10 h-10 animate-pulse" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-600 mb-1">
+              <p className="text-md font-bold text-gray-600 mb-1 tracking-wider">
                 Currently Live
               </p>
-              <h3 className="text-3xl font-black text-gray-900 uppercase">
-                {liveSessions}
+              <h3 className="text-3xl font-bold text-gray-900 uppercase">
+                {activeSessionStr ? 1 : liveSessions}
               </h3>
             </div>
           </div>
 
-          <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-6 flex items-center gap-5 shadow-sm">
+          <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-6 flex items-center gap-5 shadow-sm">
             <div className="bg-purple-100 p-4 rounded-xl text-purple-600">
               <CheckCircle className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-600 mb-1">
+              <p className="text-md font-bold text-gray-600 mb-1 tracking-wider">
                 Completed Sessions
               </p>
-              <h3 className="text-3xl font-black text-gray-900 uppercase">
+              <h3 className="text-3xl font-bold text-gray-900 uppercase">
                 {completedSessions}
               </h3>
             </div>
@@ -126,22 +187,98 @@ export default function LecturerDailySessions() {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-blue-600" /> Daily Lectures
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-md">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <GraduationCap className="w-10 h-10 text-blue-600" /> Daily Lectures
             Timetable
           </h2>
 
-          {/* Search Bar */}
-          <div className="relative mb-8">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search module, code or location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
+          {/* Filters Section (Grid Layout) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {/* 1. Search Bar */}
+            <div className="relative">
+              <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search module, code or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+              />
+            </div>
+
+            {/* 2. Degree Filter */}
+            <div>
+              <select
+                value={degreeFilter}
+                onChange={(e) => setDegreeFilter(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
+              >
+                <option value="">All Degrees / Programs</option>
+                {uniqueDegrees.map((deg) => (
+                  <option key={deg} value={deg}>
+                    {deg}
+                  </option>
+                ))}
+                {/* Fallback hardcoded options just in case backend doesn't send degree yet */}
+                {uniqueDegrees.length === 0 && (
+                  <>
+                    <option value="BSc (Hons) in Computer Science">
+                      BSc (Hons) in Computer Science
+                    </option>
+                    <option value="BSc (Hons) in Software Engineering">
+                      BSc (Hons) in Software Engineering
+                    </option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* 3. Semester Filter */}
+            <div>
+              <select
+                value={semesterFilter}
+                onChange={(e) => setSemesterFilter(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
+              >
+                <option value="">All Semesters</option>
+                {uniqueSemesters.map((sem) => (
+                  <option key={sem} value={sem}>
+                    {sem}
+                  </option>
+                ))}
+                {/* Fallback */}
+                {uniqueSemesters.length === 0 && (
+                  <>
+                    <option value="Year 1 - Semester 1">
+                      Year 1 - Semester 1
+                    </option>
+                    <option value="Year 1 - Semester 2">
+                      Year 1 - Semester 2
+                    </option>
+                    <option value="Year 2 - Semester 1">
+                      Year 2 - Semester 1
+                    </option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* 4. Batch Filter */}
+            <div>
+              <select
+                value={batchFilter}
+                onChange={(e) => setBatchFilter(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Sessions Grid */}
@@ -151,7 +288,7 @@ export default function LecturerDailySessions() {
             </div>
           ) : filteredSessions.length === 0 ? (
             /* NEW: Large Dashed Empty State */
-            <div className="flex flex-col items-center justify-center py-24 bg-white border-2 border-dashed border-gray-300 rounded-2xl shadow-sm mx-2 my-4">
+            <div className="flex flex-col items-center justify-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-2xl mx-2 my-4">
               <Calendar className="w-16 h-16 text-gray-300 mb-4" />
               <h3 className="text-xl font-bold text-gray-800 mb-2">
                 No Sessions Scheduled
@@ -167,21 +304,25 @@ export default function LecturerDailySessions() {
               {filteredSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col"
+                  className={`border-2 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col ${
+                    String(session.id) === activeSessionId
+                      ? " border-2 border-green-200 bg-green-50/30"
+                      : "bg-white border-gray-200"
+                  }`}
                 >
                   {/* Badge */}
                   <div className="mb-4">
-                    {session.is_live ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-green-100 text-green-700 uppercase tracking-wider">
-                        <span className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse"></span>
-                        Live Now
+                    {String(session.id) === activeSessionId ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 animate-pulse rounded-full text-sm font-bold bg-green-100 text-green-700 uppercase shadow-sm border-2 border-green-200">
+                        <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                        LIVE NOW
                       </span>
                     ) : session.status === "completed" ? (
-                      <span className="inline-flex px-3 py-1 rounded-md text-xs font-bold bg-gray-100 text-gray-600 uppercase tracking-wider">
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 uppercase">
                         Completed
                       </span>
                     ) : (
-                      <span className="inline-flex px-3 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 uppercase">
                         Pending
                       </span>
                     )}
@@ -190,50 +331,92 @@ export default function LecturerDailySessions() {
                   <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
                     {session.module_name}
                   </h3>
-                  <p className="text-sm font-medium text-gray-500 mb-5">
-                    {session.module_code} • Batch {session.batch}
+                  <p className="text-sm font-semibold text-gray-700 mb-5">
+                    {session.module_code} - Batch {session.batch}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-2 mb-6">
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-3 mb-6 mt-2">
+                    {/* Time */}
                     <div className="flex items-start gap-2">
-                      <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
+                      <Clock className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs font-medium text-gray-500">
                           Time
                         </p>
-                        <p className="text-sm font-semibold text-gray-800">
+                        <p className="text-sm font-bold text-gray-800">
                           {session.start_time} - {session.end_time}
                         </p>
                       </div>
                     </div>
+
+                    {/* Location */}
                     <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                      <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs font-medium text-gray-500">
                           Location
                         </p>
-                        <p className="text-sm font-semibold text-gray-800">
+                        <p className="text-sm font-bold text-gray-800">
                           {session.location}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Degree (col-span-2 to handle long degree names nicely) */}
+                    <div className="flex items-start gap-2 col-span-1 mt-2">
+                      <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          Degree Program
+                        </p>
+                        <p className="text-sm font-bold text-gray-800">
+                          {session.degree || "Not specified"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Semester */}
+                    <div className="flex items-start gap-2 col-span-1 mt-2">
+                      <BookOpen className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          Semester
+                        </p>
+                        <p className="text-sm font-bold text-gray-800">
+                          {session.semester || session.level || "Not specified"}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-4 border-t border-gray-100">
+                  {/* Action Button */}
+                  <div className="mt-auto border-t border-gray-100">
                     <button
-                      onClick={() =>
-                        navigate(
-                          `/lecturer/live-class-monitoring?sessionId=${session.id}`,
-                        )
-                      }
-                      className={`w-full py-2.5 rounded-lg cursor-pointer font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
-                        session.is_live
-                          ? "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
-                          : "bg-gray-50 text-gray-800 hover:bg-gray-200 border border-gray-300"
+                      onClick={() => handleStartSession(session)}
+                      disabled={startingSessionId === session.id}
+                      className={`w-full py-2.5 rounded-xl font-bold text-md cursor-pointer flex items-center justify-center gap-2 transition-all ${
+                        startingSessionId === session.id
+                          ? "bg-blue-600 text-white cursor-wait"
+                          : session.is_live || String(session.id) === activeSessionId
+                            ? "bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300"
+                            : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200"
                       }`}
                     >
-                      <Video className="w-4 h-4" />
-                      {session.is_live ? "Resume Session" : "Start Session"}
+                      {startingSessionId === session.id ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-lg animate-spin"></span>
+                          Starting...
+                        </>
+                      ) : session.is_live || String(session.id) === activeSessionId ? (
+                        <>
+                          <Video className="w-6 h-6" /> Resume Session
+                        </>
+                      ) : (
+                        <>
+                          <Video className="w-6 h-6" /> Start Session
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

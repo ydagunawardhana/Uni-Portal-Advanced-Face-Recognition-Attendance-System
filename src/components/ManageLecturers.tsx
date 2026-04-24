@@ -404,7 +404,7 @@ export default function ManageLecturers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by Name or ID..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -417,7 +417,7 @@ export default function ManageLecturers() {
                 setFacultyFilter(e.target.value);
                 setDepartmentFilter("All Departments"); // Reset department cascade
               }}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
+              className="w-full px-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
             >
               <option value="All Faculties">All Faculties</option>
               {Object.keys(universityData).map((fac) => (
@@ -444,7 +444,7 @@ export default function ManageLecturers() {
                 facultyFilter !== "All Faculties" &&
                 !universityData[facultyFilter]
               }
-              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate disabled:bg-gray-100 disabled:text-gray-400 appearance-none cursor-pointer"
+              className="w-full px-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate disabled:bg-gray-100 disabled:text-gray-400 appearance-none cursor-pointer"
             >
               <option value="All Departments">All Departments</option>
               {facultyFilter === "All Faculties"
@@ -472,7 +472,7 @@ export default function ManageLecturers() {
               aria-label="Filter by Subject"
               value={subjectFilter}
               onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
+              className="w-full px-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
             >
               <option value="All Subjects">All Subjects</option>
               {departmentFilter === "All Departments"

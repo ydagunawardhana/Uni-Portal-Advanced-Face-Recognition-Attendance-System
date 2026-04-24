@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -89,22 +90,26 @@ export default function Sidebar({
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
+      path: "/admin/dashboard",
     },
     {
       id: "students",
       label: "Student Registration",
       icon: Users,
+      path: "/admin/students",
     },
     {
       id: "pre_registrations",
       label: "Pre Registration Queue",
       icon: Clock,
+      path: "/admin/pre-registrations",
       badgeCount: preRegCount,
     },
     {
       id: "manage_students",
       label: "Manage Students",
       icon: GraduationCap,
+      path: "/admin/manage-students",
       badgeCount: reTrainCount,
       badgeTheme: "amber" as const,
     },
@@ -112,25 +117,29 @@ export default function Sidebar({
       id: "lecturers",
       label: "Manage Lecturers",
       icon: UserCog,
+      path: "/admin/manage-lecturers",
     },
     {
       id: "modules",
       label: "Manage Modules",
       icon: BookOpen,
+      path: "/admin/manage-modules",
     },
     {
       id: "timetable",
       label: "Timetable Integration",
       icon: FileSpreadsheet,
+      path: "/admin/timetable",
     },
     {
       id: "live_attendance",
       label: "Live Class Monitoring",
       icon: Video,
+      path: "/admin/live-sessions",
     },
-    { id: "reports", label: "Reports", icon: FileText },
-    { id: "audit", label: "Audit Logs", icon: History },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "reports", label: "Reports", icon: FileText, path: "/admin/reports" },
+    { id: "audit", label: "Audit Logs", icon: History, path: "/admin/audit-logs" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
   ];
 
   return (
@@ -176,10 +185,10 @@ export default function Sidebar({
               : "bg-blue-600 text-white";
 
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
+              to={item.path}
+              className={({ isActive }) => `w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
                 isActive
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -212,7 +221,7 @@ export default function Sidebar({
                   }`}
                 />
               )}
-            </button>
+            </NavLink>
           );
         })}
       </nav>

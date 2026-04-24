@@ -3,7 +3,6 @@ import { Toaster, toast } from "react-hot-toast";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
 import LoginScreen from "./components/LoginScreen";
-import AdminDashboard from "./components/AdminDashboard";
 import LecturerDashboard from "./components/LecturerDashboard";
 import AttendanceReporting from "./components/AttendanceReports";
 import StudentDashboard from "./components/StudentDashboard";
@@ -13,6 +12,17 @@ import LecturerLiveClassMonitoring from "./components/LecturerLiveClassMonitorin
 import LecturerDailySessions from "./components/LecturerDailySessions";
 import AdminLogin from "./components/AdminLogin";
 import StudentEnrollment from "./components/StudentEnrollment";
+import AdminLayout from "./components/AdminLayout";
+import DashboardHome from "./components/DashboardHome";
+import SettingsScreen from "./components/SettingsScreen";
+import ManageLecturers from "./components/ManageLecturers";
+import ManageStudents from "./components/ManageStudents";
+import PendingRegistrations from "./components/PendingRegistrations";
+import TimetableUpload from "./components/TimetableUpload";
+import ManageModules from "./components/ManageModules";
+import LiveSessionsDashboard from "./components/LiveSessionsDashboard";
+import SystemAuditLogs from "./components/SystemAuditLogs";
+import StudentRegistration from "./components/StudentRegistration";
 
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
@@ -76,10 +86,25 @@ export default function App() {
         <Route path="/enroll" element={<StudentEnrollment onBackToHome={() => navigate("/")} />} />
         <Route path="/forgot-password" element={<ForgotPasswordScreen onBackToLogin={() => navigate("/login")} />} />
         
-        {/* Admin Routes */}
-        <Route path="/admin" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
-        <Route path="/admin/live-class-monitoring" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
-        <Route path="/admin/live-camera" element={userRole === "Admin" ? <AdminDashboard onLogout={handleLogout} onNavigate={(scr) => navigate(`/${scr}`)} /> : <Navigate to="/admin-login" />} />
+        {/* Admin Portal (Route-Based) */}
+        <Route 
+          path="/admin" 
+          element={userRole === "Admin" ? <AdminLayout onLogout={handleLogout} /> : <Navigate to="/admin-login" />}
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardHome onTabChange={(tab) => navigate(`/admin/${tab}`)} />} />
+          <Route path="students" element={<StudentRegistration />} />
+          <Route path="pre-registrations" element={<PendingRegistrations onProcess={(data) => navigate("/admin/students", { state: { preFill: data } })} />} />
+          <Route path="manage-students" element={<ManageStudents onRegisterNew={() => navigate("/admin/students")} />} />
+          <Route path="manage-lecturers" element={<ManageLecturers />} />
+          <Route path="manage-modules" element={<ManageModules />} />
+          <Route path="timetable" element={<TimetableUpload />} />
+          <Route path="live-sessions" element={<LiveSessionsDashboard />} />
+          <Route path="live-camera" element={<LecturerLiveClassMonitoring onLogout={handleLogout} onNavigate={() => {}} />} />
+          <Route path="reports" element={<AttendanceReporting />} />
+          <Route path="audit-logs" element={<SystemAuditLogs />} />
+          <Route path="settings" element={<SettingsScreen />} />
+        </Route>
         
         {/* Lecturer Routes */}
         <Route
@@ -96,9 +121,67 @@ export default function App() {
           path="/lecturer/mark-attendances"
           element={
             userRole === "Lecturer" ? (
-              <div className="flex min-h-screen bg-gray-50">
-                <LecturerDailySessions />
-              </div>
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/my-subjects"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/timetable"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/appointments"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/profile"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/history"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/manual-attendances"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" />
             )

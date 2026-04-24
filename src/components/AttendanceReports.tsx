@@ -38,10 +38,16 @@ export default function AttendanceReports({
   subject,
   onBack,
 }: AttendanceReportsProps) {
-  const [fromDate, setFromDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [toDate, setToDate] = useState(new Date().toISOString().split("T")[0]);
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [fromDate, setFromDate] = useState(getLocalDateString());
+  const [toDate, setToDate] = useState(getLocalDateString());
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [isRefreshing, setIsRefreshing] = useState(false);

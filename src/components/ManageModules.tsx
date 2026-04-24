@@ -268,7 +268,7 @@ export default function ManageModules() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by Code or Name..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
@@ -279,7 +279,7 @@ export default function ManageModules() {
                 setFacultyFilter(e.target.value);
                 setDepartmentFilter("All Departments");
               }}
-              className="px-4 py-2.5 border cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              className="px-4 py-2.5 border cursor-pointer border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white"
             >
               <option value="All Faculties">All Faculties</option>
               {Object.keys(universityData).map((fac) => (
@@ -293,7 +293,7 @@ export default function ManageModules() {
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
               disabled={facultyFilter === "All Faculties"}
-              className="px-4 py-2.5 border cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50"
+              className="px-4 py-2.5 border cursor-pointer border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50"
             >
               <option value="All Departments">All Departments</option>
               {facultyFilter !== "All Faculties" &&
@@ -319,7 +319,7 @@ export default function ManageModules() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-100 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Module Code
@@ -336,7 +336,7 @@ export default function ManageModules() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Degree
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900">
                   Level
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -381,7 +381,7 @@ export default function ManageModules() {
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {mod.degree || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-500">
+                    <td className="px-8 py-4 text-sm font-bold text-gray-500">
                       {mod.level || "N/A"}
                     </td>
                     <td className="px-6 py-4">
@@ -575,7 +575,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                     setDepartment("");
                     setSelectedDegrees([]);
                   }}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Choose a Faculty</option>
                   {Object.keys(universityData).map((fac) => (
@@ -597,7 +597,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                     setSelectedDegrees([]);
                   }}
                   disabled={!faculty}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <option value="">Select Department</option>
                   {faculty &&
@@ -613,7 +613,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Target Degrees <span className="text-red-500">*</span>
                 </label>
-                <div className="border border-gray-300 rounded-xl p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
+                <div className="border border-gray-300 rounded-xl text-sm font-semibold p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
                   {!department ? (
                     <span className="text-sm text-gray-400">
                       Select Department first
@@ -625,7 +625,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                       ).map((deg) => (
                         <label
                           key={deg}
-                          className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group"
+                          className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer group"
                         >
                           <input
                             type="checkbox"
@@ -658,7 +658,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Select Level</option>
                   <option value="Year 1 - Semester 1">
@@ -710,7 +710,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                         handleRowChange(index, "code", e.target.value)
                       }
                       placeholder="e.g. PUSL2022, CS101"
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                   <div className="md:col-span-6">
@@ -724,7 +724,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                         handleRowChange(index, "name", e.target.value)
                       }
                       placeholder="e.g. Introduction to Programming"
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                   <div className="md:col-span-1 pb-1">
@@ -848,7 +848,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                     setDepartment("");
                     setSelectedDegrees([]);
                   }}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Choose a Faculty</option>
                   {Object.keys(universityData).map((fac) => (
@@ -870,7 +870,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                     setSelectedDegrees([]);
                   }}
                   disabled={!faculty}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <option value="">Select Department</option>
                   {faculty &&
@@ -886,7 +886,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Target Degrees <span className="text-red-500">*</span>
                 </label>
-                <div className="border border-gray-300 rounded-xl p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
+                <div className="border border-gray-300 rounded-xl text-sm font-semibold p-3 max-h-48 overflow-y-auto bg-white transition-all focus-within:ring-2 focus-within:ring-blue-500 shadow-inner">
                   {!department ? (
                     <span className="text-sm text-gray-400">
                       Select Department first
@@ -931,7 +931,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Select Level</option>
                   <option value="Year 1 - Semester 1">
@@ -970,7 +970,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                     value={moduleCode}
                     onChange={(e) => setModuleCode(e.target.value)}
                     placeholder="e.g. CS101"
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono uppercase"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono uppercase"
                   />
                 </div>
                 <div>
@@ -982,7 +982,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                     value={moduleName}
                     onChange={(e) => setModuleName(e.target.value)}
                     placeholder="e.g. Introduction to Programming"
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -1000,7 +1000,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2.5 bg-blue-600 text-white font-medium hover:bg-blue-700 rounded-xl transition-colors shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-600 text-white font-medium hover:bg-blue-700 text-sm font-semibold rounded-xl transition-colors shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSaving ? (
                 <>

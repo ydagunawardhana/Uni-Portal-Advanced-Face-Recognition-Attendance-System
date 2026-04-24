@@ -1084,9 +1084,17 @@ def get_today_timetable_admin(
             return None
 
     # Logic to fetch today's sessions and include is_visiting flag
+    # Plus Degree and Level from Module table
     results = (
-        db.query(models.Timetable, models.Lecturer.is_visiting)
+        db.query(
+            models.Timetable, 
+            models.Lecturer.is_visiting,
+            models.Module.degree,
+            models.Module.level,
+            models.Lecturer.id.label("lecturer_id")
+        )
         .outerjoin(models.Lecturer, models.Timetable.lecturer == models.Lecturer.name)
+        .outerjoin(models.Module, models.Timetable.module_code == models.Module.module_code)
         .filter(models.Timetable.date == today_str)
         .all()
     )
@@ -1095,7 +1103,7 @@ def get_today_timetable_admin(
     live_count = 0
     visiting_count = 0
 
-    for entry, is_visiting in results:
+    for entry, is_visiting, degree, level, lecturer_id in results:
         visiting = is_visiting if is_visiting is not None else False
         if visiting:
             visiting_count += 1
@@ -1125,10 +1133,13 @@ def get_today_timetable_admin(
             "location": entry.location,
             "batch": entry.batch_id,
             "lecturer_name": entry.lecturer,
+            "lecturer_id": lecturer_id,
             "is_visiting": visiting,
             "faculty": entry.faculty,
             "department": entry.department,
-            "semester": entry.semester,
+            "semester": level or entry.semester,
+            "degree": degree,
+            "level": level,
             "is_live": entry.is_live,
             "status": status
         })

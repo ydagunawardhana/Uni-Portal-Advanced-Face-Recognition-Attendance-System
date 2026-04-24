@@ -90,7 +90,7 @@ export default function AddVisitingLecturerModal({
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Dr. Jane Smith"
-                  className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all"
                 />
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function AddVisitingLecturerModal({
                   required
                   value={formData.faculty}
                   onChange={(e) => setFormData({ ...formData, faculty: e.target.value, department: "" })}
-                  className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none transition-all appearance-none bg-white"
+                  className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all appearance-none bg-white"
                 >
                   <option value="">Select Faculty</option>
                   {Object.keys(universityData).map((fac) => (
@@ -132,7 +132,7 @@ export default function AddVisitingLecturerModal({
                   disabled={!formData.faculty}
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none transition-all appearance-none bg-white disabled:bg-gray-50"
+                  className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all appearance-none bg-white disabled:bg-gray-50"
                 >
                   <option value="">Select Department</option>
                   {formData.faculty && universityData[formData.faculty]?.map((dept) => (

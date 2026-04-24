@@ -578,7 +578,7 @@ export default function TimetableUpload() {
                       setSelectedFaculty(e.target.value);
                       setSelectedDepartment("");
                     }}
-                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer pr-10"
+                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer pr-10"
                   >
                     <option value="" disabled>
                       Choose Faculty...
@@ -607,7 +607,7 @@ export default function TimetableUpload() {
                     onChange={(e) => {
                       setSelectedDepartment(e.target.value);
                     }}
-                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed pr-10"
+                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed pr-10"
                   >
                     <option value="" disabled>
                       Choose Department...
@@ -635,7 +635,7 @@ export default function TimetableUpload() {
                   value={selectedBatch}
                   onChange={(e) => setSelectedBatch(e.target.value)}
                   placeholder="Type or select batch"
-                  className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                  className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                 />
                 <datalist id="batch-options">
                   {intakeOptions.map((opt) => (
@@ -653,7 +653,7 @@ export default function TimetableUpload() {
                   <select
                     value={selectedSemester}
                     onChange={(e) => setSelectedSemester(e.target.value)}
-                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer pr-10"
+                    className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all cursor-pointer pr-10"
                   >
                     <option value="" disabled>
                       Choose a semester...
@@ -677,7 +677,7 @@ export default function TimetableUpload() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer"
+                  className="w-full border border-gray-300 bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none cursor-pointer"
                 />
               </div>
             </div>

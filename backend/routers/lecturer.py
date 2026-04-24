@@ -576,8 +576,10 @@ def get_lecturer_timetable(
         raise HTTPException(status_code=404, detail="Lecturer profile not found.")
 
     # Match based on lecturer name (Timetable.lecturer is a string field)
-    records = (
-        db.query(models.Timetable)
+    # Join with Module to get degree and level/semester
+    results = (
+        db.query(models.Timetable, models.Module.degree, models.Module.level)
+        .outerjoin(models.Module, models.Timetable.module_code == models.Module.module_code)
         .filter(models.Timetable.lecturer == lecturer.name)
         .order_by(models.Timetable.date.asc(), models.Timetable.start_time.asc())
         .all()
@@ -585,15 +587,17 @@ def get_lecturer_timetable(
 
     return [
         {
-            "id": r.id,
-            "date": r.date,
-            "start_time": r.start_time,
-            "end_time": r.end_time,
-            "module_code": r.module_code,
-            "module_name": r.module_name,
-            "location": r.location or "TBA",
-            "batch": r.batch_id,
-            "semester": r.semester or "N/A",
+            "id": r.Timetable.id,
+            "date": r.Timetable.date,
+            "start_time": r.Timetable.start_time,
+            "end_time": r.Timetable.end_time,
+            "module_code": r.Timetable.module_code,
+            "module_name": r.Timetable.module_name,
+            "location": r.Timetable.location or "TBA",
+            "batch": r.Timetable.batch_id,
+            "semester": r.level or r.Timetable.semester or "N/A",
+            "degree": r.degree or "N/A",
+            "level": r.level,
         }
-        for r in records
+        for r in results
     ]

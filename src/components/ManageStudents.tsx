@@ -602,10 +602,10 @@ export default function ManageStudents({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by Name or Index Number"
+              placeholder="Search Name or Index Number"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -617,7 +617,7 @@ export default function ManageStudents({
                 setSelectedFacultyFilter(e.target.value);
                 setSelectedDepartment("all"); // Reset department when faculty changes
               }}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
               <option value="all">All Faculties</option>
               {Object.keys(universityData).map((faculty) => (
@@ -631,7 +631,7 @@ export default function ManageStudents({
               aria-label="Filter by Department"
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
               <option value="all">All Departments</option>
               {selectedFacultyFilter === "all"
@@ -656,7 +656,7 @@ export default function ManageStudents({
               aria-label="Filter by Batch"
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[140px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[140px]"
             >
               <option value="all">All Batches</option>
               <option value="Year 1">Year 1</option>
@@ -670,7 +670,7 @@ export default function ManageStudents({
               placeholder="Filter by Intake (e.g. 26.1)"
               value={selectedIntake === "all" ? "" : selectedIntake}
               onChange={(e) => setSelectedIntake(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[180px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[180px]"
             />
           </div>
 
@@ -820,7 +820,7 @@ export default function ManageStudents({
                     </td>
                     <td className="p-4 text-center">
                       <span
-                        className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
                           student.is_active !== false
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
@@ -879,7 +879,7 @@ export default function ManageStudents({
             </div>
 
             {/* Modal Body - Scrollable */}
-            <div className="p-6 space-y-6 overflow-y-auto text-left flex-1 custom-scrollbar">
+            <div className="p-6 space-y-4 overflow-y-auto text-left flex-1 custom-scrollbar">
               {/* Read-only Identifiers */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -890,7 +890,7 @@ export default function ManageStudents({
                     type="text"
                     value={editForm.index_number}
                     disabled
-                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -901,7 +901,7 @@ export default function ManageStudents({
                     type="text"
                     value={editForm.email}
                     disabled
-                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -920,7 +920,7 @@ export default function ManageStudents({
                     onChange={(e) =>
                       setEditForm({ ...editForm, name: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -936,7 +936,7 @@ export default function ManageStudents({
                         personal_email: e.target.value,
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
@@ -951,7 +951,7 @@ export default function ManageStudents({
                       onChange={(e) =>
                         setEditForm({ ...editForm, mobile: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div>
@@ -964,7 +964,7 @@ export default function ManageStudents({
                       onChange={(e) =>
                         setEditForm({ ...editForm, nic_number: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>
@@ -989,7 +989,7 @@ export default function ManageStudents({
                             degree_program: "",
                           });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                       >
                         <option value="">Select Faculty</option>
                         {Object.keys(universityData).map((faculty) => (
@@ -1014,7 +1014,7 @@ export default function ManageStudents({
                           });
                         }}
                         disabled={!editFaculty}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                       >
                         <option value="">Select Department</option>
                         {editFaculty &&
@@ -1043,7 +1043,7 @@ export default function ManageStudents({
                         })
                       }
                       disabled={!editSubDepartment}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="">Select Degree Program</option>
                       {editFaculty &&
@@ -1070,7 +1070,7 @@ export default function ManageStudents({
                       onChange={(e) =>
                         setEditForm({ ...editForm, gender: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
@@ -1089,7 +1089,7 @@ export default function ManageStudents({
                           academic_year: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="Year 1">Year 1</option>
                       <option value="Year 2">Year 2</option>
@@ -1112,7 +1112,7 @@ export default function ManageStudents({
                       onChange={(e) =>
                         setEditForm({ ...editForm, intake: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>

@@ -174,7 +174,7 @@ export default function AddLecturerModal({
               id="fullName"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="Enter lecturer's full name"
             />
           </div>
@@ -192,7 +192,7 @@ export default function AddLecturerModal({
               id="employeeId"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="e.g. LEC001"
             />
           </div>
@@ -210,7 +210,7 @@ export default function AddLecturerModal({
               id="personalEmail"
               value={personalEmail}
               onChange={(e) => setPersonalEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="e.g. john.doe@gmail.com"
             />
           </div>
@@ -228,7 +228,7 @@ export default function AddLecturerModal({
               id="email"
               value={autoEmail}
               readOnly
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 text-gray-900 font-medium outline-none cursor-not-allowed"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold bg-gray-100 text-gray-900 font-medium outline-none cursor-not-allowed"
               placeholder="lecturer@university.edu"
             />
           </div>
@@ -246,7 +246,7 @@ export default function AddLecturerModal({
                   setDepartment("");
                   setAssignedSubjects([]); // Flush mismatch constraints
                 }}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">Select Faculty</option>
                 {Object.keys(universityData).map((fac) => (
@@ -268,7 +268,7 @@ export default function AddLecturerModal({
                   setAssignedSubjects([]); // Flush on cascade hop
                 }}
                 disabled={!faculty}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <option value="">Select Department</option>
                 {faculty &&
@@ -318,7 +318,7 @@ export default function AddLecturerModal({
             {/* Subject Selector */}
             <div className="relative">
               <select
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 value=""
                 disabled={!department}
                 onChange={(e) => {

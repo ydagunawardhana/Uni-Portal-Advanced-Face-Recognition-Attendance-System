@@ -182,10 +182,8 @@ export default function LecturerLiveClassMonitoring({
     ? "admin_activeSession"
     : "lecturer_activeSession";
 
-  const role =
-    localStorage.getItem("lecturer_role") || localStorage.getItem("adminToken")
-      ? "Admin"
-      : "Lecturer";
+  // FIX: Rely strictly on the route path to determine the active role context, avoiding localStorage token confusion
+  const role = isAdminRoute ? "Admin" : "Lecturer";
   // UI state
   const [activeTab, setActiveTab] = useState<"camera" | "manual">(
     isAdminRoute ? "manual" : "camera",
@@ -258,10 +256,106 @@ export default function LecturerLiveClassMonitoring({
   const selectedSessionDetails = (todaySessions || []).find(
     (s) => String(s.id) === String(selectedSession),
   );
-  // Independent View-Only: Admin AND backend says it's live
-  const isOwner = localStorage.getItem(storageKey) === String(selectedSession);
-  const isViewOnly =
-    isAdminRoute && selectedSessionDetails?.is_live === true && !isOwner;
+  // Determine if current user is the host
+  // Check if current user is the owner. Fallback to currentSessionId if selectedSession is pending.
+  const isOwner =
+    localStorage.getItem(storageKey) ===
+    String(selectedSession || currentSessionId);
+
+  // Track which session this admin is actively hosting to prevent View-Only flashes during teardown
+  const hostedSessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isOwner) hostedSessionIdRef.current = String(selectedSession);
+  }, [isOwner, selectedSession]);
+
+  // Robust View-Only state
+  const [isViewOnly, setIsViewOnly] = useState(false);
+
+  useEffect(() => {
+    // 1. STRONGEST OVERRIDE: If the dashboard explicitly says this is NOT view-only (Resume Session clicked)
+    if (location.state?.viewOnly === false) {
+      setIsViewOnly(false);
+      return;
+    }
+
+    // 2. Check memory ownership
+    const isTearingDownOwnSession =
+      hostedSessionIdRef.current === String(selectedSession) && !isOwner;
+    if (!isAdminRoute || isOwner || isTearingDownOwnSession) {
+      setIsViewOnly(false);
+      return;
+    }
+
+    // 3. Fallback for actual viewers
+    const isLiveSession =
+      location.state?.viewOnly === true ||
+      location.state?.isLive === true ||
+      selectedSessionDetails?.is_live === true;
+
+    setIsViewOnly(!!isLiveSession);
+  }, [
+    isAdminRoute,
+    isOwner,
+    selectedSession,
+    selectedSessionDetails?.is_live,
+    location.state,
+  ]);
+
+  // Bulletproof lock to prevent multiple toasts natively
+  const toastShownRef = useRef(false);
+
+  // Trigger notification when arriving from Dashboard securely
+  useEffect(() => {
+    if (location.state?.sessionStarted && !toastShownRef.current) {
+      toastShownRef.current = true; // Lock it immediately so it never fires twice
+
+      const moduleName = location.state?.moduleName || "Class";
+
+      toast.success(
+        `${moduleName} session started successfully! Cameras are now live.`,
+        {
+          duration: 6000,
+          position: "top-right",
+          style: {
+            background: "#1e3b8adc", // Dark blue
+            color: "#fff",
+            fontWeight: "bold",
+          },
+        },
+      );
+
+      // Safely strip 'sessionStarted' from the React Router state
+      const currentState = { ...location.state };
+      delete currentState.sessionStarted;
+
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: currentState,
+      });
+    }
+  }, [location.state, navigate, location.pathname, location.search]);
+
+  // --- CRITICAL FIX: Smart Memory Management on Exit ---
+  const isHostingRef = useRef(false);
+
+  useEffect(() => {
+    // Keep track of whether we are the active host
+    isHostingRef.current =
+      sessionActive &&
+      localStorage.getItem(storageKey) === String(selectedSession);
+  }, [sessionActive, selectedSession, storageKey]);
+
+  useEffect(() => {
+    return () => {
+      // This runs whenever the component is unmounted (leaving the page)
+      // ONLY clear memory if the Admin is just VIEWING. If they are HOSTING, keep memory to resume later!
+      if (isAdminRoute && !isHostingRef.current) {
+        localStorage.removeItem("admin_activeSession");
+        localStorage.removeItem("activeAttendanceSession");
+        localStorage.removeItem("sessionStartTime");
+      }
+    };
+  }, [isAdminRoute]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -346,28 +440,86 @@ export default function LecturerLiveClassMonitoring({
     getCameras();
   }, []);
 
-  // Restore active session from localStorage on mount
+  // Absolute cleanup to prevent memory/hardware leaks when navigating away
   useEffect(() => {
+    return () => {
+      // 1. Stop frontend capture polling
+      if (captureTimerRef.current) {
+        clearInterval(captureTimerRef.current);
+      }
+
+      // 2. Stop frontend webcam tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        window.dispatchEvent(
+          new CustomEvent("camera-status", { detail: "Offline" }),
+        );
+      }
+
+      // 3. SMART BACKEND CLEANUP:
+      // ONLY stop the backend OpenCV stream if this user is the HOST.
+      // If an Admin (Viewer) navigates away, they exit silently without freezing the Lecturer's feed.
+      if (isHostingRef.current) {
+        fetch(`${API_BASE}/api/attendance/stop_cameras`, {
+          method: "POST",
+          keepalive: true,
+        }).catch(() => console.error("Failed to stop backend cameras"));
+      }
+    };
+  }, []);
+
+  // Comprehensive Initialization: Restore active session OR load targeted session
+  useEffect(() => {
+    const navSessionData = location.state?.sessionData;
+    const navSessionId = navSessionData
+      ? String(navSessionData.batch_id || navSessionData.id)
+      : null;
+
     const saved = localStorage.getItem("activeAttendanceSession");
+    let restoredFromMemory = false;
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.sessionId) {
+        const savedSessionId = String(parsed.selectedSession);
+
+        // RESTORE CONDITION: If there's no specific navigation target, OR the target matches the saved session
+        if (
+          parsed.sessionId &&
+          (!navSessionId || navSessionId === savedSessionId)
+        ) {
           setCurrentSessionId(parsed.sessionId);
           setSessionActive(true);
+
+          // Explicitly disable camera states on return to prevent frozen streams
+          setIsEntranceActive(false);
+          setIsExitActive(false);
+
           if (parsed.selectedSession)
             setSelectedSession(parsed.selectedSession);
           if (parsed.selectedSubject)
             setSelectedSubject(parsed.selectedSubject);
           if (parsed.sessionDetails) setSessionDetails(parsed.sessionDetails);
-          console.log(`[SESSION RESTORED] ID: ${parsed.sessionId}`);
+
+          console.log(`[SESSION RESTORED] ID: ${parsed.sessionId}.`);
+          restoredFromMemory = true;
         }
       } catch (e) {
-        console.error("[SESSION RESTORE] Failed to parse stored session:", e);
-        localStorage.removeItem("activeAttendanceSession");
+        console.error("[SESSION RESTORE] Failed to parse:", e);
       }
     }
-  }, []);
+
+    // LOAD NEW TARGET: If we didn't restore (e.g., viewing a different session), load from navigation state safely
+    if (!restoredFromMemory && navSessionData) {
+      setSelectedSession(navSessionId || "");
+      setSelectedSubject(
+        navSessionData.subject_id || navSessionData.moduleCode || "",
+      );
+      setSessionDetails(navSessionData);
+      // Note: sessionActive is NOT set to true here. isViewOnly handles live states for viewers.
+    }
+  }, [location.state]);
 
   // Fetch Lecturer ID on mount (Auth Context placeholder)
   useEffect(() => {
@@ -412,7 +564,14 @@ export default function LecturerLiveClassMonitoring({
           const data = await res.json();
           // For lecturer, filter for today only if not already done by backend
           if (role === "Lecturer") {
-            const today = new Date().toISOString().split("T")[0];
+            const getLocalDateString = () => {
+              const d = new Date();
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, "0");
+              const day = String(d.getDate()).padStart(2, "0");
+              return `${year}-${month}-${day}`;
+            };
+            const today = getLocalDateString();
             const sessionsArray = Array.isArray(data)
               ? data
               : data?.sessions || [];
@@ -516,28 +675,34 @@ export default function LecturerLiveClassMonitoring({
 
     const fetchLiveData = async () => {
       if (!targetId) return;
+
+      let fetchedLogsData = null;
+
       try {
-        // 1. Fetch Logs
-        const logsRes = await fetch(
+        // 1. SMART FETCH: Try multiple common endpoint patterns to guarantee we hit the right logs API
+        const logEndpoints = [
+          `${API_BASE}/api/attendance/session_logs/${targetId}`,
           `${API_BASE}/api/attendance/live_logs/${targetId}`,
-        );
-        if (logsRes.ok) {
-          const logsData = await logsRes.json();
-          setLogEntries(
-            logsData.map((d: any, idx: number) => ({
-              id: `${idx}-${d.timestamp || d.time}`,
-              studentName: d.name || d.student_name || "Unknown",
-              indexNumber: d.index_number || d.student_index || d.student_id,
-              time: d.timestamp || d.time,
-              status: d.status,
-            })),
-          );
+          `${API_BASE}/api/attendance/logs/${targetId}`,
+        ];
+
+        for (const endpoint of logEndpoints) {
+          try {
+            const res = await fetch(endpoint);
+            if (res.ok) {
+              fetchedLogsData = await res.json();
+              break; // Found the correct endpoint, exit the loop!
+            }
+          } catch (e) {
+            // Ignore network errors for incorrect endpoints and try the next one
+          }
         }
 
         // 2. Fetch Stats
         const statsRes = await fetch(
           `${API_BASE}/api/attendance/session_stats/${targetId}`,
         );
+
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           setLiveStats({
@@ -545,17 +710,55 @@ export default function LecturerLiveClassMonitoring({
             totalEntered: statsData.total_entered || 0,
             leftEarly: statsData.left_early || 0,
           });
+
+          // Fallback: If the backend bundles logs directly inside the stats response, use them!
+          if (!fetchedLogsData && statsData.logs) {
+            fetchedLogsData = statsData.logs;
+          }
+        } else if (statsRes.status === 404 || statsRes.status === 400) {
+          // Session was ended remotely by the host
+          if (isViewOnly) {
+            toast.error("The Host has ended this live session.", {
+              duration: 5000,
+            });
+            navigate("/admin/live-sessions");
+          }
+        }
+
+        // 3. Safely map and set the log entries if we successfully retrieved them
+        if (fetchedLogsData) {
+          const logsArray = Array.isArray(fetchedLogsData)
+            ? fetchedLogsData
+            : fetchedLogsData.logs || [];
+
+          setLogEntries(
+            logsArray.map((d: any, idx: number) => ({
+              id: d.id || `${idx}-${d.timestamp || d.time || Date.now()}`,
+              studentName:
+                d.name || d.student_name || d.student?.name || "Unknown",
+              indexNumber:
+                d.index_number ||
+                d.student_index ||
+                d.student?.index_number ||
+                d.student_id ||
+                "N/A",
+              time: d.timestamp || d.time || new Date().toISOString(),
+              status: d.status || "entered",
+            })),
+          );
         }
       } catch (error) {
         console.error("Live polling error:", error);
       }
     };
 
-    if (targetId) {
-      // Fetch immediately
+    const pollData = () => {
       fetchLiveData();
-      // Then poll
-      interval = setInterval(fetchLiveData, 1000);
+      interval = setInterval(fetchLiveData, 5000); // Poll every 5 seconds for stability
+    };
+
+    if (sessionActive || isViewOnly) {
+      pollData();
     }
 
     return () => {
@@ -655,7 +858,9 @@ export default function LecturerLiveClassMonitoring({
         const newEntries: LogEntry[] = data.logs.map((log: any) => ({
           id: _logIdCounter++,
           studentName:
-            log.student?.name || log.student_name || `Student #${log.student_id}`,
+            log.student?.name ||
+            log.student_name ||
+            `Student #${log.student_id}`,
           indexNumber:
             log.student?.index_number || log.student_index || log.student_id,
           time: log.timestamp || log.time || nowTimeString(),
@@ -686,30 +891,71 @@ export default function LecturerLiveClassMonitoring({
     }
 
     try {
-      // 1. Resolve dynamic IDs for foreign key constraints
-      const currentLecturerId = lecturerId || 5; // Fallback to 5 for testing if profile fetch fails
-
       if (!selectedSubject) {
         setCameraError("Please select a Course Subject to begin tracking.");
         return;
       }
 
-      // 2. Initialize session in backend
+      // 1. Thoroughly extract the true Lecturer ID from possible data structures
+      const extractedLecturerId =
+        selectedSessionDetails?.lecturer_id ||
+        selectedSessionDetails?.lecturerId ||
+        selectedSessionDetails?.lecturer?.id ||
+        (sessionDetails as any)?.lecturer_id ||
+        (sessionDetails as any)?.lecturerId ||
+        lecturerId;
+
+      if (!extractedLecturerId) {
+        console.error(
+          "[START SESSION] Missing Lecturer ID in session details:",
+          selectedSessionDetails,
+        );
+        toast.error(
+          "Cannot start session: Lecturer ID is missing from the timetable data.",
+          { duration: 5000 },
+        );
+        return; // Halt the function to prevent 500 Backend Error
+      }
+
+      // 2. Strictly format payload for FastAPI Pydantic validation
+      const payload = {
+        lecturer_id: Number(extractedLecturerId),
+        subject_id: String(
+          selectedSubject || selectedSessionDetails?.subject_id || "UNKNOWN",
+        ),
+        batch_id: String(
+          selectedSession || selectedSessionDetails?.batch_id || "UNKNOWN",
+        ),
+        session_type: String(
+          sessionDetails?.type ||
+            selectedSessionDetails?.session_type ||
+            "Lecture",
+        ),
+        location: String(
+          sessionDetails?.location ||
+            selectedSessionDetails?.location ||
+            "Hall A",
+        ),
+      };
+
+      console.log(
+        "[START SESSION] Sending strictly validated payload:",
+        payload,
+      );
+
+      // 3. Initialize session in backend
       const res = await fetch(`${API_BASE}/api/attendance/start_session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lecturer_id: currentLecturerId,
-          subject_id: selectedSubject,
-          batch_id: selectedSession,
-          session_type: sessionDetails.type,
-          location: sessionDetails.location,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("Failed to start backend session");
       const data = await res.json();
       setCurrentSessionId(data.id);
+
+      // Mark Admin as Host on Start
+      localStorage.setItem("admin_hosted_session", String(selectedSession));
 
       // Persist session to localStorage for navigation resilience
       localStorage.setItem(storageKey, String(selectedSession));
@@ -739,6 +985,11 @@ export default function LecturerLiveClassMonitoring({
 
       setSessionActive(true);
       setAttendanceToast(null);
+
+      // Dispatch explicitly for global Layout
+      window.dispatchEvent(
+        new CustomEvent("camera-status", { detail: "Online" }),
+      );
 
       // Optionally start neither, but let's start entrance by default if specified
       if (inCameraId) setIsEntranceActive(true);
@@ -779,9 +1030,10 @@ export default function LecturerLiveClassMonitoring({
 
   const handleEndSession = useCallback(async () => {
     // Clear persisted session immediately
-    localStorage.removeItem("activeAttendanceSession");
     localStorage.removeItem(storageKey);
+    localStorage.removeItem("activeAttendanceSession");
     localStorage.removeItem("sessionStartTime");
+    localStorage.removeItem("admin_hosted_session");
 
     // Optimistic UI update: mark session dead on client so it doesn't flip to ViewOnly
     setTodaySessions((prev) =>
@@ -798,6 +1050,10 @@ export default function LecturerLiveClassMonitoring({
     setAnnotatedFrame(null);
     setShowEndSessionModal(false);
     setShowSuccessToast(true);
+
+    navigate(
+      isAdminRoute ? "/admin/live-sessions" : "/lecturer/mark-attendances",
+    );
 
     // SYNC: Mark timetable session as closed for real-time dashboard updates
     if (selectedSession) {
@@ -863,10 +1119,23 @@ export default function LecturerLiveClassMonitoring({
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
       {/* Admin Back Button */}
       {isAdminRoute && (
-        <div className="bg-white border-b border-gray-100">
+        <div className="bg-white border-b border-gray-100 px-4 py-2">
           <button
-            onClick={() => navigate("/admin/live-class-monitoring")}
+            onClick={() => navigate("/admin/live-sessions")}
             className="flex items-center gap-2 px-3 py-1.5 text-gray-600 hover:text-blue-600 font-bold cursor-pointer rounded-lg transition-all group text-md"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Sessions Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Lecturer Back Button */}
+      {!isAdminRoute && (
+        <div className="bg-white border-b border-gray-100 px-4 py-2">
+          <button
+            onClick={() => navigate("/lecturer/mark-attendances")}
+            className="flex items-center gap-2 px-2 mt-2 text-gray-800 hover:text-blue-600 font-bold cursor-pointer rounded-lg transition-all group text-sm"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to Sessions Dashboard
@@ -876,13 +1145,13 @@ export default function LecturerLiveClassMonitoring({
 
       {/* View-Only Mode Banner for Admin */}
       {isViewOnly && (
-        <div className="mx-4 mt-2 bg-blue-50 border-2 border-blue-200 rounded-xl p-3 flex items-start gap-3 shadow-sm">
+        <div className="mx-4 mt-2 bg-blue-50 border-2 border-blue-200 border-dashed rounded-xl p-3 flex items-start gap-3 shadow-sm">
           <div className="bg-blue-100 p-2 rounded-lg shrink-0 mt-1">
             <Info className="w-6 h-6 text-blue-700" />
           </div>
           <div>
             <h4 className="text-blue-800 font-bold text-md">View-Only Mode</h4>
-            <p className="text-blue-600 text-sm mt-0.5 leading-relaxed">
+            <p className="text-blue-600 text-sm mt-0.5 leading-relaxed font-medium">
               This session is currently being managed by the Lecturer. You are
               viewing the live attendance stream but cannot modify or end the
               session.
@@ -904,11 +1173,10 @@ export default function LecturerLiveClassMonitoring({
                 Subject
               </label>
               <select
-                aria-label="Select Course Subject"
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 disabled={sessionActive}
-                className="w-full px-4 cursor-pointer py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full px-4 cursor-pointer py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               >
                 <option value="">Select Subject...</option>
                 <option value="CS-101">
@@ -945,7 +1213,7 @@ export default function LecturerLiveClassMonitoring({
                   }
                 }}
                 disabled={sessionActive || isLoadingSessions || isViewOnly}
-                className={`w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500  transition-all disabled:opacity-75 ${
+                className={`w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500  transition-all disabled:opacity-75 ${
                   isViewOnly ? "opacity-70 cursor-not-allowed bg-gray-50" : ""
                 }`}
               >
@@ -976,7 +1244,7 @@ export default function LecturerLiveClassMonitoring({
                   setSessionDetails({ ...sessionDetails, type: e.target.value })
                 }
                 disabled={sessionActive}
-                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
+                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
               >
                 <option value="Lecture">Lecture</option>
                 <option value="Practical/Lab">Practical/Lab</option>
@@ -999,7 +1267,7 @@ export default function LecturerLiveClassMonitoring({
                   })
                 }
                 disabled={sessionActive}
-                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
+                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
               >
                 <option value="Main Auditorium">Main Auditorium</option>
                 <option value="Lab 01">Lab 01</option>
@@ -1176,12 +1444,17 @@ export default function LecturerLiveClassMonitoring({
                   <div className="flex-1 bg-gray-900 relative overflow-hidden min-h-[300px] flex items-center justify-center">
                     {isViewOnly ? (
                       /* ADMIN VIEW-ONLY PLACEHOLDER (No Video) */
-                      <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center z-10">
-                        <VideoOff className="w-12 h-12 mb-3 opacity-40 text-gray-500" />
-                        <p className="text-md font-bold text-gray-300">
-                          View-Only Mode
-                        </p>
-                        <p className="text-sm mt-1 opacity-80 font-medium leading-relaxed max-w-[200px]">
+                      <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center text-center p-6 rounded-lg z-10 m-2">
+                        <div className="relative flex h-16 w-16 mb-4 mt-8">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-16 w-16 bg-blue-500 items-center justify-center">
+                            <VideoOff className="w-8 h-8 text-white" />
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          Host Camera is Active
+                        </h3>
+                        <p className="text-gray-400 max-w-sm mb-8 font-medium text-sm">
                           Live video feed is disabled for monitoring. Real-time
                           attendance logs are updating on the right panel.
                         </p>
@@ -1313,12 +1586,17 @@ export default function LecturerLiveClassMonitoring({
                   <div className="flex-1 bg-gray-900 relative overflow-hidden min-h-[300px] flex items-center justify-center">
                     {isViewOnly ? (
                       /* ADMIN VIEW-ONLY PLACEHOLDER (No Video) */
-                      <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center z-10">
-                        <VideoOff className="w-12 h-12 mb-3 opacity-40 text-gray-500" />
-                        <p className="text-md font-bold text-gray-300">
-                          View-Only Mode
-                        </p>
-                        <p className="text-sm mt-1 opacity-80 font-medium leading-relaxed max-w-[200px]">
+                      <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center text-center p-6 rounded-lg z-10 m-2">
+                        <div className="relative flex h-16 w-16 mb-4 mt-8">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-16 w-16 bg-red-500 items-center justify-center">
+                            <VideoOff className="w-8 h-8 text-white" />
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          Host Camera is Active
+                        </h3>
+                        <p className="text-gray-400 max-w-sm mb-8 font-medium text-sm">
                           Live video feed is disabled for monitoring. Real-time
                           attendance logs are updating on the right panel.
                         </p>
@@ -1397,7 +1675,7 @@ export default function LecturerLiveClassMonitoring({
             )}
 
             <div className="flex-1 overflow-y-auto">
-              {!sessionActive ? (
+              {!(sessionActive || isViewOnly) ? (
                 <div className="flex items-center justify-center h-full px-5 py-20">
                   <div className="text-center">
                     <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -1463,12 +1741,14 @@ export default function LecturerLiveClassMonitoring({
                                   if (match) {
                                     let h = parseInt(match[1]);
                                     const m = parseInt(match[2]);
-                                    const isPM = match[3].toUpperCase() === "PM";
+                                    const isPM =
+                                      match[3].toUpperCase() === "PM";
                                     if (isPM && h !== 12) h += 12;
                                     if (!isPM && h === 12) h = 0;
 
                                     const totalMinutes = h * 60 + m + 330; // +5.5 hours
-                                    let newH = Math.floor(totalMinutes / 60) % 24;
+                                    let newH =
+                                      Math.floor(totalMinutes / 60) % 24;
                                     const newM = totalMinutes % 60;
 
                                     const newAmPm = newH >= 12 ? "PM" : "AM";
@@ -1480,8 +1760,13 @@ export default function LecturerLiveClassMonitoring({
                                 }
 
                                 // Scenario B: Backend sent raw DB timestamp (e.g., "2026-04-23 21:18:15.643787")
-                                let cleanStr = t.split(".")[0].replace(" ", "T");
-                                if (cleanStr.includes("-") && !cleanStr.endsWith("Z"))
+                                let cleanStr = t
+                                  .split(".")[0]
+                                  .replace(" ", "T");
+                                if (
+                                  cleanStr.includes("-") &&
+                                  !cleanStr.endsWith("Z")
+                                )
                                   cleanStr += "Z";
 
                                 const d = new Date(cleanStr);

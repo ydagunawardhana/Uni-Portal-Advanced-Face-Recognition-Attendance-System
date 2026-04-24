@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { LogOut, User, UserCheck, Video, AlertTriangle } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import LecturerSidebar from "./LecturerSidebar";
 import LecturerDashboardHome from "./LecturerDashboardHome";
@@ -32,7 +33,42 @@ interface LecturerDashboardProps {
 export default function LecturerDashboard({
   onLogout,
 }: LecturerDashboardProps) {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.pathname.includes("mark-attendances")) return "live-class";
+    if (location.pathname.includes("my-subjects")) return "subjects";
+    if (location.pathname.includes("timetable")) return "timetable";
+    if (location.pathname.includes("appointments")) return "appointments";
+    if (location.pathname.includes("profile")) return "profile";
+    if (location.pathname.includes("history")) return "history";
+    if (location.pathname.includes("manual-attendances"))
+      return "mark-attendance";
+    return "dashboard";
+  });
+
+  // Sync tab with URL for navigation resilience
+  useEffect(() => {
+    if (location.pathname.includes("mark-attendances")) {
+      setActiveTab("live-class");
+    } else if (location.pathname.includes("manual-attendances")) {
+      setActiveTab("mark-attendance");
+    } else if (location.pathname.includes("my-subjects")) {
+      setActiveTab("subjects");
+    } else if (location.pathname.includes("timetable")) {
+      setActiveTab("timetable");
+    } else if (location.pathname.includes("appointments")) {
+      setActiveTab("appointments");
+    } else if (location.pathname.includes("profile")) {
+      setActiveTab("profile");
+    } else if (location.pathname.includes("history")) {
+      setActiveTab("history");
+    } else if (location.pathname === "/lecturer") {
+      setActiveTab("dashboard");
+    }
+  }, [location.pathname]);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [lecturerName, setLecturerName] = useState("Lecturer");
@@ -202,6 +238,35 @@ export default function LecturerDashboard({
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    // Route based on tab selection
+    switch (tab) {
+      case "dashboard":
+        navigate("/lecturer");
+        break;
+      case "live-class":
+        navigate("/lecturer/mark-attendances");
+        break;
+      case "subjects":
+        navigate("/lecturer/my-subjects");
+        break;
+      case "timetable":
+        navigate("/lecturer/timetable");
+        break;
+      case "appointments":
+        navigate("/lecturer/appointments");
+        break;
+      case "profile":
+        navigate("/lecturer/profile");
+        break;
+      case "history":
+        navigate("/lecturer/history");
+        break;
+      case "mark-attendance":
+        navigate("/lecturer/manual-attendances");
+        break;
+      default:
+        navigate("/lecturer");
+    }
   };
 
   const getHeaderTitle = () => {
@@ -234,7 +299,7 @@ export default function LecturerDashboard({
       case "dashboard":
         return "Overview of your classes and attendance";
       case "live-class":
-        return "CS301 - Database Systems | Classroom A";
+        return "Real-time attendance Sessions Monitoring";
       case "history":
         return "View and export past class records";
       case "subjects":
@@ -259,7 +324,8 @@ export default function LecturerDashboard({
     activeTab === "timetable" ||
     activeTab === "settings" ||
     activeTab === "mark-attendance" ||
-    activeTab === "appointments"
+    activeTab === "appointments" ||
+    activeTab === "live-class"
   ) {
     return (
       <div className="flex min-h-screen bg-gray-50">
@@ -354,6 +420,7 @@ export default function LecturerDashboard({
               {activeTab === "timetable" && <LecturerTimetable />}
               {activeTab === "settings" && <LecturerSettings />}
               {activeTab === "appointments" && <Appointments />}
+              {activeTab === "live-class" && <LecturerDailySessions />}
             </main>
           )}
         </div>
@@ -361,25 +428,6 @@ export default function LecturerDashboard({
     );
   }
 
-  // Live class overview (Replaces immediate camera view)
-  if (activeTab === "live-class") {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <LecturerSidebar
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          pendingCount={pendingCount}
-        />
-        <div
-          className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"}`}
-        >
-          <LecturerDailySessions />
-        </div>
-      </div>
-    );
-  }
 
   // Old live class view kept for reference (should not be reached)
   return (

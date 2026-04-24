@@ -275,7 +275,7 @@ export default function LecturerProfile() {
   return (
     <div className="w-full mx-auto flex flex-col gap-6">
       {/* Save Reminder Note */}
-      <div className="bg-gray-100 border border-yellow-500 p-4 mb-2 rounded-lg shadow-md">
+      <div className="bg-gray-100 border border-yellow-500 p-4 mb-2 rounded-xl shadow-md">
         <div className="flex items-start">
           <div className="flex-shrink-0">
             <AlertCircle
@@ -366,7 +366,7 @@ export default function LecturerProfile() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="e.g. Dr. Michael Johnson"
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -378,7 +378,7 @@ export default function LecturerProfile() {
               type="text"
               disabled
               value={lecturerData?.employee_id || ""}
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
             />
             <p className="mt-1.5 text-xs text-gray-500">
               Employee ID cannot be changed.
@@ -393,7 +393,7 @@ export default function LecturerProfile() {
               type="email"
               disabled
               value={lecturerData?.email || ""}
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
             />
             <p className="mt-1.5 text-xs text-gray-500">
               Used as the login username and cannot be changed.
@@ -409,7 +409,7 @@ export default function LecturerProfile() {
               value={personalEmail}
               onChange={(e) => setPersonalEmail(e.target.value)}
               placeholder="e.g. name@outlook.com"
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
         </div>
@@ -440,7 +440,7 @@ export default function LecturerProfile() {
               type="text"
               disabled
               value={lecturerData?.faculty || "Not Specified"}
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
             />
             <p className="mt-1.5 text-xs text-gray-500">
               Academic assignments are managed by the administration.
@@ -455,7 +455,7 @@ export default function LecturerProfile() {
               type="text"
               disabled
               value={lecturerData?.department || ""}
-              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
+              className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-gray-100 text-gray-500 cursor-not-allowed"
             />
             <p className="mt-1.5 text-xs text-gray-500">
               Academic assignments are managed by the administration.
@@ -524,7 +524,7 @@ export default function LecturerProfile() {
                     newQuals[index].degree = e.target.value;
                     setQualifications(newQuals);
                   }}
-                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div className="col-span-5">
@@ -537,7 +537,7 @@ export default function LecturerProfile() {
                     newQuals[index].institution = e.target.value;
                     setQualifications(newQuals);
                   }}
-                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div className="col-span">
@@ -550,7 +550,7 @@ export default function LecturerProfile() {
                     newQuals[index].year = e.target.value;
                     setQualifications(newQuals);
                   }}
-                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center"
+                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-center"
                 />
               </div>
               <div className="col-span-1 flex justify-center">
@@ -609,7 +609,7 @@ export default function LecturerProfile() {
                     newSlots[index].day = e.target.value;
                     setOfficeHours(newSlots);
                   }}
-                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
                 >
                   {[
                     "Monday",
@@ -635,7 +635,7 @@ export default function LecturerProfile() {
                     newSlots[index].startTime = e.target.value;
                     setOfficeHours(newSlots);
                   }}
-                  className="w-full px-3 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center"
+                  className="w-full px-3 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-center"
                 />
               </div>
               <div className="col-span-2">
@@ -647,7 +647,7 @@ export default function LecturerProfile() {
                     newSlots[index].endTime = e.target.value;
                     setOfficeHours(newSlots);
                   }}
-                  className="w-full px-3 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center"
+                  className="w-full px-3 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-center"
                 />
               </div>
               <div className="col-span-2">
@@ -660,7 +660,7 @@ export default function LecturerProfile() {
                     newSlots[index].location = e.target.value;
                     setOfficeHours(newSlots);
                   }}
-                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div className="col-span-1 flex justify-center">
@@ -724,7 +724,7 @@ export default function LecturerProfile() {
                 type={showCurrentPassword ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2.5 text-md border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 placeholder="Enter current password"
               />
               <button
@@ -750,7 +750,7 @@ export default function LecturerProfile() {
                 type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-2.5 text-md  border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2.5 text-md  border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 placeholder="Enter new password"
               />
               <button
@@ -776,7 +776,7 @@ export default function LecturerProfile() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2.5 text-md   border border-gray-300 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2.5 text-md   border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 placeholder="Confirm new password"
               />
               <button

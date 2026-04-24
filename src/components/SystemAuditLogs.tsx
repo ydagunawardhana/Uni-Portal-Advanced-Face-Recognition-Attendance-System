@@ -235,9 +235,17 @@ export default function SystemAuditLogs() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
+      const getLocalDateString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       link.setAttribute(
         "download",
-        `audit_logs_${new Date().toISOString().split("T")[0]}.csv`,
+        `audit_logs_${getLocalDateString()}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -288,7 +296,7 @@ export default function SystemAuditLogs() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by action or description..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
@@ -304,7 +312,7 @@ export default function SystemAuditLogs() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
@@ -320,7 +328,7 @@ export default function SystemAuditLogs() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
@@ -335,7 +343,7 @@ export default function SystemAuditLogs() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
               >
                 <option value="All">All Roles</option>
                 <option value="Admin">Admin</option>
@@ -353,7 +361,7 @@ export default function SystemAuditLogs() {
           <select
             value={actionTypeFilter}
             onChange={(e) => setActionTypeFilter(e.target.value)}
-            className="w-full px-4  cursor-pointer py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
+            className="w-full px-4  cursor-pointer py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
           >
             <option value="All">All Actions</option>
             <option value="Login Activity">Login Activity</option>
