@@ -1141,7 +1141,9 @@ def get_today_timetable_admin(
             "degree": degree,
             "level": level,
             "is_live": entry.is_live,
-            "status": status
+            "status": status,
+            "cover_requested": getattr(entry, 'cover_requested', False),
+            "cover_reason": getattr(entry, 'cover_reason', None)
         })
 
     return {

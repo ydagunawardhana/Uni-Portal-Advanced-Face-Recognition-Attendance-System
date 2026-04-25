@@ -75,6 +75,8 @@ class ClassSession(Base):
     start_time   = Column(DateTime, default=func.now(), nullable=False)
     end_time     = Column(DateTime, nullable=True)
     status       = Column(String, default="Active", nullable=False)  # 'Active' | 'Closed'
+    cover_requested = Column(Boolean, default=False, nullable=False)
+    cover_reason    = Column(String, nullable=True)
 
     lecturer     = relationship("Lecturer")
     attendance_logs = relationship("AttendanceLog", back_populates="session")
@@ -214,6 +216,8 @@ class Timetable(Base):
     semester    = Column(String, nullable=True)
     is_live     = Column(Boolean, default=False, nullable=False)
     file_name   = Column(String, nullable=True)
+    cover_requested = Column(Boolean, default=False, nullable=False)
+    cover_reason    = Column(String, nullable=True)
     created_at  = Column(DateTime, server_default=func.now())
 
 

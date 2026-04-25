@@ -58,7 +58,7 @@ export default function AddVisitingLecturerModal({
         onClick={onClose}
       />
       
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden transform transition-all animate-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md relative overflow-hidden transform transition-all animate-in zoom-in duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-blue-50/50">
           <div className="flex items-center gap-2 text-blue-700">

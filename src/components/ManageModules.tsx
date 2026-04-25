@@ -443,7 +443,7 @@ export default function ManageModules() {
         selectedModule &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center animate-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-8 text-center animate-in zoom-in duration-200">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
@@ -545,7 +545,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="px-6 border-b border-gray-100 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-bold text-gray-900 pt-6">
@@ -821,7 +821,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
         <div className="px-6 border-b border-gray-100 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-bold text-gray-900 pt-6">
             Update Module Details

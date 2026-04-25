@@ -127,6 +127,8 @@ class SessionOut(SessionCreate):
     start_time: datetime
     end_time: Optional[datetime] = None
     status: str
+    cover_requested: bool = False
+    cover_reason: Optional[str] = None
 
     model_config = {"from_attributes": True}
     
@@ -160,4 +162,8 @@ class ModuleUpdate(BaseModel):
 class ManualOverride(BaseModel):
     session_id: int
     student_index: str
+
+
+class CoverRequestUpdate(BaseModel):
+    reason: str
 

@@ -54,7 +54,6 @@ const universityData: Record<string, string[]> = {
   ],
 };
 
-
 export default function ManageLecturers() {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +61,9 @@ export default function ManageLecturers() {
   const [facultyFilter, setFacultyFilter] = useState("All Faculties");
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
   const [subjectFilter, setSubjectFilter] = useState("All Subjects");
-  const [allModules, setAllModules] = useState<{module_code: string, module_name: string, department: string}[]>([]);
+  const [allModules, setAllModules] = useState<
+    { module_code: string; module_name: string; department: string }[]
+  >([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVisitingModalOpen, setIsVisitingModalOpen] = useState(false);
@@ -476,13 +477,13 @@ export default function ManageLecturers() {
             >
               <option value="All Subjects">All Subjects</option>
               {departmentFilter === "All Departments"
-                ? Array.from(
-                    new Set(allModules.map((m) => m.module_code)),
-                  ).map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))
+                ? Array.from(new Set(allModules.map((m) => m.module_code))).map(
+                    (code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ),
+                  )
                 : allModules
                     .filter((m) => m.department === departmentFilter)
                     .map((m) => (
@@ -715,14 +716,15 @@ export default function ManageLecturers() {
       />
 
       {/* Custom Delete Confirmation Modal */}
-      {isDeleteModalOpen && selectedLecturer &&
+      {isDeleteModalOpen &&
+        selectedLecturer &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div
               className="absolute inset-0"
               onClick={() => setIsDeleteModalOpen(false)}
             ></div>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
               <div className="p-8 flex flex-col items-center text-center">
                 {/* Warning Icon Cluster */}
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
@@ -739,8 +741,8 @@ export default function ManageLecturers() {
                   <span className="font-bold text-gray-900">
                     {selectedLecturer.name}
                   </span>
-                  ? This will permanently remove their academic profile and revoke
-                  all portal access rights.
+                  ? This will permanently remove their academic profile and
+                  revoke all portal access rights.
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 w-full text-center">

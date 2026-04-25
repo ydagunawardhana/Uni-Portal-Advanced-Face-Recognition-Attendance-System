@@ -155,7 +155,7 @@ export default function EditLecturerModal({
       ></div>
 
       {/* Modal Card */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
+      <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 bg-gray-50/50">
           <div>

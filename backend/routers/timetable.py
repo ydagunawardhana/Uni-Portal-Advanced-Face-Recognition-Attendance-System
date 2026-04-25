@@ -453,3 +453,18 @@ async def stop_timetable_session(session_id: int, db: Session = Depends(get_db))
     session.is_live = False
     db.commit()
     return {"status": "success", "message": f"Session {session_id} is now CLOSED."}
+class CoverRequest(BaseModel):
+    reason: str
+
+@router.post("/{session_id}/request_cover")
+async def request_cover(session_id: int, payload: CoverRequest, db: Session = Depends(get_db)):
+    """Allows a lecturer to request an admin to cover their class."""
+    session = db.query(Timetable).filter(Timetable.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session.cover_requested = True
+    session.cover_reason = payload.reason
+    db.commit()
+    
+    return {"status": "success", "message": "Cover request submitted successfully."}

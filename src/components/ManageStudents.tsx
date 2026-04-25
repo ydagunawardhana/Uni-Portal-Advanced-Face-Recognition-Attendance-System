@@ -863,7 +863,7 @@ export default function ManageStudents({
               className="absolute inset-0"
               onClick={() => setIsEditModalOpen(false)}
             ></div>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-3xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -1186,7 +1186,7 @@ export default function ManageStudents({
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="absolute inset-0" onClick={closeCaptureModal}></div>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative overflow-hidden transform transition-all">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl relative overflow-hidden transform transition-all">
             {/* Modal Header */}
             <div className="bg-blue-100 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1411,7 +1411,7 @@ export default function ManageStudents({
               className="absolute inset-0"
               onClick={() => setStudentToDelete(null)}
             ></div>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               {/* Warning Icon Cluster */}
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
@@ -1435,13 +1435,13 @@ export default function ManageStudents({
               <div className="grid grid-cols-2 gap-4 w-full text-center">
                 <button
                   onClick={() => setStudentToDelete(null)}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 border border-gray-300 cursor-pointer text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-red-600 text-white rounded-xl cursor-pointer font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
                 >
                   <Trash className="w-4 h-4" />
                   Yes, Delete

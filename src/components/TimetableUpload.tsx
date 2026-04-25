@@ -510,7 +510,7 @@ export default function TimetableUpload() {
       {isErrorModalOpen &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="p-6 text-center">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-10 h-10 text-red-600" />
@@ -907,7 +907,7 @@ export default function TimetableUpload() {
       {/* Extraction Preview Modal */}
       {isPreviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-6 border-b flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-4">
@@ -1043,7 +1043,7 @@ export default function TimetableUpload() {
       {deleteBatchId &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-sm">
                 <Trash2 className="w-10 h-10 text-red-600" />
               </div>
@@ -1085,7 +1085,7 @@ export default function TimetableUpload() {
       {viewBatchId &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-8 border-b flex justify-between items-center bg-gray-50 shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-100 text-blue-600 rounded-xl shadow-inner">

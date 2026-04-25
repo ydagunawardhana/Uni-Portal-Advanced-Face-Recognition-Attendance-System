@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 import models
+import schemas
 from database import get_db
 from auth import verify_password, hash_password, get_current_user
 
@@ -274,6 +275,8 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
             "status": s.status,
             "students_present": entered,
             "attendance_percentage": session_pct,
+            "cover_requested": getattr(s, 'cover_requested', False),
+            "cover_reason": getattr(s, 'cover_reason', None)
         })
 
     # ── 4. Upcoming appointments (next 5, Pending or Approved) ──
@@ -381,6 +384,8 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
             "session_type": s.session_type,
             "location": s.location,
             "status": s.status,
+            "cover_requested": getattr(s, 'cover_requested', False),
+            "cover_reason": getattr(s, 'cover_reason', None)
         })
 
     # ── 8. Assemble response ──
@@ -598,6 +603,81 @@ def get_lecturer_timetable(
             "semester": r.level or r.Timetable.semester or "N/A",
             "degree": r.degree or "N/A",
             "level": r.level,
+            "cover_requested": getattr(r.Timetable, 'cover_requested', False),
+            "cover_reason": getattr(r.Timetable, 'cover_reason', None)
         }
         for r in results
     ]
+
+
+@router.post("/request_cover/{session_id}")
+def request_admin_cover(
+    session_id: int,
+    request_data: schemas.CoverRequestUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Saves a lecturer's request for administrative cover to the timetable record."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    # 1. Find the timetable entry
+    timetable_entry = (
+        db.query(models.Timetable).filter(models.Timetable.id == session_id).first()
+    )
+
+    if not timetable_entry:
+        raise HTTPException(status_code=404, detail="Session not found in timetable")
+
+    # 2. Update the fields
+    timetable_entry.cover_requested = True
+    timetable_entry.cover_reason = request_data.reason
+
+    # 3. Commit the changes
+    try:
+        db.commit()
+        db.refresh(timetable_entry)
+        return {
+            "message": "Cover request saved successfully",
+            "session_id": session_id,
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/cancel_cover/{session_id}")
+def cancel_admin_cover(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Clears a lecturer's cover request from the timetable record."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    # 1. Find the timetable entry
+    timetable_entry = (
+        db.query(models.Timetable).filter(models.Timetable.id == session_id).first()
+    )
+
+    if not timetable_entry:
+        raise HTTPException(status_code=404, detail="Session not found in timetable")
+
+    # 2. Clear the fields
+    timetable_entry.cover_requested = False
+    timetable_entry.cover_reason = None
+
+    # 3. Commit the changes
+    try:
+        db.commit()
+        db.refresh(timetable_entry)
+        return {
+            "message": "Cover request cancelled successfully",
+            "session_id": session_id,
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+

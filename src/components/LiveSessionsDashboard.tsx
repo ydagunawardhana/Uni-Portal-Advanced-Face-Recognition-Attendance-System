@@ -55,6 +55,8 @@ interface Session {
   department?: string;
   semester?: string;
   status: "Pending" | "Live" | "Completed";
+  cover_requested?: boolean;
+  cover_reason?: string;
 }
 
 interface DashboardData {
@@ -74,6 +76,7 @@ export default function LiveSessionsDashboard() {
   const [facultyFilter, setFacultyFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [lecturerTypeFilter, setLecturerTypeFilter] = useState("");
+  const [showCoverRequestsOnly, setShowCoverRequestsOnly] = useState(false);
 
   const handleFacultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFacultyFilter(e.target.value);
@@ -153,6 +156,9 @@ export default function LiveSessionsDashboard() {
         matchesType = s.is_visiting === false || !s.is_visiting;
       }
 
+      // 4. Cover Requests Filter
+      if (showCoverRequestsOnly && !s.cover_requested) return false;
+
       return matchesSearch && matchesFaculty && matchesDept && matchesType;
     }) || [];
 
@@ -205,10 +211,28 @@ export default function LiveSessionsDashboard() {
 
       {/* Toolbar & Filters */}
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-6">
-          <GraduationCap className="w-10 h-10 text-blue-600" />
-          Daily Lectures Timetable
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <GraduationCap className="w-10 h-10 text-blue-600" />
+            Daily Lectures Timetable
+          </h2>
+        
+
+        {/* Quick Filters */}
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={() => setShowCoverRequestsOnly(!showCoverRequestsOnly)}
+            className={`px-4 py-2 rounded-lg font-bold cursor-pointer text-sm flex items-center gap-2 transition-colors border-2 ${
+              showCoverRequestsOnly
+                ? "bg-red-50 text-red-700 border-red-200"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4" />
+            {showCoverRequestsOnly ? "Showing Cover Requests" : "Show Cover Requests"}
+          </button>
+        </div>
+        </div>
 
         {/* Filters Section (Grid Layout) */}
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
@@ -272,6 +296,8 @@ export default function LiveSessionsDashboard() {
             </select>
           </div>
         </div>
+
+        
       </div>
 
       {/* Sessions Grid */}
@@ -300,17 +326,26 @@ export default function LiveSessionsDashboard() {
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-bold uppercase tracking-widest ${
-                      session.status === "Live"
-                        ? "bg-green-100 text-green-600 animate-pulse border-2 border-green-200"
-                        : session.status === "Completed"
-                          ? "bg-gray-100 text-gray-600"
-                          : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {session.status === "Live" ? "● LIVE NOW" : session.status}
-                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-bold uppercase tracking-widest ${
+                        session.status === "Live"
+                          ? "bg-green-100 text-green-600 animate-pulse border-2 border-green-200"
+                          : session.status === "Completed"
+                            ? "bg-gray-100 text-gray-600"
+                            : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {session.status === "Live" ? "● LIVE NOW" : session.status}
+                    </span>
+
+                    {/* NEW: Cover Request Badge */}
+                    {session.cover_requested && (
+                      <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-full flex items-center gap-1 animate-pulse uppercase">
+                        <AlertCircle className="w-4 h-4" /> Cover Requested
+                      </span>
+                    )}
+                  </div>
 
                   {session.is_visiting && (
                     <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-sm font-bold rounded-full">
@@ -318,6 +353,14 @@ export default function LiveSessionsDashboard() {
                     </span>
                   )}
                 </div>
+
+                {/* NEW: Display Cover Reason */}
+                {session.cover_requested && session.cover_reason && (
+                  <div className="mb-3 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>Reason: {session.cover_reason}</span>
+                  </div>
+                )}
 
                 <div className="mb-4">
                   <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">

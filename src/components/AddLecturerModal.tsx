@@ -139,7 +139,7 @@ export default function AddLecturerModal({
       ></div>
 
       {/* Modal Card */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
+      <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 bg-gray-50/50">
           <div>
@@ -373,14 +373,14 @@ export default function AddLecturerModal({
         <div className="flex items-center justify-end space-x-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
           <button
             onClick={handleCancel}
-            className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg cursor-pointer font-medium hover:bg-gray-100 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg cursor-pointer font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:bg-blue-400 disabled:cursor-not-allowed"
           >
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? "Saving..." : "Save Lecturer"}

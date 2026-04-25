@@ -12,7 +12,10 @@ import {
   Users,
   User,
   LogOut,
+  AlertCircle,
+  X,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const API_BASE = "http://localhost:8000";
 
@@ -30,6 +33,8 @@ interface Session {
   degree?: string;
   semester?: string;
   level?: string;
+  cover_requested?: boolean;
+  cover_reason?: string;
 }
 
 export default function LecturerDailySessions() {
@@ -43,6 +48,11 @@ export default function LecturerDailySessions() {
   const [startingSessionId, setStartingSessionId] = useState<number | null>(
     null,
   );
+  const [showCoverModal, setShowCoverModal] = useState(false);
+  const [selectedCoverSession, setSelectedCoverSession] =
+    useState<Session | null>(null);
+  const [coverReason, setCoverReason] = useState("");
+  const [isSubmittingCover, setIsSubmittingCover] = useState(false);
 
   useEffect(() => {
     const fetchTodayTimetable = async () => {
@@ -56,8 +66,8 @@ export default function LecturerDailySessions() {
           const getLocalDateString = () => {
             const d = new Date();
             const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
             return `${year}-${month}-${day}`;
           };
           const today = getLocalDateString();
@@ -108,7 +118,10 @@ export default function LecturerDailySessions() {
     (s) => s.status === "completed",
   ).length;
 
-  const activeSessionStr = typeof window !== 'undefined' ? localStorage.getItem("activeAttendanceSession") : null;
+  const activeSessionStr =
+    typeof window !== "undefined"
+      ? localStorage.getItem("activeAttendanceSession")
+      : null;
   let activeSessionId: string | null = null;
   try {
     if (activeSessionStr) {
@@ -135,6 +148,106 @@ export default function LecturerDailySessions() {
         },
       });
     }, 3000);
+  };
+
+  const handleRequestCover = async () => {
+    if (!selectedCoverSession || !coverReason.trim()) return;
+
+    setIsSubmittingCover(true);
+
+    const requestPromise = (async () => {
+      // Artificial delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const token = localStorage.getItem("lecturerToken");
+      const res = await fetch(
+        `${API_BASE}/api/lecturer/request_cover/${selectedCoverSession.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ reason: coverReason }),
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to submit request");
+      }
+
+      return res.json();
+    })();
+
+    toast.promise(requestPromise, {
+      loading: "Submitting cover request...",
+      success: "Cover request submitted successfully!",
+      error: (err) => `Error: ${err.message}`,
+    });
+
+    try {
+      await requestPromise;
+      // Refresh local state
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === selectedCoverSession.id
+            ? { ...s, cover_requested: true, cover_reason: coverReason }
+            : s,
+        ),
+      );
+      setShowCoverModal(false);
+      setCoverReason("");
+    } catch (err) {
+      console.error("Cover request error:", err);
+    } finally {
+      setIsSubmittingCover(false);
+    }
+  };
+  const handleCancelCover = async (sessionId: number) => {
+    const cancelPromise = (async () => {
+      // Artificial delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const token = localStorage.getItem("lecturerToken");
+      const res = await fetch(
+        `${API_BASE}/api/lecturer/cancel_cover/${sessionId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to cancel request");
+      }
+
+      return res.json();
+    })();
+
+    toast.promise(cancelPromise, {
+      loading: "Cancelling cover request...",
+      success: "Cover request cancelled successfully!",
+      error: (err) => `Error: ${err.message}`,
+    });
+
+    try {
+      await cancelPromise;
+      // Refresh local state
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, cover_requested: false, cover_reason: "" }
+            : s,
+        ),
+      );
+    } catch (err) {
+      console.error("Cancel cover error:", err);
+    }
   };
 
   return (
@@ -311,7 +424,7 @@ export default function LecturerDailySessions() {
                   }`}
                 >
                   {/* Badge */}
-                  <div className="mb-4">
+                  <div className="flex justify-between items-start mb-4">
                     {String(session.id) === activeSessionId ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 animate-pulse rounded-full text-sm font-bold bg-green-100 text-green-700 uppercase shadow-sm border-2 border-green-200">
                         <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
@@ -323,7 +436,14 @@ export default function LecturerDailySessions() {
                       </span>
                     ) : (
                       <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 uppercase">
-                        Pending
+                        {session.status || "Pending"}
+                      </span>
+                    )}
+
+                    {session.cover_requested && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 mt-0.5 bg-red-100 text-red-700 uppercase rounded-full text-sm font-bold  animate-pulse">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Cover Requested
                       </span>
                     )}
                   </div>
@@ -331,9 +451,16 @@ export default function LecturerDailySessions() {
                   <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
                     {session.module_name}
                   </h3>
-                  <p className="text-sm font-semibold text-gray-700 mb-5">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
                     {session.module_code} - Batch {session.batch}
                   </p>
+
+                  {session.cover_requested && (
+                    <div className="mb-4 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>Reason: {session.cover_reason}</span>
+                    </div>
+                  )}
 
                   {/* Details Grid */}
                   <div className="grid grid-cols-2 gap-y-4 gap-x-3 mb-6 mt-2">
@@ -365,7 +492,7 @@ export default function LecturerDailySessions() {
 
                     {/* Degree (col-span-2 to handle long degree names nicely) */}
                     <div className="flex items-start gap-2 col-span-1 mt-2">
-                      <GraduationCap className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                      <GraduationCap className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs font-medium text-gray-500">
                           Degree Program
@@ -391,24 +518,36 @@ export default function LecturerDailySessions() {
                   </div>
 
                   {/* Action Button */}
-                  <div className="mt-auto border-t border-gray-100">
+                  <div className="mt-auto border-t border-gray-100 flex flex-col gap-2">
+                    {/* Cancel Request Button (Only visible if requested) */}
+                    {session.cover_requested && (
+                      <button
+                        onClick={() => handleCancelCover(session.id)}
+                        className="w-full py-2.5 hover:bg-red-50 text-red-600 border-2 border-red-200 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
+                      >
+                        Cancel Cover Request
+                      </button>
+                    )}
+
                     <button
                       onClick={() => handleStartSession(session)}
                       disabled={startingSessionId === session.id}
-                      className={`w-full py-2.5 rounded-xl font-bold text-md cursor-pointer flex items-center justify-center gap-2 transition-all ${
+                      className={`w-full py-2.5 rounded-xl font-bold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all ${
                         startingSessionId === session.id
                           ? "bg-blue-600 text-white cursor-wait"
-                          : session.is_live || String(session.id) === activeSessionId
+                          : session.is_live ||
+                              String(session.id) === activeSessionId
                             ? "bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300"
                             : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200"
                       }`}
                     >
                       {startingSessionId === session.id ? (
                         <>
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-lg animate-spin"></span>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-xl animate-spin"></span>
                           Starting...
                         </>
-                      ) : session.is_live || String(session.id) === activeSessionId ? (
+                      ) : session.is_live ||
+                        String(session.id) === activeSessionId ? (
                         <>
                           <Video className="w-6 h-6" /> Resume Session
                         </>
@@ -418,6 +557,21 @@ export default function LecturerDailySessions() {
                         </>
                       )}
                     </button>
+
+                    {!session.is_live &&
+                      session.status !== "completed" &&
+                      !session.cover_requested && (
+                        <button
+                          onClick={() => {
+                            setSelectedCoverSession(session);
+                            setShowCoverModal(true);
+                          }}
+                          className="w-full py-2.5 rounded-xl font-bold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all bg-white text-red-600 hover:bg-red-50 border-2 border-red-200"
+                        >
+                          <AlertCircle className="w-5 h-5" /> Request Admin
+                          Cover
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -425,6 +579,63 @@ export default function LecturerDailySessions() {
           )}
         </div>
       </div>
+
+      {/* Cover Request Modal */}
+      {showCoverModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-2xl text-red-600">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Request Cover
+                  </h3>
+                  <p className="text-sm text-gray-600 font-medium">
+                    For {selectedCoverSession?.module_name}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-md font-bold text-gray-700 mb-2">
+                    Reason for Request
+                  </label>
+                  <textarea
+                    value={coverReason}
+                    onChange={(e) => setCoverReason(e.target.value)}
+                    placeholder="e.g., Medical emergency, Technical issue..."
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all text-sm min-h-[120px] resize-none font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowCoverModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 font-bold text-gray-600 hover:bg-gray-100 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestCover}
+                  disabled={isSubmittingCover || !coverReason.trim()}
+                  className="flex-2 bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmittingCover ? (
+                    <span>Submitting...</span>
+                  ) : (
+                    "Submit Request"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
