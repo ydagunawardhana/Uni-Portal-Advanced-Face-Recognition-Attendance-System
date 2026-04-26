@@ -153,7 +153,7 @@ export default function AddLecturerModal({
           <button
             onClick={handleCancel}
             title="Close modal"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 cursor-pointer hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
           </button>

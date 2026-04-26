@@ -581,14 +581,57 @@ def get_lecturer_timetable(
         raise HTTPException(status_code=404, detail="Lecturer profile not found.")
 
     # Match based on lecturer name (Timetable.lecturer is a string field)
+    # Filter: Window includes past 7 days (current week) to 14 days future (cover requests)
+    from datetime import date as date_type, timedelta
+    today_dt = date_type.today()
+    start_date = today_dt - timedelta(days=7)
+    end_date = today_dt + timedelta(days=14)
+
     # Join with Module to get degree and level/semester
     results = (
         db.query(models.Timetable, models.Module.degree, models.Module.level)
         .outerjoin(models.Module, models.Timetable.module_code == models.Module.module_code)
-        .filter(models.Timetable.lecturer == lecturer.name)
+        .filter(
+            models.Timetable.lecturer == lecturer.name,
+            models.Timetable.date >= start_date.strftime("%Y-%m-%d"),
+            models.Timetable.date <= end_date.strftime("%Y-%m-%d")
+        )
         .order_by(models.Timetable.date.asc(), models.Timetable.start_time.asc())
         .all()
     )
+
+    from datetime import datetime as dt_class
+    now_time = dt_class.now().time()
+
+    def _parse(t_str):
+        try:
+            return dt_class.strptime(t_str, "%I:%M %p").time()
+        except Exception:
+            return None
+
+    def _resolve(tt):
+        """Hybrid status resolution: manual action > date/time > live flag."""
+        db_st = getattr(tt, 'status', None)
+        # Check for both 'completed' and 'closed' since the DB may use either string
+        is_manually_completed = bool(db_st and db_st.lower() in ["completed", "closed"])
+        s = _parse(tt.start_time)
+        e = _parse(tt.end_time)
+        
+        tt_date = dt_class.strptime(tt.date, "%Y-%m-%d").date()
+        today_date = dt_class.today().date()
+
+        is_past_session = (tt_date < today_date) or (tt_date == today_date and s and e and now_time > e)
+        is_time_live = (tt_date == today_date and s and e and s <= now_time <= e)
+        is_db_live = bool(tt.is_live)
+
+        if is_manually_completed:
+            return "Completed", False, True
+        elif is_past_session:
+            return "Missed", False, False # Status = Missed, is_live = False, is_completed = False
+        elif is_db_live or is_time_live:
+            return "Live", True, False
+        else:
+            return "Pending", False, False
 
     return [
         {
@@ -603,8 +646,11 @@ def get_lecturer_timetable(
             "semester": r.level or r.Timetable.semester or "N/A",
             "degree": r.degree or "N/A",
             "level": r.level,
+            "is_live": _resolve(r.Timetable)[1],
+            "status": _resolve(r.Timetable)[0],
+            "is_completed": _resolve(r.Timetable)[2],
             "cover_requested": getattr(r.Timetable, 'cover_requested', False),
-            "cover_reason": getattr(r.Timetable, 'cover_reason', None)
+            "cover_reason": getattr(r.Timetable, 'cover_reason', None),
         }
         for r in results
     ]

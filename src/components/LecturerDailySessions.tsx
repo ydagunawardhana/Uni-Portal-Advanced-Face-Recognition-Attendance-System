@@ -9,11 +9,11 @@ import {
   MapPin,
   BookOpen,
   GraduationCap,
-  Users,
-  User,
-  LogOut,
   AlertCircle,
+  Square,
   X,
+  Info,
+  Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -28,6 +28,7 @@ interface Session {
   start_time: string;
   end_time: string;
   is_live: boolean;
+  is_completed?: boolean;
   status?: string;
   date: string;
   degree?: string;
@@ -53,36 +54,61 @@ export default function LecturerDailySessions() {
     useState<Session | null>(null);
   const [coverReason, setCoverReason] = useState("");
   const [isSubmittingCover, setIsSubmittingCover] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<
+    "prev_week" | "today" | "next_week"
+  >("today");
+
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const getNextWeekStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const getPrevWeekStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const fetchTodayTimetable = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const token = localStorage.getItem("lecturerToken");
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE}/api/lecturer/timetable`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch timetable", err);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTodayTimetable = async () => {
-      try {
-        const token = localStorage.getItem("lecturerToken");
-        const res = await fetch(`${API_BASE}/api/lecturer/timetable`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const getLocalDateString = () => {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, "0");
-            const day = String(d.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
-          };
-          const today = getLocalDateString();
-          const todaySessions = Array.isArray(data)
-            ? data.filter((s: Session) => s.date === today)
-            : [];
-          setSessions(todaySessions);
-        }
-      } catch (err) {
-        console.error("Failed to fetch timetable", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTodayTimetable();
+    // 1. Initial fetch with loading state
+    fetchTodayTimetable(true);
+
+    // 2. Setup background polling (silent) every 5 seconds
+    const intervalId = setInterval(() => {
+      fetchTodayTimetable(false);
+    }, 5000);
+
+    // 3. Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   // Extract unique values for the dropdowns dynamically based on today's sessions
@@ -109,13 +135,45 @@ export default function LecturerDailySessions() {
       : true;
     const matchesBatch = batchFilter ? s.batch === batchFilter : true;
 
-    return matchesSearch && matchesDegree && matchesSemester && matchesBatch;
+    // Time Filtering logic
+    const today = getTodayStr();
+    const nextWeek = getNextWeekStr();
+    const prevWeek = getPrevWeekStr();
+    const sessionDate = s.date;
+
+    let matchesTime = false;
+    if (timeFilter === "today") {
+      matchesTime = sessionDate === today;
+    } else if (timeFilter === "next_week") {
+      matchesTime = sessionDate >= today && sessionDate <= nextWeek;
+    } else if (timeFilter === "prev_week") {
+      matchesTime = sessionDate >= prevWeek && sessionDate < today;
+    }
+
+    return (
+      matchesSearch &&
+      matchesDegree &&
+      matchesSemester &&
+      matchesBatch &&
+      matchesTime
+    );
   });
 
-  const totalSessions = sessions.length;
-  const liveSessions = sessions.filter((s) => s.is_live).length;
-  const completedSessions = sessions.filter(
-    (s) => s.status === "completed",
+  const todayStr = getTodayStr();
+  const todaySessionsCount = sessions.filter((s) => s.date === todayStr).length;
+  const activeCoverRequestsCount = sessions.filter(
+    (s) =>
+      s.cover_requested &&
+      !(s.status?.toLowerCase() === "completed" || s.is_completed),
+  ).length;
+
+  const liveCount = sessions.filter(
+    (s) => s.date === todayStr && (s.is_live || s.status?.toLowerCase() === "live"),
+  ).length;
+  const completedCount = sessions.filter(
+    (s) =>
+      s.date === todayStr &&
+      (s.status?.toLowerCase() === "completed" || s.is_completed),
   ).length;
 
   const activeSessionStr =
@@ -130,6 +188,18 @@ export default function LecturerDailySessions() {
   } catch (e) {}
 
   const handleStartSession = (session: Session) => {
+    // Prevent starting future sessions
+    const today = getTodayStr();
+    if (session.date > today) {
+      toast.error(
+        "This session is scheduled for a future date. You cannot start it yet.",
+        {
+          style: { borderRadius: "10px", background: "#fff", color: "#333" },
+        },
+      );
+      return;
+    }
+
     if (String(session.id) === activeSessionId) {
       navigate(`/lecturer/live-class-monitoring?sessionId=${session.id}`, {
         state: { sessionStarted: true, moduleName: session.module_name },
@@ -254,8 +324,8 @@ export default function LecturerDailySessions() {
     <div className="flex-1">
       {/* 2. Content Wrapper with Padding removed as parent handles it */}
       <div>
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 flex items-center gap-5 shadow-sm">
             <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
               <Calendar className="w-8 h-8" />
@@ -265,7 +335,7 @@ export default function LecturerDailySessions() {
                 My Sessions Today
               </p>
               <h3 className="text-3xl font-bold text-gray-900 uppercase">
-                {totalSessions}
+                {todaySessionsCount}
               </h3>
             </div>
           </div>
@@ -279,7 +349,7 @@ export default function LecturerDailySessions() {
                 Currently Live
               </p>
               <h3 className="text-3xl font-bold text-gray-900 uppercase">
-                {activeSessionStr ? 1 : liveSessions}
+                {activeSessionStr ? 1 : liveCount}
               </h3>
             </div>
           </div>
@@ -293,7 +363,22 @@ export default function LecturerDailySessions() {
                 Completed Sessions
               </p>
               <h3 className="text-3xl font-bold text-gray-900 uppercase">
-                {completedSessions}
+                {completedCount}
+              </h3>
+            </div>
+          </div>
+
+          {/* NEW: Cover Requests Stat Card */}
+          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-center gap-5 shadow-sm">
+            <div className="bg-red-100 p-4 rounded-xl text-red-600">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <div>
+              <p className="text-md font-bold text-gray-600 mb-1 tracking-wider">
+                Cover Requests
+              </p>
+              <h3 className="text-3xl font-bold text-gray-900 uppercase">
+                {activeCoverRequestsCount}
               </h3>
             </div>
           </div>
@@ -301,10 +386,46 @@ export default function LecturerDailySessions() {
 
         {/* Main Content */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <GraduationCap className="w-10 h-10 text-blue-600" /> Daily Lectures
-            Timetable
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <GraduationCap className="w-10 h-10 text-blue-600" /> Lectures
+              Timetable
+            </h2>
+
+            {/* Time Filter Toggle */}
+            <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-inner w-max">
+              <button
+                onClick={() => setTimeFilter("prev_week")}
+                className={`px-5 py-1.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                  timeFilter === "prev_week"
+                    ? "bg-white shadow text-blue-600"
+                    : "text-gray-500 hover:text-gray-700 font-medium"
+                }`}
+              >
+                Previous 7 Days
+              </button>
+              <button
+                onClick={() => setTimeFilter("today")}
+                className={`px-5 py-1.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                  timeFilter === "today"
+                    ? "bg-white shadow text-blue-600"
+                    : "text-gray-500 hover:text-gray-700 font-medium"
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setTimeFilter("next_week")}
+                className={`px-5 py-1.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                  timeFilter === "next_week"
+                    ? "bg-white shadow text-blue-600"
+                    : "text-gray-500 hover:text-gray-700 font-medium"
+                }`}
+              >
+                Next 7 Days
+              </button>
+            </div>
+          </div>
 
           {/* Filters Section (Grid Layout) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -419,8 +540,13 @@ export default function LecturerDailySessions() {
                   key={session.id}
                   className={`border-2 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col ${
                     String(session.id) === activeSessionId
-                      ? " border-2 border-green-200 bg-green-50/30"
-                      : "bg-white border-gray-200"
+                      ? "border-green-200 bg-green-50/30"
+                      : session.is_live && session.cover_requested
+                        ? "border-orange-200 bg-orange-50/20"
+                        : session.status?.toLowerCase() === "completed" ||
+                            session.is_completed
+                          ? "border-gray-200 bg-gray-50/50"
+                          : "bg-white border-gray-200"
                   }`}
                 >
                   {/* Badge */}
@@ -430,9 +556,14 @@ export default function LecturerDailySessions() {
                         <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
                         LIVE NOW
                       </span>
-                    ) : session.status === "completed" ? (
-                      <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 uppercase">
+                    ) : session.status?.toLowerCase() === "completed" ||
+                      session.is_completed === true ? (
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-green-100 text-green-600 uppercase">
                         Completed
+                      </span>
+                    ) : session.status?.toLowerCase() === "missed" ? (
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-red-100 text-red-600 uppercase">
+                        Missed
                       </span>
                     ) : (
                       <span className="inline-flex px-2.5 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-700 uppercase">
@@ -440,10 +571,18 @@ export default function LecturerDailySessions() {
                       </span>
                     )}
 
+                    {/* Cover Request Badge */}
                     {session.cover_requested && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 mt-0.5 bg-red-100 text-red-700 uppercase rounded-full text-sm font-bold  animate-pulse">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        Cover Requested
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 mt-0.5 uppercase rounded-full text-sm font-bold ${
+                        session.status?.toLowerCase() === "completed" || session.is_completed
+                          ? "bg-gray-100 text-gray-500 border border-gray-200"
+                          : "bg-red-100 text-red-700 animate-pulse"
+                      }`}>
+                        {session.status?.toLowerCase() === "completed" || session.is_completed ? (
+                          <>Covered</>
+                        ) : (
+                          <><AlertCircle className="w-3.5 h-3.5" /> Cover Requested</>
+                        )}
                       </span>
                     )}
                   </div>
@@ -451,11 +590,23 @@ export default function LecturerDailySessions() {
                   <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
                     {session.module_name}
                   </h3>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                  <p className="text-sm font-bold text-gray-700 mb-2">
                     {session.module_code} - Batch {session.batch}
                   </p>
 
-                  {session.cover_requested && (
+                  {/* Session Date Indicator */}
+                  <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 w-max mb-3 mt-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(session.date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+
+                  {/* Display Cover Reason — hidden once session is completed */}
+                  {session.cover_requested &&
+                    !(session.status?.toLowerCase() === "completed" || session.is_completed) && (
                     <div className="mb-4 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                       <span>Reason: {session.cover_reason}</span>
@@ -518,60 +669,128 @@ export default function LecturerDailySessions() {
                   </div>
 
                   {/* Action Button */}
-                  <div className="mt-auto border-t border-gray-100 flex flex-col gap-2">
-                    {/* Cancel Request Button (Only visible if requested) */}
-                    {session.cover_requested && (
-                      <button
-                        onClick={() => handleCancelCover(session.id)}
-                        className="w-full py-2.5 hover:bg-red-50 text-red-600 border-2 border-red-200 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
-                      >
-                        Cancel Cover Request
-                      </button>
-                    )}
+                  <div className="mt-auto border-gray-100 flex flex-col gap-2">
+                    {(() => {
+                      const isSessionCompleted =
+                        session.status?.toLowerCase() === "completed" ||
+                        session.is_completed === true;
+                      const isSessionMissed =
+                        session.status?.toLowerCase() === "missed";
+                      const isSessionLive =
+                        !isSessionCompleted &&
+                        !isSessionMissed &&
+                        (session.is_live ||
+                          String(session.id) === activeSessionId ||
+                          session.status?.toLowerCase() === "live");
 
-                    <button
-                      onClick={() => handleStartSession(session)}
-                      disabled={startingSessionId === session.id}
-                      className={`w-full py-2.5 rounded-xl font-bold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all ${
-                        startingSessionId === session.id
-                          ? "bg-blue-600 text-white cursor-wait"
-                          : session.is_live ||
-                              String(session.id) === activeSessionId
-                            ? "bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-300"
-                            : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200"
-                      }`}
-                    >
-                      {startingSessionId === session.id ? (
-                        <>
-                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-xl animate-spin"></span>
-                          Starting...
-                        </>
-                      ) : session.is_live ||
-                        String(session.id) === activeSessionId ? (
-                        <>
-                          <Video className="w-6 h-6" /> Resume Session
-                        </>
-                      ) : (
-                        <>
-                          <Video className="w-6 h-6" /> Start Session
-                        </>
-                      )}
-                    </button>
+                      if (isSessionCompleted) {
+                        /* STATE 1: COMPLETED */
+                        return session.cover_requested ? (
+                          <button
+                            disabled
+                            className="w-full py-2.5 bg-green-50 text-green-600 font-bold rounded-xl border-2 border-green-200 cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                          >
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                            Covered by Admin
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="w-full py-2.5 bg-green-50 text-green-600 font-bold rounded-xl border-2 border-green-200 cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                          >
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                            Session Completed
+                          </button>
+                        );
+                      } else if (isSessionMissed) {
+                        /* STATE: MISSED */
+                        return (
+                          <button
+                            disabled
+                            className="w-full py-2.5 bg-red-50 text-red-500 font-bold rounded-xl border-2 border-red-200 cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                          >
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                            Session Missed
+                          </button>
+                        );
+                      } else if (isSessionLive) {
+                        /* STATE 2: LIVE */
+                        return session.cover_requested ? (
+                          /* 2a. Covered live — read-only */
+                          <button
+                            disabled
+                            className="w-full py-2.5 bg-green-50 text-green-700 border-2 border-green-200 font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                          >
+                            <Video className="w-5 h-5 animate-pulse" />
+                            Live (Covered by Admin)
+                          </button>
+                        ) : (
+                          /* 2b. Own live session — allow resume */
+                          <button
+                            onClick={() => handleStartSession(session)}
+                            className="w-full py-2.5 bg-green-100 hover:bg-green-200 text-green-700 border-2 border-green-300 font-bold rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all text-sm"
+                          >
+                            <Video className="w-6 h-6 animate-pulse" /> Resume
+                            Session
+                          </button>
+                        );
+                      } else if (session.cover_requested) {
+                        /* STATE 3: PENDING COVER REQUEST */
+                        return (
+                          <button
+                            onClick={() => handleCancelCover(session.id)}
+                            className="w-full py-2.5 bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
+                          >
+                            Cancel Cover Request
+                          </button>
+                        );
+                      } else {
+                        /* STATE 4: DEFAULT / UPCOMING */
+                        const isFutureSession = session.date > todayStr;
+                        return (
+                          <>
+                            <button
+                              onClick={() => handleStartSession(session)}
+                              disabled={startingSessionId === session.id}
+                              className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                                startingSessionId === session.id
+                                  ? "bg-blue-600 text-white cursor-wait"
+                                  : isFutureSession
+                                  ? "bg-gray-50 text-gray-400 border-2 border-gray-200 cursor-not-allowed hover:bg-gray-100"
+                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 cursor-pointer"
+                              }`}
+                            >
+                              {startingSessionId === session.id ? (
+                                <>
+                                  <span className="w-4 h-4 border-2 border-white rounded-xl animate-spin"></span>
+                                  Starting...
+                                </>
+                              ) : isFutureSession ? (
+                                <>
+                                  <Lock className="w-5 h-5 opacity-70" /> Start
+                                  Session
+                                </>
+                              ) : (
+                                <>
+                                  <Video className="w-5 h-5" /> Start Session
+                                </>
+                              )}
+                            </button>
 
-                    {!session.is_live &&
-                      session.status !== "completed" &&
-                      !session.cover_requested && (
-                        <button
-                          onClick={() => {
-                            setSelectedCoverSession(session);
-                            setShowCoverModal(true);
-                          }}
-                          className="w-full py-2.5 rounded-xl font-bold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all bg-white text-red-600 hover:bg-red-50 border-2 border-red-200"
-                        >
-                          <AlertCircle className="w-5 h-5" /> Request Admin
-                          Cover
-                        </button>
-                      )}
+                            <button
+                              onClick={() => {
+                                setSelectedCoverSession(session);
+                                setShowCoverModal(true);
+                              }}
+                              className="w-full py-2.5 rounded-xl font-bold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all bg-white text-red-600 hover:bg-red-50 border-2 border-red-200"
+                            >
+                              <AlertCircle className="w-5 h-5" /> Request Admin
+                              Cover
+                            </button>
+                          </>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               ))}
@@ -599,7 +818,7 @@ export default function LecturerDailySessions() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-md font-bold text-gray-700 mb-2">
                     Reason for Request
@@ -608,8 +827,19 @@ export default function LecturerDailySessions() {
                     value={coverReason}
                     onChange={(e) => setCoverReason(e.target.value)}
                     placeholder="e.g., Medical emergency, Technical issue..."
-                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all text-sm min-h-[120px] resize-none font-medium"
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 transition-all text-sm resize-none font-medium"
                   />
+                </div>
+              </div>
+
+              {/* Informational Note */}
+              <div className="mt-2 p-3.5 py-2 px-3 font-medium bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-xs italic text-blue-800">
+                <div>
+                  <strong className="font-bold">Important Note:</strong>{" "}
+                  Submitting this request grants the Admin access to cover and
+                  start this session. You will not be able to start or manage it
+                  once covered. However, you can cancel this request at any time
+                  before the session begins.
                 </div>
               </div>
 

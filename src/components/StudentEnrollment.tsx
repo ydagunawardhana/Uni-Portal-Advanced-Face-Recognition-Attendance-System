@@ -170,6 +170,26 @@ export default function StudentEnrollment({
         toast.error("Enter a valid email");
         return false;
       }
+      if (!formData.mobile.trim()) {
+        toast.error("Mobile Number is required");
+        return false;
+      }
+      if (!formData.mobile.match(/^[0-9]{9}$/)) {
+        toast.error("Enter a valid mobile number");
+        return false;
+      }
+      if (!formData.nic_number.trim()) {
+        toast.error("NIC Number is required");
+        return false;
+      }
+      if (!formData.nic_number.match(/^[0-9]{9}[0-9Xx]$/)) {
+        toast.error("Enter a valid NIC number");
+        return false;
+      }
+      if (!formData.gender.trim()) {
+        toast.error("Gender is required");
+        return false;
+      }
       return true;
     }
     if (step === 2) {
@@ -501,7 +521,7 @@ export default function StudentEnrollment({
                           }`}
                         >
                           {isCompleted ? (
-                            <CheckCircle2 size={20} />
+                            <CheckCircle2 size={24} />
                           ) : (
                             <span className="text-md font-bold">{step}</span>
                           )}
@@ -527,7 +547,7 @@ export default function StudentEnrollment({
                       style={{ width: "3 rem" }}
                     >
                       <span
-                        className={`text-xs uppercase font-bold tracking-wider whitespace-nowrap ${
+                        className={`text-sm font-bold tracking-wider whitespace-nowrap ${
                           currentStep === idx + 1
                             ? "text-blue-600"
                             : "text-gray-400"
@@ -548,7 +568,7 @@ export default function StudentEnrollment({
                 <div className="grid grid-cols-1 md:grid-cols-1 gap-x-6 gap-y-8">
                   {/* Full Name */}
                   <div className="flex flex-col">
-                    <label className="mb-2  text-sm font-medium text-gray-700">
+                    <label className="mb-2  text-sm  font-medium text-gray-700">
                       Full Name <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -558,7 +578,7 @@ export default function StudentEnrollment({
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="Enter your full name"
-                        className="login-input"
+                        className="login-input py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       />
                     </div>
                   </div>
@@ -577,7 +597,7 @@ export default function StudentEnrollment({
                         value={formData.personal_email}
                         onChange={handleChange}
                         placeholder="e.g. john.doe@gmail.com"
-                        className="login-input"
+                        className="login-input py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       />
                     </div>
                   </div>
@@ -594,7 +614,7 @@ export default function StudentEnrollment({
                         value={formData.mobile}
                         onChange={handleChange}
                         placeholder="+94 77 123 4567"
-                        className="login-input"
+                        className="login-input py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       />
                     </div>
                   </div>
@@ -614,7 +634,7 @@ export default function StudentEnrollment({
                         value={formData.nic_number}
                         onChange={handleChange}
                         placeholder="e.g. 200012345678"
-                        className="login-input"
+                        className="login-input py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       />
                     </div>
                   </div>
@@ -633,7 +653,7 @@ export default function StudentEnrollment({
                         name="gender"
                         value={formData.gender}
                         onChange={handleChange}
-                        className="login-input pl-11 appearance-none bg-white pr-10"
+                        className="login-input pl-11 cursor-pointer appearance-none bg-white pr-10 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       >
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -663,7 +683,7 @@ export default function StudentEnrollment({
                         name="faculty"
                         value={formData.faculty}
                         onChange={handleChange}
-                        className="login-input pl-11 appearance-none bg-white pr-10"
+                        className="login-input pl-11 appearance-none bg-white pr-10 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       >
                         <option value="">Select Faculty</option>
                         {Object.keys(universityData).map((f) => (
@@ -693,7 +713,7 @@ export default function StudentEnrollment({
                         value={formData.department}
                         onChange={handleChange}
                         disabled={!formData.faculty}
-                        className="login-input pl-11 appearance-none bg-white pr-10 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        className="login-input pl-11 appearance-none rounded-xl border border-gray-300 text-sm font-semibold bg-white pr-10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                       >
                         <option value="">Select Department</option>
                         {formData.faculty &&
@@ -719,14 +739,14 @@ export default function StudentEnrollment({
                     <div className="relative">
                       <GraduationCap
                         className="field-icon text-gray-400"
-                        size={18}
+                        size={20}
                       />
                       <select
                         name="degree_program"
                         value={formData.degree_program}
                         onChange={handleChange}
                         disabled={!formData.department}
-                        className="login-input pl-11 appearance-none bg-white pr-10 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        className="login-input pl-11 appearance-none rounded-xl text-sm font-semibold bg-white pr-10 disabled:bg-gray-50 disabled:cursor-not-allowed"
                       >
                         <option value="">Select Degree Program</option>
                         {formData.faculty &&
@@ -760,7 +780,7 @@ export default function StudentEnrollment({
                         value={formData.academic_year}
                         onChange={handleChange}
                         placeholder="e.g. 2026"
-                        className="login-input"
+                        className="login-input text-sm rounded-xl font-semibold"
                       />
                     </div>
                   </div>
@@ -780,7 +800,7 @@ export default function StudentEnrollment({
                         value={formData.intake}
                         onChange={handleChange}
                         placeholder="e.g. 26.1"
-                        className="login-input"
+                        className="login-input text-sm rounded-xl font-semibold"
                       />
                     </div>
                   </div>

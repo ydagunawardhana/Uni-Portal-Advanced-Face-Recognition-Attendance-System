@@ -207,11 +207,11 @@ export default function PendingRegistrations({
                 <col className="w-[18%]" />
               </colgroup>
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
+                <tr className="bg-gray-50 text-gray-500 text-sm font-bold tracking-wider border-b border-gray-100">
                   <th className="px-6 py-4">Student Information</th>
                   <th className="px-6 py-4">Academic Details</th>
                   <th className="px-6 py-4">
-                    <span className="flex items-center px-10">
+                    <span className="flex items-center px-10 gap-2">
                       <Calendar size={13} />
                       Applied Date
                     </span>
@@ -232,10 +232,10 @@ export default function PendingRegistrations({
                           {item.name}
                         </span>
                         <div className="flex flex-col gap-1 mt-1.5">
-                          <span className="text-sm text-gray-500 flex items-center gap-1.5 truncate">
+                          <span className="text-sm font-medium text-blue-700 flex items-center gap-1.5 truncate">
                             <Mail
                               size={12}
-                              className="text-gray-400 shrink-0"
+                              className="text-gray-500 shrink-0"
                             />
                             {item.personal_email}
                           </span>
@@ -243,7 +243,7 @@ export default function PendingRegistrations({
                             <span className="text-sm text-gray-500 flex items-center gap-1.5">
                               <Phone
                                 size={12}
-                                className="text-gray-400 shrink-0"
+                                className="text-gray-500 shrink-0"
                               />
                               {item.mobile}
                             </span>
@@ -257,16 +257,16 @@ export default function PendingRegistrations({
                       <div className="flex flex-col gap-1.5">
                         <span className="font-medium text-gray-800 text-sm flex items-center gap-1.5">
                           <GraduationCap
-                            size={14}
-                            className="text-indigo-400 shrink-0"
+                            size={15}
+                            className="text-indigo-500 shrink-0"
                           />
                           <span className="truncate">{item.faculty}</span>
                         </span>
-                        <span className="text-gray-500 text-xs leading-tight line-clamp-2">
+                        <span className="text-gray-500 font-semibold text-xs leading-tight line-clamp-2">
                           {item.degree_program}
                         </span>
                         {item.intake && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 w-fit mt-0.5">
+                          <span className="flex items-left py-0.5 rounded-full text-sm font-bold text-blue-700 mt-0.5">
                             Batch: {item.intake}
                           </span>
                         )}
@@ -275,8 +275,8 @@ export default function PendingRegistrations({
 
                     {/* Date */}
                     <td className="px-6 py-5 align-top">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 pt-0.5">
-                        <Clock size={14} className="text-gray-400 shrink-0" />
+                      <div className="flex items-center gap-2 font-semibold text-sm text-gray-500 pt-0.5">
+                        <Clock size={15} className="text-gray-500 shrink-0" />
                         {formatDate(item.created_at)}
                       </div>
                     </td>
@@ -288,7 +288,7 @@ export default function PendingRegistrations({
                         <button
                           onClick={() => handleDelete(item.id, item.name)}
                           disabled={deletingId === item.id}
-                          className="flex items-center cursor-pointer gap-1.5 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center cursor-pointer gap-1.5 px-3 py-2 text-red-600 bg-white border-2 border-red-200 hover:bg-red-50 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Reject Application"
                         >
                           {deletingId === item.id ? (
@@ -302,7 +302,7 @@ export default function PendingRegistrations({
                         {/* Enroll */}
                         <button
                           onClick={() => onProcess(item)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/20 active:scale-95"
+                          className="inline-flex cursor-pointer items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl border-2 hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/20 active:scale-95"
                         >
                           <UserPlus size={14} />
                           Enroll

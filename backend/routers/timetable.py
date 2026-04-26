@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import pandas as pd
 from database import get_db
+import models
 from models import Timetable, Module, Lecturer
 from utils.audit_logger import log_audit_action
 
@@ -437,22 +438,40 @@ async def delete_timetable_batch(batch_id: str, db: Session = Depends(get_db)):
 @router.post("/{session_id}/start")
 async def start_timetable_session(session_id: int, db: Session = Depends(get_db)):
     """Sets a timetable session as active/live."""
+    # 1. Update the high-level Timetable status (Used by Dashboards)
     session = db.query(Timetable).filter(Timetable.id == session_id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail="Session not found in timetable")
     session.is_live = True
+
+    # 2. Synchronize with the active ClassSession tracker (Used by Lecturer Monitoring)
+    # The session_id here maps to what the monitoring component expects
+    class_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if class_session:
+        class_session.status = "Live"
+
     db.commit()
     return {"status": "success", "message": f"Session {session_id} is now LIVE."}
 
 @router.post("/{session_id}/stop")
 async def stop_timetable_session(session_id: int, db: Session = Depends(get_db)):
-    """Ends a live timetable session."""
+    """Ends a live timetable session and marks it as Completed."""
+    # 1. Update the high-level Timetable status
     session = db.query(Timetable).filter(Timetable.id == session_id).first()
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail="Session not found in timetable")
     session.is_live = False
+    session.status = "Completed"  # CRITICAL: Write to the new status column so hybrid logic can detect it
+    # NOTE: Do NOT clear cover_requested here. The flag must be preserved after
+    # completion so the frontend can correctly show "Covered by Admin" vs "Session Completed".
+
+    # 2. Synchronize with the active ClassSession tracker
+    class_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if class_session:
+        class_session.status = "Completed"  # Match the string the frontend checks
+
     db.commit()
-    return {"status": "success", "message": f"Session {session_id} is now CLOSED."}
+    return {"status": "success", "message": f"Session {session_id} is now COMPLETED."}
 class CoverRequest(BaseModel):
     reason: str
 

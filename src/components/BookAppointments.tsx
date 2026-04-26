@@ -11,6 +11,7 @@ import {
   Calendar,
   Trash2,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -31,6 +32,7 @@ interface Lecturer {
   email: string;
   profile_picture?: string;
   office_hours: OfficeHour[];
+  is_visiting?: boolean;
 }
 
 export default function BookAppointments() {
@@ -265,33 +267,47 @@ export default function BookAppointments() {
                   <button
                     key={lecturer.id}
                     onClick={() => {
-                      setSelectedLecturer(lecturer);
-                      setSelectedSlot(null);
+                      if (!lecturer.is_visiting) {
+                        setSelectedLecturer(lecturer);
+                        setSelectedSlot(null);
+                      }
                     }}
-                    className={`w-full text-left p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                      selectedLecturer?.id === lecturer.id
-                        ? "bg-red-50 border-red-300 ring-1 ring-red-300 shadow-sm"
-                        : "border-gray-100 hover:bg-gray-50 hover:border-gray-200"
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                      lecturer.is_visiting
+                        ? "opacity-60 bg-gray-50 cursor-not-allowed border-gray-100"
+                        : selectedLecturer?.id === lecturer.id
+                          ? "bg-red-50 border-red-300 ring-1 ring-red-300 shadow-sm cursor-pointer"
+                          : "border-gray-100 hover:bg-gray-50 hover:border-gray-200 cursor-pointer"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          selectedLecturer?.id === lecturer.id
-                            ? "bg-red-600 text-white"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        <User className="w-6 h-6" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            selectedLecturer?.id === lecturer.id &&
+                            !lecturer.is_visiting
+                              ? "bg-red-600 text-white"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          <User className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 leading-tight">
+                            {lecturer.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {lecturer.department}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 leading-tight">
-                          {lecturer.name}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {lecturer.department}
-                        </p>
-                      </div>
+
+                      {/* Visiting Badge */}
+                      {lecturer.is_visiting && (
+                        <span className="px-2.5 py-1 bg-orange-100 text-orange-700 text-sm font-bold rounded-full uppercase">
+                          Visiting
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))
@@ -313,9 +329,17 @@ export default function BookAppointments() {
                 <h3 className="text-xl font-bold text-gray-900">
                   Select a Lecturer
                 </h3>
-                <p className="text-gray-500 mt-2 max-w-xs">
+                <p className="text-gray-600 mt-2 text-sm font-medium mb-1.5">
                   Please select a lecturer from the directory on the left to
                   view their availability and book a session.
+                </p>
+
+                {/* NEW: Visiting Lecturer Explanation Box */}
+
+                <p className="text-sm text-gray-600 font-medium">
+                  <span className="font-bold">Note:</span> Visiting lecturers do
+                  not hold regular office hours and are therefore not available
+                  for direct appointment bookings through the portal.
                 </p>
               </div>
             ) : (
@@ -442,13 +466,13 @@ export default function BookAppointments() {
         {/* My Consultation Requests Section */}
         <div className="mt-8 bg-white border border-gray-200 rounded-xl p-6 shadow-md mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-red-600" />
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <Calendar className="w-8 h-8 text-red-600" />
               My Consultation Requests
             </h2>
             <button
               onClick={() => fetchAppointments()}
-              className="text-sm font-semibold cursor-pointer text-red-600 hover:text-red-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
+              className="text-sm font-semibold cursor-pointer border-2 border-red-200 px-3 text-red-600 hover:text-red-600 hover:bg-red-50 rounded-full p-1.5 transition-colors"
             >
               Refresh List
             </button>

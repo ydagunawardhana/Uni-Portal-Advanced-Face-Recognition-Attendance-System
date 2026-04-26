@@ -18,6 +18,8 @@ import {
   Eye,
   Trash2,
   Loader2,
+  Edit,
+  Save,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -53,6 +55,86 @@ export default function TimetableUpload() {
   const [viewData, setViewData] = useState<any[]>([]);
   const [isLoadingView, setIsLoadingView] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Edit Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isViewModalHidden, setIsViewModalHidden] = useState(false);
+
+  const handleEditClick = (session: any) => {
+    setEditingSession(session);
+    setIsEditModalOpen(true);
+    setIsViewModalHidden(true); // Hide view modal to prevent overlap
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditModalOpen(false);
+    setEditingSession(null);
+    setIsViewModalHidden(false); // Re-open the preview modal ONLY on cancel
+  };
+
+  const handleUpdateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    // 1. Show loading toast
+    const loadingToastId = toast.loading("Updating session details...");
+
+    // 2. Add artificial delay (1s) for tactile feedback
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/admin/timetable/${editingSession.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+          body: JSON.stringify({
+            date: editingSession.date,
+            start_time: editingSession.start_time,
+            end_time: editingSession.end_time,
+            lecturer: editingSession.lecturer,
+            module_code: editingSession.module_code,
+            module_name: editingSession.module_name,
+          }),
+        },
+      );
+
+      const errorData = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        // 3. Replace loading toast with success toast
+        toast.success("Timetable updated successfully!", { id: loadingToastId });
+        setIsEditModalOpen(false);
+        setViewBatchId(null); // Close the preview modal
+        setIsViewModalHidden(false); // Reset hidden state
+
+        // Refresh the table data silently
+        if (viewBatchId) handleViewBatch(viewBatchId, false);
+      } else {
+        // 4. Replace loading toast with specific backend error
+        toast.error(
+          errorData.detail ||
+            "Failed to update timetable. Please check your inputs.",
+          {
+            id: loadingToastId,
+            duration: 5000,
+            style: {
+              fontWeight: "bold",
+            },
+          },
+        ) ;
+      }
+    } catch (error) {
+      toast.error("Network error. Please try again.", { id: loadingToastId });
+    } finally {
+      setIsSaving(false); // Reset loading state
+    }
+  };
 
   // Fetch recent uploads on mount
   useEffect(() => {
@@ -273,18 +355,28 @@ export default function TimetableUpload() {
     }
   };
 
-  const handleViewBatch = async (batchId: string) => {
+  const handleViewBatch = async (batchId: string, showToast = true) => {
     setIsLoadingView(true);
-    const viewToast = toast.loading(`Retrieving schedule for ${batchId}...`);
+    let viewToast = null;
+    if (showToast) {
+      viewToast = toast.loading(`Retrieving schedule for ${batchId}...`);
+    }
+
     try {
-      const response = await fetch(`http://localhost:8000/api/timetable/batch/${batchId}`);
+      const response = await fetch(
+        `http://localhost:8000/api/timetable/batch/${batchId}`,
+      );
       if (!response.ok) throw new Error("Failed to load records");
       const data = await response.json();
       setViewData(data);
       setViewBatchId(batchId);
-      toast.success("Schedule loaded!", { id: viewToast });
+      if (showToast && viewToast) {
+        toast.success("Schedule loaded!", { id: viewToast });
+      }
     } catch (error) {
-      toast.error("Failed to load timetable details.", { id: viewToast });
+      if (showToast && viewToast) {
+        toast.error("Failed to load timetable details.", { id: viewToast });
+      }
     } finally {
       setIsLoadingView(false);
     }
@@ -292,17 +384,20 @@ export default function TimetableUpload() {
 
   const exportToCSV = async () => {
     if (!viewData || viewData.length === 0) return;
-    
+
     setIsExporting(true);
     const exportToast = toast.loading("Processing dataset for export...");
 
     try {
       // UX Delay for tactile feedback
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
-      
-      const headers = ["Date,Start Time,End Time,Module Code,Module Name,Lecturer,Faculty,Department,Semester"];
-      const csvRows = viewData.map(row => 
-        `"${row.date}","${row.start_time}","${row.end_time}","${row.module_code}","${row.module_name || ''}","${row.lecturer || ''}","${row.faculty || ''}","${row.department || ''}","${row.semester || ''}"`
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const headers = [
+        "Date,Start Time,End Time,Module Code,Module Name,Lecturer,Faculty,Department,Semester",
+      ];
+      const csvRows = viewData.map(
+        (row) =>
+          `"${row.date}","${row.start_time}","${row.end_time}","${row.module_code}","${row.module_name || ""}","${row.lecturer || ""}","${row.faculty || ""}","${row.department || ""}","${row.semester || ""}"`,
       );
       const csvString = [headers, ...csvRows].join("\n");
       const blob = new Blob([csvString], { type: "text/csv" });
@@ -312,7 +407,7 @@ export default function TimetableUpload() {
       a.download = `Timetable_Batch_${viewBatchId}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-      
+
       toast.success("CSV file downloaded successfully!", { id: exportToast });
     } catch (error) {
       toast.error("Failed to generate export.", { id: exportToast });
@@ -826,9 +921,12 @@ export default function TimetableUpload() {
                 <div className="w-16 h-16 bg-white rounded-full shadow-md flex items-center justify-center mb-4 border-2 border-blue-200 group-hover:scale-110 transition-transform duration-300">
                   <UploadCloud className="w-8 h-8 text-blue-500 group-hover:text-blue-500 transition-colors" />
                 </div>
-                <h3 className="text-gray-900 font-bold text-base mb-2">No history found</h3>
+                <h3 className="text-gray-900 font-bold text-base mb-2">
+                  No history found
+                </h3>
                 <p className="text-gray-500 text-sm max-w-[220px] leading-relaxed italic font-medium">
-                  Upload Files will appear here once you've uploaded academic schedules. 
+                  Upload Files will appear here once you've uploaded academic
+                  schedules.
                 </p>
                 <div className="mt-6 px-4 py-2 cursor-pointer bg-blue-50 text-blue-600 text-[11px] font-bold shadow-sm tracking-wider rounded-full border-2 border-blue-100">
                   Ready for Sync
@@ -841,7 +939,9 @@ export default function TimetableUpload() {
                     <tr>
                       <th className="px-4 py-3 font-bold">File Name</th>
                       <th className="px-4 py-3 font-bold">Status</th>
-                      <th className="px-8 py-3 font-bold text-right">Actions</th>
+                      <th className="px-8 py-3 font-bold text-right">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -887,7 +987,9 @@ export default function TimetableUpload() {
                               <Eye className="w-5 h-5" />
                             </button>
                             <button
-                              onClick={() => handleDeleteTimetable(record.batch)}
+                              onClick={() =>
+                                handleDeleteTimetable(record.batch)
+                              }
                               className="p-1.5 cursor-pointer text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               title="Delete Record"
                             >
@@ -907,7 +1009,7 @@ export default function TimetableUpload() {
       {/* Extraction Preview Modal */}
       {isPreviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-6 border-b flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-4">
@@ -1043,7 +1145,7 @@ export default function TimetableUpload() {
       {deleteBatchId &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-2xl w-full max-w-md overflow-hidden p-8 text-center animate-in fade-in zoom-in duration-200">
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-sm">
                 <Trash2 className="w-10 h-10 text-red-600" />
               </div>
@@ -1083,32 +1185,41 @@ export default function TimetableUpload() {
 
       {/* 5. View Full Timetable Modal */}
       {viewBatchId &&
+        !isViewModalHidden &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-8 border-b flex justify-between items-center bg-gray-50 shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-100 text-blue-600 rounded-xl shadow-inner">
                     <Calendar className="w-8 h-8" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 leading-tight">Academic Schedule</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 leading-tight">
+                      Academic Schedule
+                    </h2>
                     <p className="text-sm text-gray-500 font-medium mt-1">
-                      Batch: <span className="text-blue-600 mr-3">{viewBatchId}</span> {viewData.length} Active Sessions
+                      Batch:{" "}
+                      <span className="text-blue-600 mr-3">{viewBatchId}</span>{" "}
+                      {viewData.length} Active Sessions
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-12">
-                  <button 
-                    onClick={exportToCSV} 
+                  <button
+                    onClick={exportToCSV}
                     disabled={isExporting}
                     className="px-6 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    {isExporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                    {isExporting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Download className="w-5 h-5" />
+                    )}
                     {isExporting ? "Processing..." : "Export CSV"}
                   </button>
-                  <button 
-                    onClick={() => setViewBatchId(null)} 
+                  <button
+                    onClick={() => setViewBatchId(null)}
                     className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-all cursor-pointer"
                   >
                     <X className="w-7 h-7" />
@@ -1119,29 +1230,60 @@ export default function TimetableUpload() {
                 <table className="w-full text-left border-collapse border-gray-200 border-2 whitespace-nowrap min-w-full">
                   <thead className="bg-gray-100 sticky top-0 z-10 border-b-2 border-gray-100">
                     <tr>
-                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Date</th>
-                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Time Slot</th>
-                      <th className="px-8 py-4 text-sm font-bold text-blue-600 tracking-widest">Module Code</th>
-                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Module Name</th>
-                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">Lecturer</th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">
+                        Date
+                      </th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">
+                        Time Slot
+                      </th>
+                      <th className="px-6 py-4 text-sm font-bold text-blue-600 tracking-widest">
+                        Module Code
+                      </th>
+                      <th className="px-8 py-4 text-sm font-bold text-gray-500 tracking-widest">
+                        Module Name
+                      </th>
+                      <th className="px-4 py-4 text-sm font-bold text-gray-500 tracking-widest">
+                        Lecturer
+                      </th>
+                      <th className="px-4 py-4 text-sm font-bold text-gray-500 tracking-widest">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {viewData.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
+                      <tr
+                        key={idx}
+                        className="hover:bg-blue-50/50 transition-colors group"
+                      >
                         <td className="px-8 py-4">
-                          <span className="font-bold text-gray-900 underline decoration-blue-200 decoration-2 underline-offset-4">{row.date}</span>
+                          <span className="font-bold text-gray-900 underline decoration-blue-200 decoration-2 underline-offset-4">
+                            {row.date}
+                          </span>
                         </td>
                         <td className="px-8 py-4">
                           <div className="bg-white border border-gray-200 px-3 py-1 rounded-lg shadow-sm font-bold text-gray-700 text-sm inline-block">
-                             {row.start_time} - {row.end_time}
+                            {row.start_time} - {row.end_time}
                           </div>
                         </td>
-                        <td className="px-8 py-4 text-sm font-bold text-blue-600 tracking-tight">{row.module_code}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-blue-600 tracking-tight">
+                          {row.module_code}
+                        </td>
                         <td className="px-8 py-4 text-sm text-gray-800 font-bold">
                           {row.module_name}
                         </td>
-                        <td className="px-8 py-4 text-sm text-gray-600 font-medium">{row.lecturer || '—'}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600 font-medium">
+                          {row.lecturer || "—"}
+                        </td>
+                        <td className="px-4 py-4">
+                          <button
+                            onClick={() => handleEditClick(row)}
+                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                            title="Edit Session"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1149,9 +1291,178 @@ export default function TimetableUpload() {
               </div>
               <div className="p-4 border-t bg-gray-50 flex justify-center shrink-0">
                 <p className="text-xs text-gray-500 italic font-bold">
-                   Showing all records retrieved for the academic batch registry.
+                  Showing all records retrieved for the academic batch registry.
                 </p>
               </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* 6. Edit Session Modal */}
+      {isEditModalOpen &&
+        editingSession &&
+        createPortal(
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 border border-gray-200 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                    <Edit className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    Edit Session
+                  </h3>
+                </div>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-gray-500 font-bold hover:text-gray-600 p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSession} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700">
+                      Module Code
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 border border-gray-300 text-sm font-semibold rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                      value={editingSession.module_code || ""}
+                      onChange={(e) =>
+                        setEditingSession({
+                          ...editingSession,
+                          module_code: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700">
+                      Module Name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 border border-gray-300 text-sm font-semibold rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                      value={editingSession.module_name || ""}
+                      onChange={(e) =>
+                        setEditingSession({
+                          ...editingSession,
+                          module_name: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full p-2.5 border cursor-pointer border-gray-300 text-sm font-semibold rounded-xl font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                    value={editingSession.date}
+                    onChange={(e) =>
+                      setEditingSession({
+                        ...editingSession,
+                        date: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700">
+                      Start Time
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 08:30 AM"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                      value={editingSession.start_time}
+                      onChange={(e) =>
+                        setEditingSession({
+                          ...editingSession,
+                          start_time: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700">
+                      End Time
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10:30 AM"
+                      className="w-full p-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                      value={editingSession.end_time}
+                      onChange={(e) =>
+                        setEditingSession({
+                          ...editingSession,
+                          end_time: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700">
+                    Lecturer Name
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                    value={editingSession.lecturer}
+                    onChange={(e) =>
+                      setEditingSession({
+                        ...editingSession,
+                        lecturer: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex-1 py-2.5 bg-gray-50 text-gray-700 font-bold rounded-xl border-2 border-gray-200 hover:bg-gray-200 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className={`flex-2 px-6 font-bold py-2.5 rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50 ${
+                      isSaving
+                        ? "bg-blue-400 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200"
+                    }`}
+                  >
+                    {isSaving ? (
+                      <>
+                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" /> Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>,
           document.body,

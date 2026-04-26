@@ -219,6 +219,7 @@ class Timetable(Base):
     cover_requested = Column(Boolean, default=False, nullable=False)
     cover_reason    = Column(String, nullable=True)
     created_at  = Column(DateTime, server_default=func.now())
+    status = Column(String(50), default="Pending")
 
 
 class Module(Base):

@@ -781,7 +781,7 @@ export default function StudentRegistration() {
                   id="nicNumber"
                   value={nicNumber}
                   onChange={(e) => setNicNumber(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   placeholder="e.g. 200012345678"
                 />
               </div>

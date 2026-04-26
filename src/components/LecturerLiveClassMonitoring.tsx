@@ -350,9 +350,10 @@ export default function LecturerLiveClassMonitoring({
       // This runs whenever the component is unmounted (leaving the page)
       // ONLY clear memory if the Admin is just VIEWING. If they are HOSTING, keep memory to resume later!
       if (isAdminRoute && !isHostingRef.current) {
+        // SAFE: Only remove the Admin's own session marker.
+        // DO NOT remove 'activeAttendanceSession' or 'sessionStartTime' — these belong
+        // to the Lecturer's live session and clearing them would break their active monitoring!
         localStorage.removeItem("admin_activeSession");
-        localStorage.removeItem("activeAttendanceSession");
-        localStorage.removeItem("sessionStartTime");
       }
     };
   }, [isAdminRoute]);
@@ -1029,6 +1030,14 @@ export default function LecturerLiveClassMonitoring({
   // No longer polling the frontend React camera canvas! Wait for backend to perform attendance via stream.
 
   const handleEndSession = useCallback(async () => {
+    // SAFETY GUARD: Admins in view-only mode must never be able to end a session.
+    // The End Session button is already hidden for viewers, but this is a hard stop
+    // to prevent any unexpected code path from destructively ending the Lecturer's session.
+    if (isViewOnly) {
+      console.warn("[END SESSION] Blocked: Admin is in view-only mode.");
+      return;
+    }
+
     // Clear persisted session immediately
     localStorage.removeItem(storageKey);
     localStorage.removeItem("activeAttendanceSession");
@@ -1849,7 +1858,7 @@ export default function LecturerLiveClassMonitoring({
       {showEndSessionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowEndSessionModal(false)}
           />
           <div className="relative bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-fade-in">

@@ -23,6 +23,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
+from fastapi import Query
 
 import cv2
 import numpy as np
@@ -37,6 +38,144 @@ import models
 from services.face_trainer import update_face_model, retrain_model
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
+
+# Define a quick update schema
+class TimetableUpdate(BaseModel):
+    date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    lecturer: Optional[str] = None
+    location: Optional[str] = None
+    module_code: Optional[str] = None
+    module_name: Optional[str] = None
+    batch_id: Optional[str] = None
+
+@router.put("/timetable/{session_id}")
+def update_timetable_entry(
+    session_id: int, 
+    update_data: TimetableUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Allows Admin to edit a session with strict validation."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only admins can edit the timetable.")
+
+    entry = db.query(models.Timetable).filter(models.Timetable.id == session_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Timetable entry not found")
+
+    # Time parsing helper to handle HTML <input type="time"> (HH:MM) or DB format (I:M p)
+    # Robust Time parsing helper to handle various input formats seamlessly
+    def parse_t(t_str):
+        # Clean the string and convert to uppercase for easier AM/PM matching
+        t_str = t_str.strip().upper()
+        
+        # List of acceptable time formats
+        formats = [
+            "%I:%M %p",  # 02:00 PM
+            "%I:%M%p",   # 02:00PM
+            "%H:%M",     # 14:00
+            "%H:%M:%S"   # 14:00:00
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(t_str, fmt).time()
+            except ValueError:
+                continue
+                
+        # If none of the formats match, raise the exception to trigger the 400 error
+        raise ValueError(f"Time format not recognized: {t_str}")
+    
+    def to_12h(t_str):
+        return parse_t(t_str).strftime("%I:%M %p")
+
+    # 1. Validate Lecturer
+    new_lecturer = update_data.lecturer or entry.lecturer
+    lecturer_obj = None
+    if new_lecturer:
+        lecturer_obj = db.query(models.Lecturer).filter(models.Lecturer.name == new_lecturer).first()
+        if not lecturer_obj:
+            raise HTTPException(status_code=400, detail=f"Lecturer '{new_lecturer}' is not registered in the system.")
+
+    # 2. Validate Module & Check Match
+    new_module_code = update_data.module_code or entry.module_code
+    new_module_name = update_data.module_name or entry.module_name
+    
+    if new_module_code:
+        module_obj = db.query(models.Module).filter(models.Module.module_code == new_module_code).first()
+        if not module_obj:
+            raise HTTPException(status_code=400, detail=f"Module Code '{new_module_code}' does not exist.")
+        
+        # Validation A: Module Code must match Module Name
+        if new_module_name and module_obj.module_name.lower() != new_module_name.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Module mismatch! The name for '{new_module_code}' is '{module_obj.module_name}', not '{new_module_name}'."
+            )
+            
+        # Validation B: Lecturer must be assigned to this Module
+        if lecturer_obj:
+            assigned = lecturer_obj.assigned_subjects or ""
+            # Assuming assigned_subjects is a comma-separated string of module codes
+            assigned_list = [m.strip().lower() for m in assigned.split(",")]
+            if new_module_code.lower() not in assigned_list:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Lecturer '{new_lecturer}' is not assigned to teach module '{new_module_code}'."
+                )
+
+    # 3. Validate Time Logic
+    new_start = update_data.start_time or entry.start_time
+    new_end = update_data.end_time or entry.end_time
+    new_date = update_data.date or entry.date
+    
+    try:
+        t_start = parse_t(new_start)
+        t_end = parse_t(new_end)
+        if t_start >= t_end:
+            raise HTTPException(status_code=400, detail="Start time must be strictly before End time.")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid time format.")
+
+    # 4. Check for Timetable Clashes
+    clashing_sessions = db.query(models.Timetable).filter(
+        models.Timetable.lecturer == new_lecturer,
+        models.Timetable.date == new_date,
+        models.Timetable.id != session_id
+    ).all()
+
+    for cl in clashing_sessions:
+        try:
+            c_start = parse_t(cl.start_time)
+            c_end = parse_t(cl.end_time)
+            # Overlap logic
+            if max(t_start, c_start) < min(t_end, c_end):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Time Clash! {new_lecturer} is already scheduled for '{cl.module_code}' from {cl.start_time} to {cl.end_time} on this date."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    # 5. Apply Updates (Enforcing 12-hour format for consistency)
+    update_dict = update_data.dict(exclude_unset=True)
+    for key, value in update_dict.items():
+        if key in ['start_time', 'end_time'] and value:
+            setattr(entry, key, to_12h(value))
+        else:
+            setattr(entry, key, value)
+
+    try:
+        db.commit()
+        db.refresh(entry)
+        return {"message": "Timetable entry updated successfully", "id": entry.id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database update error: {str(e)}")
 
 DATASET_DIR = Path(__file__).resolve().parent.parent / "dataset"
 admin_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -1066,6 +1205,7 @@ def update_lecturer(
 
 @router.get("/timetable/today")
 def get_today_timetable_admin(
+    date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1074,7 +1214,14 @@ def get_today_timetable_admin(
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     now = datetime.now()
-    today_str = now.strftime("%Y-%m-%d")
+    if date:
+        try:
+            today_str = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
+        except ValueError:
+            today_str = now.strftime("%Y-%m-%d")
+    else:
+        today_str = now.strftime("%Y-%m-%d")
+
     current_time = now.time()
 
     def parse_time_str(t_str):
@@ -1111,18 +1258,36 @@ def get_today_timetable_admin(
         start_t = parse_time_str(entry.start_time)
         end_t = parse_time_str(entry.end_time)
         
-        # Priority 1: Check explicit DB flag (Manually toggled)
-        # Priority 2: Check time window (Auto-inference)
-        status = "Pending"
-        if entry.is_live:
+        # Ensure we parse the session date for comparison
+        from datetime import datetime as dt_class
+        try:
+            session_date = dt_class.strptime(entry.date, "%Y-%m-%d").date()
+        except:
+            session_date = now.date()
+        today_date = now.date()
+
+        db_status = getattr(entry, 'status', None)
+        is_manually_completed = bool(db_status and db_status.lower() in ["completed", "closed"])
+        
+        # Check if the session is entirely in the past (yesterday, or earlier today)
+        is_past_session = (session_date < today_date) or (session_date == today_date and start_t and end_t and current_time > end_t)
+        
+        is_db_live = bool(entry.is_live)
+        is_time_live = bool(session_date == today_date and start_t and end_t and start_t <= current_time <= end_t)
+
+        if is_manually_completed:
+            status = "Completed"
+            resolved_live = False
+        elif is_past_session:
+            status = "Missed" # NEW STATUS!
+            resolved_live = False
+        elif is_db_live or is_time_live:
             status = "Live"
+            resolved_live = True
             live_count += 1
-        elif start_t and end_t:
-            if start_t <= current_time <= end_t:
-                status = "Live"
-                live_count += 1
-            elif current_time > end_t:
-                status = "Completed"
+        else:
+            status = "Pending"
+            resolved_live = False
 
         sessions_data.append({
             "id": entry.id,
@@ -1140,8 +1305,10 @@ def get_today_timetable_admin(
             "semester": level or entry.semester,
             "degree": degree,
             "level": level,
-            "is_live": entry.is_live,
+            "is_live": resolved_live,
             "status": status,
+            "is_completed": status == "Completed",
+            "date": entry.date,
             "cover_requested": getattr(entry, 'cover_requested', False),
             "cover_reason": getattr(entry, 'cover_reason', None)
         })
@@ -1242,3 +1409,66 @@ def get_audit_logs(
         }
         for log in logs
     ]
+
+@router.get("/cover_requests/upcoming")
+def get_upcoming_cover_requests(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    from datetime import date as datetime_date
+    today = datetime_date.today()
+    
+    # Replicate the exact JOINs used in the main timetable endpoint
+    results = (
+        db.query(
+            models.Timetable, 
+            models.Lecturer.is_visiting,
+            models.Module.degree,
+            models.Module.level,
+            models.Lecturer.id.label("lecturer_id")
+        )
+        .outerjoin(models.Lecturer, models.Timetable.lecturer == models.Lecturer.name)
+        .outerjoin(models.Module, models.Timetable.module_code == models.Module.module_code)
+        .filter(
+            models.Timetable.cover_requested == True,
+            models.Timetable.date >= today.strftime("%Y-%m-%d")
+        )
+        .order_by(models.Timetable.date.asc(), models.Timetable.start_time.asc())
+        .all()
+    )
+    
+    # Format and return the list of sessions, EXCLUDING completed ones
+    response_data = []
+    for entry, is_visiting, degree, level, lecturer_id in results:
+        db_status = getattr(entry, 'status', '')
+        
+        # Skip this session if it is already completed or closed
+        if db_status and db_status.lower() in ["completed", "closed"]:
+            continue
+            
+        response_data.append({
+            "id": entry.id,
+            "module_code": entry.module_code,
+            "module_name": entry.module_name,
+            "start_time": entry.start_time,
+            "end_time": entry.end_time,
+            "location": entry.location,
+            "batch": entry.batch_id,
+            "lecturer_name": entry.lecturer,
+            "lecturer_id": lecturer_id,
+            "is_visiting": is_visiting if is_visiting is not None else False,
+            "faculty": entry.faculty,
+            "department": entry.department,
+            "semester": level or entry.semester,
+            "degree": degree,
+            "level": level,
+            "date": entry.date,
+            "cover_requested": entry.cover_requested,
+            "cover_reason": entry.cover_reason,
+            "status": "Pending"
+        })
+
+    return response_data

@@ -492,7 +492,7 @@ export default function StudentProfileSecurity({ notifications = [] }: { notific
             <button
               onClick={handleRequestRetraining}
               disabled={isRetraining || studentData?.retrain_requested}
-              className={`w-full cursor-pointer px-6 py-3 border-2 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
+              className={`w-full cursor-pointer px-6 py-3 border-2 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
                 studentData?.retrain_requested
                   ? 'bg-yellow-50 border-yellow-500 text-yellow-600'
                   : 'bg-white border-red-600 text-red-600 hover:bg-red-50'
@@ -660,7 +660,7 @@ export default function StudentProfileSecurity({ notifications = [] }: { notific
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
-                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                     required
                   />
                   <button
@@ -684,7 +684,7 @@ export default function StudentProfileSecurity({ notifications = [] }: { notific
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                     required
                   />
                   <button
@@ -708,7 +708,7 @@ export default function StudentProfileSecurity({ notifications = [] }: { notific
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter new password"
-                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                     required
                   />
                   <button
@@ -725,7 +725,7 @@ export default function StudentProfileSecurity({ notifications = [] }: { notific
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-8 py-3 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="px-8 py-2.5 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
