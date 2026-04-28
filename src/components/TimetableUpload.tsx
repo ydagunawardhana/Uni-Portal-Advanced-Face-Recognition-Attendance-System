@@ -108,7 +108,9 @@ export default function TimetableUpload() {
 
       if (response.ok) {
         // 3. Replace loading toast with success toast
-        toast.success("Timetable updated successfully!", { id: loadingToastId });
+        toast.success("Timetable updated successfully!", {
+          id: loadingToastId,
+        });
         setIsEditModalOpen(false);
         setViewBatchId(null); // Close the preview modal
         setIsViewModalHidden(false); // Reset hidden state
@@ -127,7 +129,7 @@ export default function TimetableUpload() {
               fontWeight: "bold",
             },
           },
-        ) ;
+        );
       }
     } catch (error) {
       toast.error("Network error. Please try again.", { id: loadingToastId });
@@ -382,6 +384,67 @@ export default function TimetableUpload() {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    if (!viewBatchId) return;
+
+    // Step 1: Show loading toast FIRST, then flush render before starting fetch.
+    setIsExporting(true);
+    const TOAST_ID = "excel-export-toast";
+    toast.loading("Generating Report, Please wait...", {
+      id: TOAST_ID,
+      duration: Infinity, // Keep it alive until we explicitly dismiss it
+    });
+
+    // Flush: yield to the browser so React commits the loading state
+    // and the toast renders before the fetch blocks the thread.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    try {
+      // Step 2: Fetch the Excel blob — await so loading toast stays visible
+      const response = await fetch(
+        `http://localhost:8000/api/timetable/export/${encodeURIComponent(viewBatchId)}`,
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.detail || "Failed to generate Excel report.");
+      }
+
+      // CRITICAL: Read as binary Blob — prevents .xlsx corruption
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(
+        new Blob([blob], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+      );
+
+      // Step 3: Trigger download via hidden anchor, then clean up
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `Official_Timetable_${viewBatchId}_Report.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      // Step 4: Replace loading toast with success
+      toast.success("Excel Report Downloaded Successfully! ", {
+        id: TOAST_ID,
+        duration: 4000,
+      });
+    } catch (error: any) {
+      // Step 5: Replace loading toast with error
+      toast.error(error.message || "Export Failed. Please try again.", {
+        id: TOAST_ID,
+        duration: 5000,
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Legacy CSV export kept for reference
   const exportToCSV = async () => {
     if (!viewData || viewData.length === 0) return;
 
@@ -389,7 +452,6 @@ export default function TimetableUpload() {
     const exportToast = toast.loading("Processing dataset for export...");
 
     try {
-      // UX Delay for tactile feedback
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const headers = [
@@ -1207,16 +1269,16 @@ export default function TimetableUpload() {
                 </div>
                 <div className="flex gap-12">
                   <button
-                    onClick={exportToCSV}
+                    onClick={handleDownloadExcel}
                     disabled={isExporting}
-                    className="px-6 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isExporting ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <Download className="w-5 h-5" />
                     )}
-                    {isExporting ? "Processing..." : "Export CSV"}
+                    {isExporting ? "Generating..." : "Export Excel"}
                   </button>
                   <button
                     onClick={() => setViewBatchId(null)}
@@ -1431,7 +1493,6 @@ export default function TimetableUpload() {
                     required
                   />
                 </div>
-
 
                 <div className="flex gap-3 pt-4">
                   <button

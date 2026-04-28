@@ -27,11 +27,7 @@ export default function LoginScreen({
   onLogin,
   onForgotPassword,
   onBackToHome,
-  initialRole = "Student",
 }: LoginScreenProps) {
-  const [selectedRole, setSelectedRole] = useState<"Lecturer" | "Student">(
-    initialRole,
-  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,15 +46,12 @@ export default function LoginScreen({
     const toastId = toast.loading("Authenticating...");
 
     try {
-      const endpoint =
-        selectedRole === "Student"
-          ? `${API_BASE}/api/student/login`
-          : `${API_BASE}/api/login`;
+      const endpoint = `${API_BASE}/api/login`;
 
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role: selectedRole }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -70,33 +63,31 @@ export default function LoginScreen({
         return;
       }
 
-      if (selectedRole === "Student") {
-        localStorage.setItem("studentToken", data.token);
+      const assignedRole = data.role; // Determined dynamically by backend
+
+      if (assignedRole === "Student") {
+        localStorage.setItem("studentToken", data.access_token);
         localStorage.setItem(
           "requiresPasswordChange",
           String(data.requires_password_change),
         );
+        localStorage.setItem("student_role", assignedRole);
+        localStorage.setItem("student_email", email);
       } else {
         localStorage.setItem("lecturerToken", data.access_token);
-        if (selectedRole === "Lecturer") {
+        if (assignedRole === "Lecturer") {
           localStorage.setItem(
             "lecturerRequiresPasswordChange",
             String(data.requires_password_change),
           );
         }
-      }
-
-      if (selectedRole === "Student") {
-        localStorage.setItem("student_role", data.role || selectedRole);
-        localStorage.setItem("student_email", email);
-      } else {
-        localStorage.setItem("lecturer_role", data.role || selectedRole);
+        localStorage.setItem("lecturer_role", assignedRole);
         localStorage.setItem("lecturer_email", email);
       }
 
       toast.success("Login Successful!", { id: toastId, duration: 3000 });
       await new Promise((r) => setTimeout(r, 900));
-      onLogin(selectedRole);
+      onLogin(assignedRole);
     } catch (error: any) {
       const msg = error.response?.data?.detail || "Server connection error";
       toast.error(msg, { id: toastId, duration: 5000 });
@@ -122,8 +113,6 @@ export default function LoginScreen({
       desc: "Granular analytics and exportable attendance summaries.",
     },
   ];
-
-  const roles: Array<"Lecturer" | "Student"> = ["Lecturer", "Student"];
 
   return (
     <>
@@ -332,7 +321,7 @@ export default function LoginScreen({
                 boxShadow:
                   "0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.04)",
                 padding: "2.5rem",
-                border: "1px solid #f3f4f6",
+                border: "2px solid #f3f4f6",
               }}
             >
               <div style={{ marginBottom: "2rem" }}>
@@ -347,30 +336,8 @@ export default function LoginScreen({
                   Welcome back
                 </h2>
                 <p style={{ color: "#5a5d61ff", fontSize: "0.895rem" }}>
-                  Sign in to your account to continue
+                  Sign in with your University Email
                 </p>
-              </div>
-
-              <div
-                style={{
-                  background: "#f3f4f6ff",
-                  borderRadius: "1rem",
-                  padding: "0.375rem",
-                  display: "flex",
-                  marginBottom: "2rem",
-                }}
-              >
-                {roles.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    disabled={loading}
-                    onClick={() => setSelectedRole(role)}
-                    className={`role-tab ${selectedRole === role ? "role-tab-active" : "role-tab-inactive"}`}
-                  >
-                    {role}
-                  </button>
-                ))}
               </div>
 
               <form

@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api", tags=["Auth"])
 class LoginRequest(BaseModel):
     email:    EmailStr
     password: str
-    role:     str          # 'Admin' | 'Lecturer' | 'Student'
+    role:     str | None = None  # Optional for backwards compatibility with Admin login
 
 
 class LoginResponse(BaseModel):
@@ -62,14 +62,39 @@ class ResetPasswordRequest(BaseModel):
 )
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     """
-    Validates email, password, **and** role against the `users` table.
+    Validates email, password, and dynamically assigns role based on email domain.
     Returns a signed JWT on success.
     """
+    
+    # 1. Determine role dynamically from email domain
+    email_domain = payload.email.split('@')[-1].lower() if '@' in payload.email else ""
+
+    if email_domain == "students.university.edu":
+        classified_role = "Student"
+    elif email_domain == "university.edu":
+        classified_role = "Lecturer"
+    else:
+        log_audit_action(
+            db=db,
+            action_type="Login Activity",
+            description=f"Failed login attempt - Invalid domain for '{payload.email}'.",
+            status="Failed",
+            severity="Warning",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid university email domain."
+        )
+
     user: models.User | None = (
         db.query(models.User)
         .filter(models.User.email == payload.email)
         .first()
     )
+
+    # 2. Allow Admin to login using the @university.edu domain
+    if user and user.role == "Admin" and classified_role == "Lecturer":
+        classified_role = "Admin"
 
     #  run verify_password even on not-found to prevent timing attacks.
     dummy_hash = "$2b$12$7ryRNQTK6CWEUzp5qkV6x.hCCID8yGXbTxlU12lWDUgQWY/JGDl2i"
@@ -83,7 +108,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         log_audit_action(
             db=db,
             action_type="Login Activity",
-            description=f"Failed login attempt for email '{payload.email}' as {payload.role}.",
+            description=f"Failed login attempt for email '{payload.email}' as {classified_role}.",
             status="Failed",
             severity="Critical",
         )
@@ -105,17 +130,17 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Account is deactivated. Contact your administrator.",
         )
 
-    if user.role.lower() != payload.role.lower():
+    if user.role.lower() != classified_role.lower():
         log_audit_action(
             db=db,
             action_type="Login Activity",
-            description=f"Role mismatch for '{payload.email}' – attempted as '{payload.role}' but registered as '{user.role}'.",
+            description=f"Role mismatch for '{payload.email}' – identified as '{classified_role}' but registered as '{user.role}'.",
             status="Failed",
             severity="Warning",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"This account is not registered as '{payload.role}'.",
+            detail=f"This account is registered as '{user.role}', which does not match the '{classified_role}' domain.",
         )
 
     token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email})
