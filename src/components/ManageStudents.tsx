@@ -768,7 +768,7 @@ export default function ManageStudents({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+              <tr className="bg-gray-100 text-gray-700 text-sm font-font">
                 <th className="p-4 font-semibold w-16 text-center">Profile</th>
                 <th className="p-4 font-semibold">Student Name</th>
                 <th className="p-4 font-semibold">Index Number</th>
@@ -806,21 +806,21 @@ export default function ManageStudents({
                     <td className="p-4 text-red-600 font-medium">
                       {student.index_number}
                     </td>
-                    <td className="p-4 text-gray-700">
+                    <td className="p-4 text-gray-700 font-medium">
                       {student.department || "-"}
                     </td>
-                    <td className="p-4 text-gray-700 text-sm">
+                    <td className="p-4 text-gray-700 text-sm font-medium">
                       {student.academic_year || "-"}
                     </td>
-                    <td className="p-4 text-gray-700 text-sm">
+                    <td className="p-4 text-gray-700 text-sm font-medium">
                       {student.intake || "-"}
                     </td>
-                    <td className="p-4 text-gray-700 text-sm">
+                    <td className="p-4 text-gray-700 text-sm font-medium">
                       {student.mobile || "-"}
                     </td>
                     <td className="p-4 text-center">
                       <span
-                        className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
+                        className={`px-2.5 py-1 inline-flex text-sm font-bold rounded-full ${
                           student.is_active !== false
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"

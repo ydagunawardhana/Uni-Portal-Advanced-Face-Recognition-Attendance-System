@@ -97,47 +97,45 @@ function bboxToPercent(
   };
 }
 
-const LiveTimer = ({ isSessionActive }: { isSessionActive: boolean }) => {
-  const [elapsedTime, setElapsedTime] = useState(0);
+// Helper to calculate MM:SS or HH:MM:SS format
+const formatElapsedTime = (startMillis: number) => {
+  const diff = Date.now() - startMillis;
+  if (diff < 0) return "00:00:00";
+  const h = Math.floor(diff / 3600000)
+    .toString()
+    .padStart(2, "0");
+  const m = Math.floor((diff % 3600000) / 60000)
+    .toString()
+    .padStart(2, "0");
+  const s = Math.floor((diff % 60000) / 1000)
+    .toString()
+    .padStart(2, "0");
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isSessionActive) {
-      // Calculate elapsed from absolute start timestamp in localStorage
-      const tick = () => {
-        const startStr = localStorage.getItem("sessionStartTime");
-        if (startStr) {
-          const elapsed = Math.floor(
-            (Date.now() - parseInt(startStr, 10)) / 1000,
-          );
-          setElapsedTime(Math.max(0, elapsed));
-        }
-      };
-      tick(); // immediate first tick so it doesn't flash 00:00
-      interval = setInterval(tick, 1000);
-    } else {
-      setElapsedTime(0);
-    }
-    return () => clearInterval(interval);
-  }, [isSessionActive]);
+  // Hide hours if it's less than 1 hour for a cleaner look
+  return h === "00" ? `${m}:${s}` : `${h}:${m}:${s}`;
+};
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600)
-      .toString()
-      .padStart(2, "0");
-    const m = Math.floor((seconds % 3600) / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
-    return `${h}:${m}:${s}`;
-  };
-
+const LiveTimer = ({
+  isSessionActive,
+  displayTime,
+  isOvertime,
+}: {
+  isSessionActive: boolean;
+  displayTime: string;
+  isOvertime?: boolean;
+}) => {
   if (!isSessionActive) return null;
 
   return (
-    <span className="text-red-600 font-bold text-md flex items-center gap-3 animate-pulse min-w-[100px]">
-      <span className="w-2 h-2 rounded-full bg-red-600"></span>
-      Live: {formatTime(elapsedTime)}
+    <span
+      className={`font-bold text-md flex items-center gap-3 min-w-[100px] ${
+        isOvertime ? "text-red-600 animate-pulse" : "text-red-600 animate-pulse"
+      }`}
+    >
+      <span
+        className={`w-2.5 h-2.5 rounded-full ${isOvertime ? "bg-red-600" : "bg-green-600"}`}
+      ></span>
+      ● Live: {displayTime} {isOvertime && "(Overtime)"}
     </span>
   );
 };
@@ -192,6 +190,9 @@ export default function LecturerLiveClassMonitoring({
   const [sessionActive, setSessionActive] = useState(false);
   const [selectedSession, setSelectedSession] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [sessionLocation, setSessionLocation] = useState("");
+  const [sessionTime, setSessionTime] = useState("");
+  const [isOvertime, setIsOvertime] = useState(false);
   const [lecturerId, setLecturerId] = useState<number | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -206,6 +207,8 @@ export default function LecturerLiveClassMonitoring({
   const [sessionDetails, setSessionDetails] = useState({
     type: "Lecture",
     location: "Lab 01",
+    date: "" as string | undefined,
+    end_time: "" as string | undefined,
   });
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
@@ -244,6 +247,7 @@ export default function LecturerLiveClassMonitoring({
   const [todaySessions, setTodaySessions] = useState<any[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [manualIndex, setManualIndex] = useState("");
+  const [manualAction, setManualAction] = useState("IN");
 
   const inCamIndex = videoDevices.findIndex(
     (cam) => cam.deviceId === inCameraId,
@@ -311,18 +315,15 @@ export default function LecturerLiveClassMonitoring({
 
       const moduleName = location.state?.moduleName || "Class";
 
-      toast.success(
-        `${moduleName} session started successfully! Cameras are now live.`,
-        {
-          duration: 6000,
-          position: "top-right",
-          style: {
-            background: "#1e3b8adc", // Dark blue
-            color: "#fff",
-            fontWeight: "bold",
-          },
+      toast.success(`${moduleName} session started successfully!`, {
+        duration: 6000,
+        position: "top-right",
+        style: {
+          background: "#1e3b8adc", // Dark blue
+          color: "#fff",
+          fontWeight: "bold",
         },
-      );
+      });
 
       // Safely strip 'sessionStarted' from the React Router state
       const currentState = { ...location.state };
@@ -361,10 +362,7 @@ export default function LecturerLiveClassMonitoring({
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
-    // For Owner (Lecturer), use the absolute start time from localStorage for precision
     const localStartTime = localStorage.getItem("sessionStartTime");
-
-    // For View-Only (Admin), use the DB timestamp.
     const dbTimeStr =
       selectedSessionDetails?.created_at ||
       selectedSessionDetails?.started_at ||
@@ -375,15 +373,12 @@ export default function LecturerLiveClassMonitoring({
     if (localStartTime && !isViewOnly) {
       startTimeMs = parseInt(localStartTime, 10);
     } else if (dbTimeStr) {
-      // Fix Python UTC timestamp by stripping microseconds completely
-      // e.g. "2026-04-23 21:18:15.643787" -> "2026-04-23T21:18:15Z"
       const tStr = String(dbTimeStr);
       if (tStr.includes("-")) {
         const cleanStr = tStr.split(".")[0].replace(" ", "T");
         const finalStr = cleanStr.endsWith("Z") ? cleanStr : `${cleanStr}Z`;
         startTimeMs = new Date(finalStr).getTime();
       } else if (tStr.includes(":")) {
-        // Fallback if backend only sends a time string like "08:00:00"
         const d = new Date();
         const [h, m, s] = tStr.split(":");
         d.setHours(parseInt(h), parseInt(m), parseInt(s || "0"));
@@ -392,17 +387,9 @@ export default function LecturerLiveClassMonitoring({
     }
 
     if ((sessionActive || isViewOnly) && startTimeMs && !isNaN(startTimeMs)) {
+      setElapsedTime(formatElapsedTime(startTimeMs)); // Immediate tick
       interval = setInterval(() => {
-        const now = new Date().getTime();
-        const diff = Math.max(0, now - startTimeMs);
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        setElapsedTime(
-          `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
-        );
+        setElapsedTime(formatElapsedTime(startTimeMs));
       }, 1000);
     } else {
       setElapsedTime("00:00:00");
@@ -440,6 +427,74 @@ export default function LecturerLiveClassMonitoring({
     };
     getCameras();
   }, []);
+
+  // Proactive Camera Check on Component Mount
+  useEffect(() => {
+    const checkCameraPermissions = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        // Permission granted, stop the stream immediately (we just wanted to check)
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (error) {
+        toast.error(
+          "Camera access is required! Please allow camera permissions in your browser to use the camera",
+          {
+            duration: 6000,
+            style: {
+              background: "#fee2e2",
+              color: "#991b1b",
+              fontWeight: "bold",
+            },
+          },
+        );
+      }
+    };
+
+    checkCameraPermissions();
+  }, []);
+
+  // Proactive Overtime Check
+  useEffect(() => {
+    if (!selectedSessionDetails && !sessionDetails) return;
+
+    const checkOvertime = () => {
+      try {
+        const date = selectedSessionDetails?.date || sessionDetails?.date;
+        const endTime =
+          selectedSessionDetails?.end_time || sessionDetails?.end_time;
+
+        if (!date || !endTime) return;
+
+        // Construct standard ISO-like string: YYYY-MM-DD HH:MM AM/PM
+        const parseDateTime = (dStr: string, tStr: string) => {
+          const [time, period] = tStr.split(" ");
+          let [hours, minutes] = time.split(":").map(Number);
+
+          if (period?.toUpperCase() === "PM" && hours < 12) hours += 12;
+          if (period?.toUpperCase() === "AM" && hours === 12) hours = 0;
+
+          const dateObj = new Date(dStr);
+          dateObj.setHours(hours, minutes, 0, 0);
+          return dateObj.getTime();
+        };
+
+        const endTimeMillis = parseDateTime(date, endTime);
+
+        if (!isNaN(endTimeMillis) && Date.now() > endTimeMillis) {
+          setIsOvertime(true);
+        } else {
+          setIsOvertime(false);
+        }
+      } catch (e) {
+        console.error("Overtime check error:", e);
+      }
+    };
+
+    const interval = setInterval(checkOvertime, 1000);
+    return () => clearInterval(interval);
+  }, [selectedSessionDetails, sessionDetails]);
 
   // Absolute cleanup to prevent memory/hardware leaks when navigating away
   useEffect(() => {
@@ -607,11 +662,13 @@ export default function LecturerLiveClassMonitoring({
       );
       if (sess) {
         setSelectedSession(sessionIdParam);
-        setSelectedSubject(sess.module_code);
+        setSelectedSubject(sess.module_name || sess.module_code);
         setSessionDetails((prev) => ({
           ...prev,
           location: sess.location || prev.location,
         }));
+        setSessionLocation(sess.location || "");
+        setSessionTime(`${sess.start_time || ""} - ${sess.end_time || ""}`);
 
         // Optional: Auto-start if it's Live?
         // For now just pre-selecting is safer.
@@ -628,41 +685,66 @@ export default function LecturerLiveClassMonitoring({
   }, [selectedSession, storageKey]);
 
   const handleManualMark = async () => {
-    if (!selectedSession) {
-      toast.error("Please select a session first!");
+    if (!manualIndex.trim()) {
+      toast.error("Please enter a student index.");
       return;
     }
-    if (!manualIndex.trim()) {
-      toast.error("Please enter a student index!");
+
+    // Safely extract the ID regardless of whether the backend sends it as 'id' or 'timetable_id'
+    // Fallback to the selectedSession string if the object lookup fails
+    const sessIdToUse =
+      selectedSessionDetails?.id ||
+      selectedSessionDetails?.timetable_id ||
+      selectedSession;
+
+    if (!sessIdToUse) {
+      toast.error(
+        "Error: Could not identify the current session ID. Please re-select the session.",
+      );
+      return;
+    }
+
+    // 1. Camera Dependency Check
+    if (manualAction === "IN" && !isEntranceActive) {
+      toast.error("Entrance Camera must be ON to mark an IN attendance.");
+      return;
+    }
+    if (manualAction === "OUT" && !isExitActive) {
+      toast.error("Exit Camera must be ON to mark an OUT attendance.");
       return;
     }
 
     try {
+      // Use the generic token or fallback to role-specific ones
       const token =
+        localStorage.getItem("token") ||
         localStorage.getItem("adminToken") ||
         localStorage.getItem("lecturerToken");
-      const res = await fetch(`${API_BASE}/api/attendance/manual-override`, {
+
+      const res = await fetch(`${API_BASE}/api/attendance/manual`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          session_id: parseInt(selectedSession),
-          student_index: manualIndex.trim(),
+          session_id: parseInt(String(sessIdToUse)),
+          student_index: manualIndex.trim().toUpperCase(),
+          action_type: manualAction,
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        toast.success(`Attendance marked for ${manualIndex}`);
+        toast.success(data.message || `Attendance marked for ${manualIndex}`);
         setManualIndex("");
         // The polling useEffect will pick up the new log entry automatically
       } else {
-        const data = await res.json();
         toast.error(data.detail || "Marking failed.");
       }
     } catch (error) {
-      toast.error("Network error.");
+      toast.error("Network error occurred.");
     }
   };
 
@@ -890,12 +972,26 @@ export default function LecturerLiveClassMonitoring({
       setCameraError("Please select a Course Session to begin tracking.");
       return;
     }
+    if (!selectedSubject) {
+      setCameraError("Please select a Course Subject to begin tracking.");
+      return;
+    }
+    if (!sessionLocation.trim()) {
+      toast.error("Please enter a valid location for this session.");
+      return;
+    }
 
+    // NEW: Camera Pre-check Logic
     try {
-      if (!selectedSubject) {
-        setCameraError("Please select a Course Subject to begin tracking.");
-        return;
-      }
+      // Request camera access to verify it's connected and permitted
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+
+      // Stop the stream immediately, we just wanted to check permissions/hardware
+      stream.getTracks().forEach((track) => track.stop());
+
+      toast.success("Camera connected! Starting session...");
 
       // 1. Thoroughly extract the true Lecturer ID from possible data structures
       const extractedLecturerId =
@@ -933,7 +1029,8 @@ export default function LecturerLiveClassMonitoring({
             "Lecture",
         ),
         location: String(
-          sessionDetails?.location ||
+          sessionLocation ||
+            sessionDetails?.location ||
             selectedSessionDetails?.location ||
             "Hall A",
         ),
@@ -966,7 +1063,7 @@ export default function LecturerLiveClassMonitoring({
           sessionId: data.id,
           selectedSession,
           selectedSubject,
-          sessionDetails,
+          sessionDetails: { ...sessionDetails, location: sessionLocation },
         }),
       );
       // Save absolute start time so the timer survives navigation
@@ -995,6 +1092,22 @@ export default function LecturerLiveClassMonitoring({
       // Optionally start neither, but let's start entrance by default if specified
       if (inCameraId) setIsEntranceActive(true);
     } catch (err: any) {
+      console.error("Camera access error:", err);
+      const isPermError =
+        err.name === "NotAllowedError" || err.name === "PermissionDeniedError";
+      toast.error(
+        isPermError
+          ? "Camera permission denied! Please allow camera access in your browser."
+          : `Session Error: ${err.message}`,
+        {
+          duration: 6000,
+          style: {
+            background: "#fee2e2",
+            color: "#991b1b",
+            fontWeight: "bold",
+          },
+        },
+      );
       setCameraError(`Session Error: ${err.message}`);
     }
   };
@@ -1179,24 +1292,15 @@ export default function LecturerLiveClassMonitoring({
             {/* Subject Selector */}
             <div className="flex-1">
               <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
-                Subject
+                Subject / Module
               </label>
-              <select
+              <input
+                type="text"
                 value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                disabled={sessionActive}
-                className="w-full px-4 cursor-pointer py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              >
-                <option value="">Select Subject...</option>
-                <option value="CS-101">
-                  Database Management Systems (CS-101)
-                </option>
-                <option value="CS-102">
-                  Data Structures &amp; Algorithms (CS-102)
-                </option>
-                <option value="CS-201">Operating Systems (CS-201)</option>
-                <option value="CS-202">Computer Networks (CS-202)</option>
-              </select>
+                readOnly
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-gray-500 font-semibold text-sm bg-gray-50 focus:outline-none cursor-not-allowed transition-all"
+                placeholder="Module Name will appear here"
+              />
             </div>
 
             {/* Session Selector */}
@@ -1214,11 +1318,15 @@ export default function LecturerLiveClassMonitoring({
                     (s) => s.id.toString() === sessId,
                   );
                   if (sess) {
-                    setSelectedSubject(sess.module_code);
+                    setSelectedSubject(sess.module_name || sess.module_code);
                     setSessionDetails((prev) => ({
                       ...prev,
                       location: sess.location || prev.location,
                     }));
+                    setSessionLocation(sess.location || "");
+                    setSessionTime(
+                      `${sess.start_time || ""} - ${sess.end_time || ""}`,
+                    );
                   }
                 }}
                 disabled={sessionActive || isLoadingSessions || isViewOnly}
@@ -1267,38 +1375,38 @@ export default function LecturerLiveClassMonitoring({
               <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
                 Location
               </label>
-              <select
-                value={sessionDetails.location}
-                onChange={(e) =>
-                  setSessionDetails({
-                    ...sessionDetails,
-                    location: e.target.value,
-                  })
-                }
+              <input
+                type="text"
+                value={sessionLocation}
+                onChange={(e) => setSessionLocation(e.target.value)}
                 disabled={sessionActive}
-                className="w-full cursor-pointer px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
-              >
-                <option value="Main Auditorium">Main Auditorium</option>
-                <option value="Lab 01">Lab 01</option>
-                <option value="Lab 02">Lab 02</option>
-                <option value="Hall A">Hall A</option>
-                <option value="Hall B">Hall B</option>
-              </select>
+                placeholder="e.g. Hall A"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-semibold text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-75"
+              />
+            </div>
+
+            {/* Read-only Time Field */}
+            <div className="flex-1">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5 tracking-wide">
+                Time
+              </label>
+              <input
+                type="text"
+                value={sessionTime}
+                readOnly
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-gray-500 font-semibold text-sm bg-gray-50 focus:outline-none cursor-not-allowed transition-all"
+                placeholder="Start - End Time"
+              />
             </div>
 
             {/* Session Controls */}
             <div className="flex items-end pl-2">
-              <div className="flex items-center gap-3 mt-4">
+              <div className="flex items-center gap-3 mt-6">
                 {/* START: Only show if NOT view-only and NOT active */}
                 {!isViewOnly && !sessionActive && (
                   <button
                     onClick={handleStartSession}
-                    disabled={!inCameraId}
-                    className={`px-5 py-2.5 cursor-pointer text-white rounded-lg font-bold text-sm transition flex items-center gap-2 whitespace-nowrap ${
-                      !inCameraId
-                        ? "bg-green-500 cursor-not-allowed opacity-70"
-                        : "bg-green-600 hover:bg-green-700 shadow-md"
-                    }`}
+                    className="px-5 py-2.5 bg-green-600 hover:bg-green-700 shadow-md cursor-pointer text-white rounded-lg font-bold text-sm transition flex items-center gap-2 whitespace-nowrap"
                   >
                     <Play className="w-4 h-4 fill-white" /> Start Live Session
                   </button>
@@ -1307,7 +1415,11 @@ export default function LecturerLiveClassMonitoring({
                 {/* STOP: Only show if NOT view-only AND active */}
                 {!isViewOnly && sessionActive && (
                   <div className="flex items-center gap-3">
-                    <LiveTimer isSessionActive={sessionActive} />
+                    <LiveTimer
+                      isSessionActive={sessionActive}
+                      displayTime={elapsedTime}
+                      isOvertime={isOvertime}
+                    />
                     <button
                       onClick={() => setShowEndSessionModal(true)}
                       className="px-6 py-2.5 cursor-pointer bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition shadow-md"
@@ -1662,20 +1774,30 @@ export default function LecturerLiveClassMonitoring({
             {/* Manual Override (Hidden for View-Only) */}
             {!isViewOnly && (
               <div className="px-5 py-4 border-b border-gray-300 bg-gray-50">
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">
                   Manual Override
                 </label>
                 <div className="flex gap-2">
+                  <select
+                    value={manualAction}
+                    onChange={(e) => setManualAction(e.target.value)}
+                    className="px-2 py-1.5 text-sm cursor-pointer border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  >
+                    <option value="IN">IN</option>
+                    <option value="OUT">OUT</option>
+                  </select>
                   <input
                     type="text"
-                    placeholder="Index (e.g. CS202601)"
+                    placeholder="e.g. CS202601"
                     value={manualIndex}
-                    onChange={(e) => setManualIndex(e.target.value)}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-medium transition-all"
+                    onChange={(e) =>
+                      setManualIndex(e.target.value.toUpperCase())
+                    }
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-semibold transition-all"
                   />
                   <button
                     onClick={handleManualMark}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer rounded-lg text-sm font-bold transition shadow-sm"
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer rounded-xl text-sm font-bold transition shadow-sm"
                   >
                     Mark
                   </button>
@@ -1861,7 +1983,7 @@ export default function LecturerLiveClassMonitoring({
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowEndSessionModal(false)}
           />
-          <div className="relative bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 animate-fade-in">
+          <div className="relative bg-white rounded-xl border border-gray-200 shadow-2xl max-w-md w-full mx-4 animate-fade-in">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">
                 End Class Session?

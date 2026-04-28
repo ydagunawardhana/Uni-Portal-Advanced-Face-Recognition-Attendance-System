@@ -413,7 +413,7 @@ export default function LoginScreen({
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="login-input"
+                      className="login-input font-semibold text-sm rounded-xl"
                       placeholder="Enter your University Email Address"
                       required
                       disabled={loading}
@@ -453,7 +453,7 @@ export default function LoginScreen({
                       autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="login-input"
+                      className="login-input font-semibold text-sm rounded-xl"
                       placeholder="Enter your password"
                       required
                       disabled={loading}
@@ -518,7 +518,7 @@ export default function LoginScreen({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-btn mt-4"
+                  className="login-btn mt-4 rounded-xl"
                 >
                   {loading ? (
                     <>

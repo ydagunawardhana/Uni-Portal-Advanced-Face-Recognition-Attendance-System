@@ -162,6 +162,12 @@ class ModuleUpdate(BaseModel):
 class ManualOverride(BaseModel):
     session_id: int
     student_index: str
+    action_type: str # 'IN' or 'OUT'
+
+class ManualAttendanceSchema(BaseModel):
+    session_id: int
+    student_index: str    # Index number, e.g. CS202601
+    action_type: str      # 'IN' or 'OUT'
 
 
 class CoverRequestUpdate(BaseModel):

@@ -36,6 +36,7 @@ interface Session {
   level?: string;
   cover_requested?: boolean;
   cover_reason?: string;
+  actual_start_time?: string;
 }
 
 export default function LecturerDailySessions() {
@@ -57,6 +58,41 @@ export default function LecturerDailySessions() {
   const [timeFilter, setTimeFilter] = useState<
     "prev_week" | "today" | "next_week"
   >("today");
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to calculate elapsed time
+  const getElapsedTime = (session: Session) => {
+    try {
+      // Use actual_start_time if provided by backend, fallback to scheduled start
+      const startTimeStr =
+        session.actual_start_time || `${session.date} ${session.start_time}`;
+      const startMillis = new Date(startTimeStr).getTime();
+
+      if (isNaN(startMillis)) return "00:00";
+
+      const diff = now - startMillis;
+      if (diff < 0) return "00:00";
+
+      const h = Math.floor(diff / 3600000)
+        .toString()
+        .padStart(2, "0");
+      const m = Math.floor((diff % 3600000) / 60000)
+        .toString()
+        .padStart(2, "0");
+      const s = Math.floor((diff % 60000) / 1000)
+        .toString()
+        .padStart(2, "0");
+
+      return h === "00" ? `${m}:${s}` : `${h}:${m}:${s}`;
+    } catch (e) {
+      return "00:00";
+    }
+  };
 
   const getTodayStr = () => {
     const d = new Date();
@@ -722,7 +758,7 @@ export default function LecturerDailySessions() {
                             className="w-full py-2.5 bg-green-50 text-green-700 border-2 border-green-200 font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                           >
                             <Video className="w-5 h-5 animate-pulse" />
-                            Live (Covered by Admin)
+                            Live (Covered by Admin) - {getElapsedTime(session)}
                           </button>
                         ) : (
                           /* 2b. Own live session — allow resume */
@@ -730,8 +766,8 @@ export default function LecturerDailySessions() {
                             onClick={() => handleStartSession(session)}
                             className="w-full py-2.5 bg-green-100 hover:bg-green-200 text-green-700 border-2 border-green-300 font-bold rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all text-sm"
                           >
-                            <Video className="w-6 h-6 animate-pulse" /> Resume
-                            Session
+                            <Video className="w-6 h-6 animate-pulse" /> Resume (
+                            {getElapsedTime(session)})
                           </button>
                         );
                       } else if (session.cover_requested) {

@@ -952,7 +952,7 @@ export default function TimetableUpload() {
                       >
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <FileSpreadsheet className="w-7 h-7 text-yellow-600 bg-yellow-100 rounded-lg p-1 shrink-0" />
+                            <FileSpreadsheet className="w-8 h-8 text-yellow-600 bg-yellow-100 rounded-lg p-1 shrink-0" />
                             <div>
                               <p className="text-sm font-bold text-gray-800 truncate max-w-[180px]">
                                 {record.name}

@@ -108,11 +108,11 @@ def update_timetable_entry(
         if not module_obj:
             raise HTTPException(status_code=400, detail=f"Module Code '{new_module_code}' does not exist.")
         
-        # Validation A: Module Code must match Module Name
-        if new_module_name and module_obj.module_name.lower() != new_module_name.lower():
+        # Validation A: Module Code must match Module Name (Robust against trailing spaces and case differences)
+        if new_module_name and module_obj.module_name.strip().lower() != new_module_name.strip().lower():
             raise HTTPException(
                 status_code=400, 
-                detail=f"Module mismatch! The name for '{new_module_code}' is '{module_obj.module_name}', not '{new_module_name}'."
+                detail=f"Module mismatch! The name for '{new_module_code}' is '{module_obj.module_name.strip()}', not '{new_module_name.strip()}'."
             )
             
         # Validation B: Lecturer must be assigned to this Module

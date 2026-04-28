@@ -153,6 +153,9 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
     eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
     db = SessionLocal()
     
+    # Fetch active session once for batch validation
+    active_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -188,85 +191,103 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
                 
             detected_ids = set()
             for (x, y, w, h, name) in results:
-                color = (0, 255, 255)
-                label = name
-                if name != "Unknown":
+                # Default appearance for identified but unverified faces
+                color = (0, 165, 255) # Orange
+                label = f"{name} - Blink!"
+                
+                if name == "Unknown":
+                    # Unknown/Unregistered face path
+                    color = (0, 255, 255) # Yellow
+                    label = "Unknown"
+                else:
                     detected_ids.add(name)
-                    if name not in blink_state: blink_state[name] = {'closed': 0, 'verified': False, 'time': 0}
-                    state = blink_state[name]
-                    if state['verified'] and (now - state['time'] > 10): state['verified'] = False
                     
-                    if not state['verified']:
-                        roi = gray[max(0,y):y+h, max(0,x):x+w]
-                        if roi.shape[0] > 0 and roi.shape[1] > 0:
-                            eyes = eye_cascade.detectMultiScale(roi[0:h//2, 0:w], 1.1, 5)
-                            if len(eyes) == 0: state['closed'] += 1
-                            else:
-                                if 2 <= state['closed'] <= 20:
-                                    state['verified'] = True
-                                    state['time'] = now
-                                state['closed'] = 0
-                                
-                    if state['verified']:
-                        color = (0, 255, 0)
-                        label = f"{name} (Verified)"
-                        
-                        # Strict IN/OUT Logic & Debounce Execution
-                        current_status = mode # "entered" or "exited"
-                        current_time = time.time()
-                        student_id = name
-                        
-                        # 1. Debounce check based on Time Dictionary (prevent spam)
-                        if student_id not in last_marked_time:
-                            last_marked_time[student_id] = {}
-                            
-                        # If the student was recently marked for this specific status, skip
-                        if current_status in last_marked_time[student_id]:
-                            if (current_time - last_marked_time[student_id][current_status]) < COOLDOWN_SECONDS:
-                                pass # Skip entirely, they were just marked
-                            else:
-                                should_log = True
+                    # 1. Fetch Student Record to check Account Status / Enrollment
+                    student_record = db.query(models.Student).filter(models.Student.index_number == name).first()
+                    
+                    # 2. Block/Inactive check
+                    if student_record and not student_record.is_active:
+                        color = (0, 0, 255) # Red for Blocked
+                        label = f"{name} - BLOCKED!"
+                    
+                    # 3. NEW: Wrong Batch / Not Enrolled Validation
+                    # Resolve the actual batch string (e.g., "23.2") from the Timetable entry
+                    session_batch_str = "UNKNOWN"
+                    if active_session:
+                        tt_entry = db.query(models.Timetable).filter(models.Timetable.id == active_session.batch_id).first()
+                        if tt_entry:
+                            session_batch_str = str(tt_entry.batch_id).strip()
                         else:
-                            should_log = True
+                            # Fallback if batch_id was already a string (old system) or missing
+                            session_batch_str = str(active_session.batch_id).strip()
 
-                        # 2. Strike DB only if perfectly verified and past cooldown
-                        if 'should_log' in locals() and should_log:
-                            try:
-                                student = db.query(models.Student).filter(models.Student.index_number == name).first()
-                                if student and session_id:
-                                    # 1. Fetch ONLY the most recent log for this student in this session
-                                    latest_record = db.query(models.AttendanceLog).filter_by(
-                                        session_id=session_id,
-                                        student_id=student.id
-                                    ).order_by(models.AttendanceLog.timestamp.desc()).first()
-
-                                    # 2. Block ONLY if the consecutive status is exactly the same
-                                    latest_status = latest_record.status if latest_record else None
-                                    
-                                    if latest_status == current_status:
-                                        last_marked_time[student_id][current_status] = current_time # Re-sync memory quietly
-                                    else:
-                                        # 3. Normal Insertion (Safe)
-                                        new_log = models.AttendanceLog(
-                                            student_id=student.id,
-                                            session_id=session_id,
-                                            timestamp=datetime.utcnow(),
-                                            status=current_status
-                                        )
-                                        db.add(new_log)
-                                        db.commit()
-                                        
-                                        # Update Cooldown Timer instantly
-                                        last_marked_time[student_id][current_status] = current_time
-                                        print(f"[DB] Logged {student.index_number} as {current_status}")
-                            except Exception as e:
-                                print(f"[DB ERROR]: {e}")
-                            
-                            # Clean up the variable for the next loop
-                            del should_log
+                    student_intake = str(student_record.intake).strip() if student_record and student_record.intake else ""
+                    
+                    if student_record and active_session and student_intake != session_batch_str:
+                        color = (0, 165, 255) # Orange for Warning
+                        label = f"{name} - Not Allowed!"
+                        
                     else:
-                        color = (0, 165, 255)
-                        label = f"{name} - Blink!"
+                        # 4. Normal Active Path - Liveness (Blink) Verification
+                        if name not in blink_state: blink_state[name] = {'closed': 0, 'verified': False, 'time': 0}
+                        state = blink_state[name]
+                        if state['verified'] and (now - state['time'] > 10): state['verified'] = False
+                        
+                        if not state['verified']:
+                            roi = gray[max(0,y):y+h, max(0,x):x+w]
+                            if roi.shape[0] > 0 and roi.shape[1] > 0:
+                                eyes = eye_cascade.detectMultiScale(roi[0:h//2, 0:w], 1.1, 5)
+                                if len(eyes) == 0: state['closed'] += 1
+                                else:
+                                    if 2 <= state['closed'] <= 20:
+                                        state['verified'] = True
+                                        state['time'] = now
+                                    state['closed'] = 0
+                                    
+                        if state['verified']:
+                            color = (0, 255, 0) # Green for Verified Active Student
+                            label = f"{name} ({mode.upper()})"
+                            
+                            # 4. Strict IN/OUT Logic & Debounce Execution
+                            current_status = mode # "entered" or "exited"
+                            current_time = time.time()
+                            student_id = name
+                            
+                            if student_id not in last_marked_time:
+                                last_marked_time[student_id] = {}
+                                
+                            should_log = False
+                            if current_status not in last_marked_time[student_id]:
+                                should_log = True
+                            elif (current_time - last_marked_time[student_id][current_status]) >= COOLDOWN_SECONDS:
+                                should_log = True
+
+                            if should_log:
+                                try:
+                                    if student_record and session_id:
+                                        latest_record = db.query(models.AttendanceLog).filter_by(
+                                            session_id=session_id,
+                                            student_id=student_record.id
+                                        ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+                                        latest_status = latest_record.status if latest_record else None
+                                        
+                                        if latest_status != current_status:
+                                            new_log = models.AttendanceLog(
+                                                student_id=student_record.id,
+                                                session_id=session_id,
+                                                timestamp=datetime.utcnow(),
+                                                status=current_status
+                                            )
+                                            db.add(new_log)
+                                            db.commit()
+                                            last_marked_time[student_id][current_status] = current_time
+                                            print(f"[DB] Logged {student_record.index_number} as {current_status}")
+                                        else:
+                                            # Just sync memory timer
+                                            last_marked_time[student_id][current_status] = current_time
+                                except Exception as e:
+                                    print(f"[DB ERROR]: {e}")
 
                 cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
                 cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -315,7 +336,7 @@ def stop_cameras():
     for cap in list(active_captures.values()): cap.release()
     active_captures.clear()
     return {"message": "Stopped"}
-
+    
 @router.get("/live_logs/{session_id}")
 def get_live_logs(session_id: int, db: Session = Depends(get_db)):
     logs = db.query(models.AttendanceLog).filter(
@@ -349,36 +370,95 @@ def get_session_stats(session_id: int, db: Session = Depends(get_db)):
         "left_early": exited_count,
         "currently_inside": entered_count - exited_count
     }
-@router.post("/manual-override")
-def manual_override_attendance(
-    data: schemas.ManualOverride,
-    db: Session = Depends(get_db)
-):
-    """Manually mark a student as present for a given session by index number."""
-    # Look up student by index number
-    student = db.query(models.Student).filter(models.Student.index_number == data.student_index).first()
+@router.post("/manual")
+def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session = Depends(get_db)):
+    """Manually mark attendance with automatic session ID resolution (Timetable vs ClassSession)."""
+    # 1. Standardize the index (Case insensitive)
+    student_index = payload.student_index.strip().upper()
+    
+    # 2. Verify Student Exists
+    student = db.query(models.Student).filter(models.Student.index_number == student_index).first()
     if not student:
-        raise HTTPException(status_code=404, detail=f"Student with index {data.student_index} not found.")
+        raise HTTPException(status_code=404, detail=f"Student with index {student_index} not found.")
 
-    # Check if session exists
-    session = db.query(models.ClassSession).filter(models.ClassSession.id == data.session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
+    # NEW: Check if the student's account is active
+    if not student.is_active:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Account for {student_index} is currently blocked/inactive."
+        )
 
-    # Create AttendanceLog entry
+    # 3. Resolve the correct Class Session ID
+    # The frontend might send a timetable_id instead of a class_session_id.
+    active_session = db.query(models.ClassSession).filter(models.ClassSession.id == payload.session_id).first()
+    
+    if not active_session:
+        # If not found, look up the timetable entry and find the corresponding active session
+        tt_entry = db.query(models.Timetable).filter(models.Timetable.id == payload.session_id).first()
+        if tt_entry:
+            # Find the most recently created class_session for this specific module/subject
+            active_session = db.query(models.ClassSession).filter(
+                models.ClassSession.subject_id == tt_entry.module_name
+            ).order_by(models.ClassSession.id.desc()).first()
+
+    if not active_session:
+        raise HTTPException(status_code=404, detail="Active class session not found. Please ensure the 'Start Session' button was clicked.")
+
+    # NEW: Validate Batch Match for Manual Override (Block "Not Allowed" students)
+    # 1. Resolve actual batch from Timetable using the session's batch_id (pointer)
+    tt_record = db.query(models.Timetable).filter(models.Timetable.id == active_session.batch_id).first()
+    session_batch_val = str(tt_record.batch_id).strip() if tt_record else str(active_session.batch_id).strip()
+    student_intake_val = str(student.intake).strip()
+
+    if session_batch_val and student_intake_val != session_batch_val:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Not Allowed: Student {student_index} belongs to intake {student_intake_val}, but this is a session for {session_batch_val}."
+        )
+
+    # 4. Fetch the last attendance log for Sequence Validation
+    last_record = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.session_id == active_session.id,
+        models.AttendanceLog.student_id == student.id
+    ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+    # Normalize internal status for sequence check
+    # Map 'entered' -> 'IN', 'exited' -> 'OUT' for comparison if necessary
+    def _normalize(s):
+        if not s: return "OUT"
+        s = s.upper()
+        if s == "ENTERED": return "IN"
+        if s == "EXITED": return "OUT"
+        return s
+
+    current_status = _normalize(last_record.status) if last_record else "OUT"
+    requested_status = payload.action_type.strip().upper() # "IN" or "OUT"
+
+    # 5. Sequence Validation
+    if requested_status == "IN" and current_status == "IN":
+        raise HTTPException(status_code=400, detail=f"{student_index} is already marked IN. Please mark OUT first.")
+    elif requested_status == "OUT" and current_status == "OUT":
+        raise HTTPException(status_code=400, detail=f"Cannot mark OUT. {student_index} is not currently IN.")
+    
+    if requested_status not in ["IN", "OUT"]:
+        raise HTTPException(status_code=400, detail="Invalid action type. Must be 'IN' or 'OUT'.")
+
+    # 6. Save the new record
+    # Mapping back to internal status for consistency with biometric logs
+    db_status = "entered" if requested_status == "IN" else "exited"
+
     new_log = models.AttendanceLog(
+        session_id=active_session.id,
         student_id=student.id,
-        session_id=data.session_id,
-        timestamp=datetime.utcnow(),
-        status="Present",  # Categorized as Present for manual marking
+        status=db_status,
+        timestamp=datetime.now(),
         remarks="Admin/Manual"
     )
     db.add(new_log)
     db.commit()
-    db.refresh(new_log)
-
+    
     return {
-        "success": True, 
-        "message": f"Successfully marked {student.name} ({student.index_number}) as present.",
+        "success": True,
+        "message": f"Successfully marked {requested_status} for {student_index}",
         "log_id": new_log.id
     }

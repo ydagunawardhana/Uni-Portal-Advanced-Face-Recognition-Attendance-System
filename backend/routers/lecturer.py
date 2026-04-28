@@ -610,10 +610,10 @@ def get_lecturer_timetable(
             return None
 
     def _resolve(tt):
-        """Hybrid status resolution: manual action > date/time > live flag."""
+        """Hybrid status resolution: manual action > live flag > date/time."""
         db_st = getattr(tt, 'status', None)
         # Check for both 'completed' and 'closed' since the DB may use either string
-        is_manually_completed = bool(db_st and db_st.lower() in ["completed", "closed"])
+        is_manually_completed = bool(db_st and db_st.lower() in ["completed", "closed", "ended"])
         s = _parse(tt.start_time)
         e = _parse(tt.end_time)
         
@@ -624,11 +624,16 @@ def get_lecturer_timetable(
         is_time_live = (tt_date == today_date and s and e and s <= now_time <= e)
         is_db_live = bool(tt.is_live)
 
+        # 1. Manual Completion ALWAYS wins
         if is_manually_completed:
             return "Completed", False, True
+        # 2. If it's explicitly marked Live in DB, it remains Live (Overtime support)
+        elif is_db_live:
+            return "Live", True, False
+        # 3. Handle expired/upcoming sessions
         elif is_past_session:
-            return "Missed", False, False # Status = Missed, is_live = False, is_completed = False
-        elif is_db_live or is_time_live:
+            return "Missed", False, False
+        elif is_time_live:
             return "Live", True, False
         else:
             return "Pending", False, False

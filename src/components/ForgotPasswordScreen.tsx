@@ -501,7 +501,7 @@ export default function ForgotPasswordScreen({
                           autoComplete="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="login-input"
+                          className="login-input text-sm rounded-xl font-semibold"
                           placeholder="Enter your Email Address"
                           required
                           disabled={loading}
@@ -784,7 +784,7 @@ export default function ForgotPasswordScreen({
                           autoComplete="new-password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="login-input"
+                          className="login-input text-sm rounded-xl font-semibold"
                           placeholder="Enter your new password"
                           required
                           disabled={loading}
@@ -823,7 +823,7 @@ export default function ForgotPasswordScreen({
                           autoComplete="new-password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="login-input"
+                          className="login-input text-sm rounded-xl font-semibold"
                           placeholder="Enter your confirm password"
                           required
                           disabled={loading}

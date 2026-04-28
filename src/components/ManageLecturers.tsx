@@ -601,7 +601,7 @@ export default function ManageLecturers() {
 
                     {/* Employee ID */}
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600 font-mono">
+                      <span className="text-sm text-gray-600 font-mono font-medium">
                         {lecturer.employee_id}
                       </span>
                     </td>

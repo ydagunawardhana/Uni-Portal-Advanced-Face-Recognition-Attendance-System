@@ -130,7 +130,7 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
           <button
             type="submit"
             disabled={loading || isRedirecting}
-            className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg py-2.5 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/20 disabled:opacity-70 mt-6"
+            className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl py-2.5 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/20 disabled:opacity-70 mt-6"
           >
             <span>
               {isRedirecting
@@ -140,10 +140,13 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
                   : "Secure Sign In"}
             </span>
           </button>
+          <p className="text-xs text-gray-400 text-center font-semibold">
+            only authorized admin can access this page
+          </p>
         </form>
 
         {onBackToHome && (
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <div className="mt-2 pt-4 border-t border-gray-100 text-center">
             <button
               onClick={onBackToHome}
               className="text-sm text-gray-500 hover:text-blue-600 font-medium cursor-pointer flex items-center justify-center gap-2 transition-colors mx-auto"
