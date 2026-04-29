@@ -239,6 +239,7 @@ export default function LecturerLiveClassMonitoring({
   const captureTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEndingSession, setIsEndingSession] = useState(false);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
@@ -1143,72 +1144,61 @@ export default function LecturerLiveClassMonitoring({
   // No longer polling the frontend React camera canvas! Wait for backend to perform attendance via stream.
 
   const handleEndSession = useCallback(async () => {
-    // SAFETY GUARD: Admins in view-only mode must never be able to end a session.
-    // The End Session button is already hidden for viewers, but this is a hard stop
-    // to prevent any unexpected code path from destructively ending the Lecturer's session.
-    if (isViewOnly) {
-      console.warn("[END SESSION] Blocked: Admin is in view-only mode.");
-      return;
-    }
-
-    // Clear persisted session immediately
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem("activeAttendanceSession");
-    localStorage.removeItem("sessionStartTime");
-    localStorage.removeItem("admin_hosted_session");
-
-    // Optimistic UI update: mark session dead on client so it doesn't flip to ViewOnly
-    setTodaySessions((prev) =>
-      prev.map((s) =>
-        String(s.id) === String(selectedSession) ? { ...s, is_live: false } : s,
-      ),
-    );
-
-    stopCamera();
-    setSessionActive(false);
-    setIsEntranceActive(false);
-    setIsExitActive(false);
-    setMediaStream(null); // prevent the attach-effect from re-running
-    setAnnotatedFrame(null);
-    setShowEndSessionModal(false);
-    setShowSuccessToast(true);
-
-    navigate(
-      isAdminRoute ? "/admin/live-sessions" : "/lecturer/mark-attendances",
-    );
-
-    // SYNC: Mark timetable session as closed for real-time dashboard updates
-    if (selectedSession) {
-      try {
-        await fetch(`${API_BASE}/api/timetable/${selectedSession}/stop`, {
-          method: "POST",
-        });
-      } catch (err) {
-        console.error("Failed to sync session stop:", err);
-      }
-    }
-
-    setLogEntries([]);
-    setLiveStats({ currentlyInside: 0, totalEntered: 0, leftEarly: 0 });
+    if (isViewOnly) return;
+    
+    setIsEndingSession(true);
+    const loadingToast = toast.loading("Calculating final attendance and processing logs...");
 
     try {
-      // 1. Close session in backend
+      // 1. Mark session as inactive in local state
+      stopCamera();
+      setSessionActive(false);
+      setIsEntranceActive(false);
+      setIsExitActive(false);
+      setMediaStream(null);
+      setAnnotatedFrame(null);
+      
+      // 2. Clear persisted session
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem("activeAttendanceSession");
+      localStorage.removeItem("sessionStartTime");
+      localStorage.removeItem("admin_hosted_session");
+
+      // 3. Close session in backend & Trigger Calculation
       if (currentSessionId) {
-        await fetch(
-          `${API_BASE}/api/attendance/end_session/${currentSessionId}`,
-          { method: "POST" },
-        );
-        setCurrentSessionId(null);
+        const res = await fetch(`${API_BASE}/api/attendance/end_session/${currentSessionId}`, { 
+          method: "POST" 
+        });
+        if (!res.ok) throw new Error("Failed to end session");
       }
 
-      // 2. Force backend hardware teardown explicitly
-      await fetch(`${API_BASE}/api/attendance/stop_cameras`, {
-        method: "POST",
+      // 4. Release hardware
+      await fetch(`${API_BASE}/api/attendance/stop_cameras`, { method: "POST" });
+      
+      // 5. Sync timetable status
+      if (selectedSession) {
+        await fetch(`${API_BASE}/api/timetable/${selectedSession}/stop`, { method: "POST" });
+      }
+
+      toast.success("Attendance processed successfully!", { id: loadingToast });
+      setShowEndSessionModal(false);
+      
+      // 6. Navigate to review
+      const targetSessionId = currentSessionId || selectedSession;
+      if (targetSessionId) {
+        localStorage.setItem("pendingReviewSessionId", String(targetSessionId));
+      }
+      navigate(isAdminRoute ? "/admin/live-sessions" : "/lecturer/session-review", { 
+        state: { sessionId: targetSessionId } 
       });
+
     } catch (err) {
-      console.error("Failed to release cameras gracefully", err);
+      console.error("End session error:", err);
+      toast.error("An error occurred while ending the session.", { id: loadingToast });
+    } finally {
+      setIsEndingSession(false);
     }
-  }, [stopCamera, currentSessionId]);
+  }, [stopCamera, currentSessionId, selectedSession, isAdminRoute, storageKey, isViewOnly]);
 
   // Cleanup on unmount
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -1981,6 +1971,7 @@ export default function LecturerLiveClassMonitoring({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
             onClick={() => setShowEndSessionModal(false)}
           />
           <div className="relative bg-white rounded-xl border border-gray-200 shadow-2xl max-w-md w-full mx-4 animate-fade-in">
@@ -2028,9 +2019,13 @@ export default function LecturerLiveClassMonitoring({
               </button>
               <button
                 onClick={handleEndSession}
-                className="px-6 py-2.5 cursor-pointer bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+                disabled={isEndingSession}
+                className="px-6 py-2.5 cursor-pointer bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
               >
-                Confirm &amp; Save
+                {isEndingSession ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
+                ) : null}
+                {isEndingSession ? "Processing..." : "Confirm & Save"}
               </button>
             </div>
           </div>
@@ -2039,7 +2034,7 @@ export default function LecturerLiveClassMonitoring({
 
       {/* Session-ended success toast (existing) */}
       {showSuccessToast && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in bg-black">
           <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 border-2 border-green-700 min-w-[400px]">
             <div className="flex-shrink-0">
               <CheckCircle className="w-6 h-6" />

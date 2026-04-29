@@ -71,6 +71,8 @@ export default function StudentTimetable() {
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   const { weekDates, displayDates } = getCurrentWeekDates();
 
@@ -97,8 +99,19 @@ export default function StudentTimetable() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // 206 = profile fields missing — descriptive warning, not a crash
+      if (res.status === 206) {
+        const warn = await res.json();
+        setWarningMessage(warn.message || "Your timetable cannot be displayed. Please update your profile.");
+        setMissingFields(warn.missing_fields || []);
+        setSchedule([]);
+        return;
+      }
+
       if (!res.ok) throw new Error("Failed to fetch timetable");
 
+      setWarningMessage(null);
+      setMissingFields([]);
       const data = await res.json();
       setSchedule(data);
     } catch (err) {
@@ -185,6 +198,35 @@ export default function StudentTimetable() {
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
+
+      {/* Warning Banner — shown when backend returns 206 (missing profile fields) */}
+      {warningMessage && (
+        <div className="mb-6 flex gap-3 items-start bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm">
+          <div className="shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl font-black">
+            !
+          </div>
+          <div>
+            <p className="font-bold text-amber-800 text-sm mb-1">
+              Timetable Unavailable — Incomplete Profile
+            </p>
+            <p className="text-amber-700 text-sm leading-relaxed">
+              {warningMessage}
+            </p>
+            {missingFields.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {missingFields.map((f) => (
+                  <span
+                    key={f}
+                    className="px-2.5 py-1 bg-amber-200 text-amber-900 text-xs font-bold rounded-full border border-amber-300"
+                  >
+                    Missing: {f}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Conditional Rendering based on Schedule Data */}
       {schedule.length === 0 && !isLoading ? (

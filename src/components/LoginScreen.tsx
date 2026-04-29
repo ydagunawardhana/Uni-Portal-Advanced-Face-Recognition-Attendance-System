@@ -321,7 +321,7 @@ export default function LoginScreen({
                 boxShadow:
                   "0 20px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.04)",
                 padding: "2.5rem",
-                border: "2px solid #f3f4f6",
+                border: "2px solid #f0f0f0ff",
               }}
             >
               <div style={{ marginBottom: "2rem" }}>

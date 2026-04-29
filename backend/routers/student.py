@@ -356,7 +356,7 @@ def get_student_timetable(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Fetch timetable records aligned with the student's intake batch."""
+    """Fetch timetable records filtered by the student's faculty, department, and intake batch."""
     student = (
         db.query(models.Student)
         .filter(models.Student.email == current_user.email)
@@ -365,26 +365,67 @@ def get_student_timetable(
     if not student:
         raise HTTPException(status_code=404, detail="Student profile not found.")
 
+    # --- Missing profile field guard ---
+    missing = []
+    if not student.faculty:
+        missing.append("Faculty")
+    if not student.department:
+        missing.append("Department")
     if not student.intake:
-        return []
+        missing.append("Intake / Batch")
+
+    if missing:
+        # Return 206 Partial Content so the frontend can show a descriptive warning
+        # instead of a blank timetable with no explanation.
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=206,
+            content={
+                "warning": True,
+                "missing_fields": missing,
+                "message": (
+                    f"Your timetable cannot be displayed because the following "
+                    f"profile fields are not set: {', '.join(missing)}. "
+                    "Please contact your Academic Coordinator to update your profile."
+                ),
+            },
+        )
+
+    # --- Multi-level filter: faculty + department + batch ---
+    query = db.query(models.Timetable).filter(
+        models.Timetable.batch_id == student.intake,
+    )
+    # Apply faculty filter if the timetable table has it populated
+    if student.faculty:
+        query = query.filter(
+            models.Timetable.faculty.ilike(student.faculty.strip())
+        )
+    # Apply department filter for precise departmental separation
+    if student.department:
+        query = query.filter(
+            models.Timetable.department.ilike(student.department.strip())
+        )
 
     records = (
-        db.query(models.Timetable)
-        .filter(models.Timetable.batch_id == student.intake)
+        query
         .order_by(models.Timetable.date, models.Timetable.start_time)
         .all()
     )
 
     return [
         {
-            "id": r.id,
-            "date": r.date,
-            "start_time": r.start_time,
-            "end_time": r.end_time,
+            "id":          r.id,
+            "date":        r.date,
+            "start_time":  r.start_time,
+            "end_time":    r.end_time,
             "module_code": r.module_code,
             "module_name": r.module_name,
-            "lecturer": r.lecturer,
-            "location": r.location,
+            "lecturer":    r.lecturer,
+            "location":    r.location,
+            "semester":    r.semester,
+            "faculty":     r.faculty,
+            "department":  r.department,
         }
         for r in records
     ]
+

@@ -669,7 +669,7 @@ export default function StudentRegistration() {
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="+94 77 123 4567"
+                placeholder="012 345 6789"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Essential for SMS alerts

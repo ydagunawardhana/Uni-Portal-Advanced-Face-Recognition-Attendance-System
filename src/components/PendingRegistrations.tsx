@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Users,
   Search,
@@ -9,10 +9,12 @@ import {
   Phone,
   ArrowRight,
   Clock,
-  Trash2,
-  AlertCircle,
+  AlertTriangle,
   GraduationCap,
+  XCircle,
+  Loader2,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 
 const API_BASE = "http://localhost:8000";
@@ -35,13 +37,185 @@ interface PendingRegistrationsProps {
   onProcess: (data: PreRegistration) => void;
 }
 
+// Reject Modal 
+interface RejectModalProps {
+  student: PreRegistration | null;
+  onClose: () => void;
+  onConfirm: (reason: string) => Promise<void>;
+}
+
+function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus textarea when modal opens
+  useEffect(() => {
+    if (student) {
+      setReason("");
+      setTimeout(() => textareaRef.current?.focus(), 80);
+    }
+  }, [student]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isSubmitting) onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isSubmitting, onClose]);
+
+  if (!student) return null;
+
+  const handleConfirm = async () => {
+    if (!reason.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onConfirm(reason.trim());
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canSubmit = reason.trim().length >= 5 && !isSubmitting;
+
+  return createPortal(
+    // Backdrop
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget && !isSubmitting) onClose(); }}
+    >
+      {/* Modal Box */}
+      <div
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reject-modal-title"
+      >
+        {/* Header */}
+        <div className="bg-red-50 border-b border-red-100 px-6 py-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-6 h-6 text-red-600" />
+          </div>
+          <div>
+            <h2
+              id="reject-modal-title"
+              className="text-lg font-bold text-gray-900"
+            >
+              Reject Student Registration
+            </h2>
+            <p className="text-sm text-red-600 font-medium mt-0.5">
+              This action is permanent and cannot be reversed.
+            </p>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-5">
+          {/* Student summary pill */}
+          <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold text-sm shrink-0">
+              {student.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-gray-900 text-sm truncate">
+                {student.name}
+              </p>
+              <p className="text-gray-500 text-sm truncate">
+                {student.personal_email}
+              </p>
+            </div>
+          </div>
+
+          {/* Warning message */}
+          <p className="text-gray-600 text-sm">
+            Are you sure you want to reject this registration? The applicant
+            will be notified and their application will be permanently removed
+            from the queue.
+          </p>
+
+          {/* Reason textarea */}
+          <div>
+            <label
+              htmlFor="rejection-reason"
+              className="block text-sm font-bold text-gray-700 mb-1.5"
+            >
+              Reason for Rejection{" "}
+              <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="rejection-reason"
+              ref={textareaRef}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="e.g. Incomplete documentation, duplicate application, incorrect programme selected…"
+              rows={4}
+              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 resize-none transition-all disabled:opacity-60 disabled:bg-gray-50"
+            />
+            <p
+              className={`text-xs mt-1.5 font-bold transition-colors ${
+                reason.trim().length === 0
+                  ? "text-gray-400"
+                  : reason.trim().length < 5
+                  ? "text-amber-500"
+                  : "text-green-600"
+              }`}
+            >
+              {reason.trim().length === 0
+                ? "A reason is required to proceed."
+                : reason.trim().length < 5
+                ? "Please provide a more descriptive reason."
+                : `${reason.trim().length} characters — looks good.`}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer — Action Buttons */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-bold text-sm hover:bg-gray-100 transition-all cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canSubmit}
+            className="px-6 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 shadow-lg shadow-red-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-95"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Rejecting…
+              </>
+            ) : (
+              <>
+                <XCircle className="w-5 h-5" />
+                Confirm Rejection
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 export default function PendingRegistrations({
   onProcess,
 }: PendingRegistrationsProps) {
   const [data, setData] = useState<PreRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Rejection modal state
+  const [rejectTarget, setRejectTarget] = useState<PreRegistration | null>(null);
 
   const getToken = () => {
     const token = localStorage.getItem("adminToken");
@@ -87,33 +261,37 @@ export default function PendingRegistrations({
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (
-      !confirm(`Reject the application from "${name}"? This cannot be undone.`)
-    )
-      return;
-
+  // Called by RejectModal when admin confirms
+  const handleConfirmReject = async (reason: string) => {
+    if (!rejectTarget) return;
+    const { id, name } = rejectTarget;
     const token = getToken();
     if (!token) return;
 
-    setDeletingId(id);
+    // Show loading toast immediately
+    const loadingToast = toast.loading("Rejecting application and sending email...");
+
     try {
       const res = await fetch(`${API_BASE}/api/admin/pre-registrations/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Rejection-Reason": reason,
+        },
       });
 
-      if (res.status === 204 || res.ok) {
-        toast.success(`Application from ${name} has been rejected.`);
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        toast.success("Student rejected and email sent successfully!", { id: loadingToast });
         setData((prev) => prev.filter((item) => item.id !== id));
+        setRejectTarget(null);
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.detail || "Failed to reject application.");
+        toast.error(result.detail || "Failed to reject application.", { id: loadingToast });
       }
-    } catch {
-      toast.error("Network error. Could not complete the action.");
-    } finally {
-      setDeletingId(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error. Could not complete the action.", { id: loadingToast });
     }
   };
 
@@ -137,6 +315,13 @@ export default function PendingRegistrations({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Rejection Modal (portal) */}
+      <RejectModal
+        student={rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={handleConfirmReject}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -189,7 +374,7 @@ export default function PendingRegistrations({
           ) : filtered.length === 0 ? (
             <div className="py-24 text-center mb-5">
               <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-2">
-                <AlertCircle size={38} />
+                <AlertTriangle size={38} />
               </div>
               <p className="text-gray-600 font-bold text-lg">Queue is Empty</p>
               <p className="text-gray-400 text-sm max-w-xs mx-auto mt-1.5">
@@ -284,18 +469,13 @@ export default function PendingRegistrations({
                     {/* Actions */}
                     <td className="px-6 py-5 align-top">
                       <div className="flex items-center gap-6 justify-center">
-                        {/* Reject */}
+                        {/* Reject — opens professional modal */}
                         <button
-                          onClick={() => handleDelete(item.id, item.name)}
-                          disabled={deletingId === item.id}
-                          className="flex items-center cursor-pointer gap-1.5 px-3 py-2 text-red-600 bg-white border-2 border-red-200 hover:bg-red-50 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => setRejectTarget(item)}
+                          className="flex items-center cursor-pointer gap-1.5 px-3 py-2 text-red-600 bg-white border-2 border-red-200 hover:bg-red-50 rounded-xl font-medium text-sm transition-colors"
                           title="Reject Application"
                         >
-                          {deletingId === item.id ? (
-                            <RefreshCw size={13} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={13} />
-                          )}
+                          <XCircle size={15} />
                           Reject
                         </button>
 

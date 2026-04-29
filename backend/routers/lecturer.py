@@ -580,6 +580,28 @@ def get_lecturer_timetable(
     if not lecturer:
         raise HTTPException(status_code=404, detail="Lecturer profile not found.")
 
+    # Missing department guard — return descriptive warning instead of empty list
+    missing = []
+    if not lecturer.faculty:
+        missing.append("Faculty")
+    if not lecturer.department:
+        missing.append("Department")
+
+    if missing:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=206,
+            content={
+                "warning": True,
+                "missing_fields": missing,
+                "message": (
+                    f"Your timetable cannot be displayed because the following "
+                    f"profile fields are not set: {', '.join(missing)}. "
+                    "Please contact the Academic Administrator to update your profile."
+                ),
+            },
+        )
+
     # Match based on lecturer name (Timetable.lecturer is a string field)
     # Filter: Window includes past 7 days (current week) to 14 days future (cover requests)
     from datetime import date as date_type, timedelta
@@ -588,14 +610,27 @@ def get_lecturer_timetable(
     end_date = today_dt + timedelta(days=14)
 
     # Join with Module to get degree and level/semester
-    results = (
+    query = (
         db.query(models.Timetable, models.Module.degree, models.Module.level)
         .outerjoin(models.Module, models.Timetable.module_code == models.Module.module_code)
         .filter(
             models.Timetable.lecturer == lecturer.name,
             models.Timetable.date >= start_date.strftime("%Y-%m-%d"),
-            models.Timetable.date <= end_date.strftime("%Y-%m-%d")
+            models.Timetable.date <= end_date.strftime("%Y-%m-%d"),
         )
+    )
+    # Secondary scope: faculty + department — prevents cross-dept name collisions
+    if lecturer.faculty:
+        query = query.filter(
+            models.Timetable.faculty.ilike(lecturer.faculty.strip())
+        )
+    if lecturer.department:
+        query = query.filter(
+            models.Timetable.department.ilike(lecturer.department.strip())
+        )
+
+    results = (
+        query
         .order_by(models.Timetable.date.asc(), models.Timetable.start_time.asc())
         .all()
     )

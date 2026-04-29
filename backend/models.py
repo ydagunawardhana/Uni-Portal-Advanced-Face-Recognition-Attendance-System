@@ -166,6 +166,7 @@ class PreRegistration(Base):
     degree_program  = Column(String, nullable=True)
     intake          = Column(String, nullable=True)
     academic_year   = Column(String, nullable=True)
+    status          = Column(String, default="Pending") # Pending, Rejected
     created_at      = Column(DateTime, server_default=func.now())
 
 
@@ -233,3 +234,17 @@ class Module(Base):
     department  = Column(String, nullable=False, index=True)
     level       = Column(String, nullable=True) # e.g. "Year 1", "Level 4"
     degree      = Column(String, nullable=True) # Optional link to specific degree
+    
+class AttendanceRecord(Base):
+    """Final attendance result per student for a specific session."""
+    __tablename__ = "attendance_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("class_sessions.id"), nullable=False)
+    total_duration_minutes = Column(Integer, nullable=False, default=0)
+    status = Column(String, nullable=False) # 'Present', 'Absent', 'Flagged', 'Incomplete'
+    calculated_at = Column(DateTime, server_default=func.now())
+
+    student = relationship("Student")
+    session = relationship("ClassSession")

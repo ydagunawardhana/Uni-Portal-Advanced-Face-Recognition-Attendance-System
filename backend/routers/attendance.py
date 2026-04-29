@@ -7,13 +7,15 @@ All routes under /api/attendance.
 from __future__ import annotations
 
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel
 
 import cv2
 import numpy as np
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
+from sqlalchemy import cast, String
 
 import crud
 import models
@@ -314,14 +316,117 @@ def start_session(data: schemas.SessionCreate, db: Session = Depends(get_db)):
     )
     return crud.create_session(db, session_model)
 
+def calculate_final_attendance(session_id: int, db: Session):
+    """
+    Runs when a session ends. Calculates total duration for each student
+    and assigns final status (Present, Absent, Flagged).
+    """
+    # 1. Fetch Session Data
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if not session:
+        return
+    
+    # If session is still active, we take current time as end_time for calculation
+    end_t = session.end_time or datetime.utcnow()
+    total_scheduled_minutes = (end_t - session.start_time).total_seconds() / 60
+    
+    # Required threshold (75%)
+    required_minutes = total_scheduled_minutes * 0.75
+    
+    # 2. Fetch All Logs for this Session
+    logs_all = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.session_id == session_id
+    ).order_by(models.AttendanceLog.timestamp.asc()).all()
+    
+    # 3. Get all enrolled students for this subject
+    enrolled_rows = db.query(models.Enrollment.student_id).filter(
+        models.Enrollment.class_id == session.subject_id
+    ).distinct().all()
+    enrolled_ids = [r[0] for r in enrolled_rows]
+    
+    # Also include students who have logs but might not be 'enrolled' in the strict sense (guest/manual)
+    log_student_ids = list(set(log.student_id for log in logs_all))
+    all_student_ids = list(set(enrolled_ids + log_student_ids))
+
+    for student_id in all_student_ids:
+        s_logs = [l for l in logs_all if l.student_id == student_id]
+        
+        total_duration = 0
+        last_in_time = None
+        is_flagged = False
+        
+        # Strict Hall-Time Accumulation (The Washroom Rule)
+        total_duration_mins = 0.0
+        current_in_time = None
+        
+        for log in s_logs:
+            status = log.status.lower()
+            # If student enters and we don't have an active 'IN' record
+            if status in ['entered', 'in', 'late', 'present'] and current_in_time is None:
+                current_in_time = log.timestamp
+            # If student exits and we HAVE an active 'IN' record
+            elif status in ['exited', 'out', 'absent'] and current_in_time is not None:
+                chunk_duration = (log.timestamp - current_in_time).total_seconds() / 60
+                total_duration_mins += chunk_duration
+                current_in_time = None
+            # Handle duplicates/consecutive entered or exited by doing nothing (already handled by None checks)
+
+        # Handle Missing OUT (Penalty/Flagging)
+        if current_in_time is not None:
+            # They never clocked out. We assume they stayed until session end or current time
+            is_flagged = True
+            final_chunk = (end_t - current_in_time).total_seconds() / 60
+            total_duration_mins += final_chunk
+            
+        total_duration = total_duration_mins
+            
+        # Final Status Assignment
+        if is_flagged:
+            final_status = 'Flagged'
+        elif total_duration >= required_minutes:
+            final_status = 'Present'
+        elif total_duration > 0:
+            final_status = 'Insufficient Time'
+        else:
+            final_status = 'Absent'
+            
+        # 6. Database Update (Update or Create)
+        record = db.query(models.AttendanceRecord).filter_by(
+            student_id=student_id, session_id=session_id
+        ).first()
+        
+        if record:
+            record.total_duration_minutes = int(total_duration)
+            record.status = final_status
+            record.calculated_at = datetime.utcnow()
+        else:
+            new_record = models.AttendanceRecord(
+                student_id=student_id,
+                session_id=session_id,
+                total_duration_minutes=int(total_duration),
+                status=final_status
+            )
+            db.add(new_record)
+            
+    db.commit()
+
 @router.post("/end_session/{session_id}")
 def end_session_endpoint(session_id: int, db: Session = Depends(get_db)):
     session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
     if not session: raise HTTPException(status_code=404, detail="Session not found")
+    
     session.status = 'Closed'
     session.end_time = datetime.utcnow()
     db.commit()
-    return {"message": "Session closed", "session_id": session_id}
+    
+    # Trigger final calculation
+    try:
+        calculate_final_attendance(session_id, db)
+    except Exception as e:
+        print(f"[Attendance Calculation Error]: {e}")
+        # We don't fail the whole request if calculation fails
+        
+    return {"message": "Session closed and attendance calculated", "session_id": session_id}
 
 @router.get("/video_feed/in")
 def video_feed_in(session_id: Optional[int] = None, cam_id: int = 0):
@@ -446,7 +551,6 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
     # 6. Save the new record
     # Mapping back to internal status for consistency with biometric logs
     db_status = "entered" if requested_status == "IN" else "exited"
-
     new_log = models.AttendanceLog(
         session_id=active_session.id,
         student_id=student.id,
@@ -462,3 +566,208 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
         "message": f"Successfully marked {requested_status} for {student_index}",
         "log_id": new_log.id
     }
+
+@router.get("/session_summary/{session_id}")
+def get_session_summary(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    # Get all enrolled students for this subject
+    # We use the batch_id from Timetable to ensure we get the right students
+    tt_record = db.query(models.Timetable).filter(models.Timetable.id == session.batch_id).first()
+    batch_str = tt_record.batch_id if tt_record else session.batch_id
+    
+    # Actually, the enrollment system uses class_id (module_code)
+    enrolled_rows = db.query(models.Enrollment.student_id).filter(
+        models.Enrollment.class_id == session.subject_id
+    ).distinct().all()
+    enrolled_student_ids = [r[0] for r in enrolled_rows]
+    
+    # Get all logs for this session
+    logs = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.session_id == session_id
+    ).all()
+    
+    # Map student_id to their status
+    attendance_map = {}
+    for log in logs:
+        if log.status == 'entered':
+            attendance_map[log.student_id] = 'present'
+        elif log.status == 'late':
+            attendance_map[log.student_id] = 'late'
+    
+    students_data = []
+    for sid in enrolled_student_ids:
+        student = db.query(models.Student).filter(models.Student.id == sid).first()
+        if not student: continue
+        
+        # Filter by intake if it's a batch-specific session
+        if tt_record and student.intake != tt_record.batch_id:
+            continue
+
+        status = attendance_map.get(sid, 'absent')
+        
+        students_data.append({
+            "id": student.id,
+            "name": student.name,
+            "indexNumber": student.index_number,
+            "avatar": student.profile_picture or "https://via.placeholder.com/150",
+            "attendance": status
+        })
+        
+    return students_data
+
+class AttendanceOverride(BaseModel):
+    student_id: int
+    status: str
+
+class BulkAttendanceSave(BaseModel):
+    session_id: int
+    overrides: List[AttendanceOverride]
+
+@router.post("/bulk_save")
+def bulk_save_attendance(payload: BulkAttendanceSave, db: Session = Depends(get_db)):
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == payload.session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    for override in payload.overrides:
+        # Remove existing logs for this student in this session
+        db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.session_id == payload.session_id,
+            models.AttendanceLog.student_id == override.student_id
+        ).delete()
+        
+        if override.status in ['present', 'late']:
+            new_log = models.AttendanceLog(
+                session_id=payload.session_id,
+                student_id=override.student_id,
+                status='entered' if override.status == 'present' else 'late',
+                timestamp=datetime.now(),
+                remarks="Manual Finalization"
+            )
+            db.add(new_log)
+            
+    db.commit()
+    return {"message": "Attendance finalized successfully"}
+
+@router.get("/review/{session_id}")
+def get_session_review(session_id: int, db: Session = Depends(get_db)):
+    """Fetch calculated attendance records for the review page."""
+    # 1. Join ClassSession with Timetable (batch_id stores timetable.id)
+    query = db.query(
+        models.ClassSession,
+        models.Timetable,
+        models.Module
+    ).join(
+        models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
+    ).outerjoin(
+        models.Module, models.Timetable.module_code == models.Module.module_code
+    ).filter(models.ClassSession.id == session_id).first()
+
+    if not query:
+        # Fallback if the join fails (e.g. legacy data)
+        session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Minimal info if no timetable match
+        timetable = None
+        module = None
+    else:
+        session, timetable, module = query
+
+    records = db.query(models.AttendanceRecord).filter(
+        models.AttendanceRecord.session_id == session_id
+    ).all()
+    
+    res = []
+    for r in records:
+        first_in = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.session_id == session_id,
+            models.AttendanceLog.student_id == r.student_id,
+            models.AttendanceLog.status.ilike("%in%") | models.AttendanceLog.status.in_(['entered', 'late', 'present'])
+        ).order_by(models.AttendanceLog.timestamp.asc()).first()
+        
+        last_out = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.session_id == session_id,
+            models.AttendanceLog.student_id == r.student_id,
+            models.AttendanceLog.status.ilike("%out%") | models.AttendanceLog.status.in_(['exited'])
+        ).order_by(models.AttendanceLog.timestamp.desc()).first()
+        
+        # Return strict ISO format with Z for UTC explicitly
+        time_in_str = first_in.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if first_in else None
+        time_out_str = last_out.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if last_out else None
+
+        res.append({
+            "student_id": r.student_id,
+            "name": r.student.name,
+            "indexNumber": r.student.index_number,
+            "avatar": r.student.profile_picture,
+            "timeIn": time_in_str,
+            "timeOut": time_out_str,
+            "duration": r.total_duration_minutes,
+            "status": r.status
+        })
+        
+    # Calculate total scheduled minutes from timetable
+    total_session_minutes = 120 # Default
+    if timetable:
+        try:
+            t1 = datetime.strptime(timetable.start_time, "%I:%M %p")
+            t2 = datetime.strptime(timetable.end_time, "%I:%M %p")
+            total_session_minutes = int((t2 - t1).total_seconds() / 60)
+        except:
+            pass
+
+    return {
+        "module_code": timetable.module_code if timetable else session.subject_id,
+        "module_name": module.module_name if module else (timetable.module_name if timetable else session.subject_id),
+        "batch": timetable.batch_id if timetable else session.batch_id,
+        "semester": module.level if (module and module.level) else (timetable.semester if timetable else "N/A"),
+        "date": session.start_time.strftime("%Y-%m-%d"),
+        "location": session.location,
+        "scheduled_time": f"{timetable.start_time} - {timetable.end_time}" if timetable else f"{session.start_time.strftime('%I:%M %p')} - —",
+        "total_session_minutes": total_session_minutes,
+        "session_type": session.session_type,
+        "records": res
+    }
+
+class FinalizeRecord(BaseModel):
+    student_id: int
+    status: str
+
+class FinalizePayload(BaseModel):
+    session_id: int
+    records: List[FinalizeRecord]
+
+@router.post("/finalize")
+def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db)):
+    """Save the final verified attendance records."""
+    session = db.query(models.ClassSession).filter(models.ClassSession.id == payload.session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    for item in payload.records:
+        record = db.query(models.AttendanceRecord).filter_by(
+            student_id=item.student_id, session_id=payload.session_id
+        ).first()
+        
+        if record:
+            record.status = item.status
+            record.calculated_at = datetime.utcnow()
+        else:
+            # Should not happen if calculation ran, but handle for safety
+            new_record = models.AttendanceRecord(
+                student_id=item.student_id,
+                session_id=payload.session_id,
+                total_duration_minutes=0,
+                status=item.status
+            )
+            db.add(new_record)
+            
+    # Mark session as fully completed/verified if needed
+    session.status = "Completed"
+    db.commit()
+    return {"message": "Attendance records finalized successfully"}

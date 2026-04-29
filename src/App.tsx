@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PostSessionReview from "./components/PostSessionReview";
 import { Toaster, toast } from "react-hot-toast";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
@@ -179,6 +180,16 @@ export default function App() {
         />
         <Route
           path="/lecturer/manual-attendances"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/lecturer/session-review"
           element={
             userRole === "Lecturer" ? (
               <LecturerDashboard onLogout={handleLogout} />

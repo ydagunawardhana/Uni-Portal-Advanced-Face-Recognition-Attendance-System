@@ -174,7 +174,7 @@ export default function StudentEnrollment({
         toast.error("Mobile Number is required");
         return false;
       }
-      if (!formData.mobile.match(/^[0-9]{9}$/)) {
+      if (!formData.mobile.match(/^[0-9]{10}$/)) {
         toast.error("Enter a valid mobile number");
         return false;
       }
@@ -182,7 +182,7 @@ export default function StudentEnrollment({
         toast.error("NIC Number is required");
         return false;
       }
-      if (!formData.nic_number.match(/^[0-9]{9}[0-9Xx]$/)) {
+      if (!formData.nic_number.match(/^[0-9]{12}$/)) {
         toast.error("Enter a valid NIC number");
         return false;
       }
@@ -613,7 +613,7 @@ export default function StudentEnrollment({
                         name="mobile"
                         value={formData.mobile}
                         onChange={handleChange}
-                        placeholder="+94 77 123 4567"
+                        placeholder="012 3456 789"
                         className="login-input py-2.5 border border-gray-300 rounded-xl text-sm font-semibold"
                       />
                     </div>

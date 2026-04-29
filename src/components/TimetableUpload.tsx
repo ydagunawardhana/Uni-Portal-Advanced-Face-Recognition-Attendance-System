@@ -1260,23 +1260,51 @@ export default function TimetableUpload() {
                     <h2 className="text-2xl font-bold text-gray-900 leading-tight">
                       Academic Schedule
                     </h2>
-                    <p className="text-sm text-gray-500 font-medium mt-1">
-                      Batch:{" "}
-                      <span className="text-blue-600 mr-3">{viewBatchId}</span>{" "}
-                      {viewData.length} Active Sessions
+                    <p className="text-sm text-gray-500 font-medium mt-2 flex items-center flex-wrap gap-1">
+                      <span className="flex items-center gap-2">
+                        <span className="text-gray-500">Faculty:</span>
+                        <span className="text-gray-800 gap">
+                          {viewData[0]?.faculty || "N/A"}
+                        </span>
+                      </span>
+                      <span className="text-gray-300">|</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-gray-500">Department:</span>
+                        <span className="text-gray-800">
+                          {viewData[0]?.department || "N/A"}
+                        </span>
+                      </span>
+                      <span className="text-gray-300">|</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-gray-500">Semester:</span>
+                        <span className="text-gray-800">
+                          {viewData[0]?.semester || "N/A"}
+                        </span>
+                      </span>
+                      <span className="text-gray-300">|</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-gray-500">Batch:</span>
+                        <span className="text-blue-600 font-bold">
+                          {viewBatchId}
+                        </span>
+                      </span>
+                      <span className="text-gray-300">|</span>
+                      <span className="text-gray-800 font-bold bg-blue-100 px-2 py-0.5 rounded-full text-[11px] border border-blue-200 uppercase tracking-tighter">
+                        {viewData.length} Active Sessions
+                      </span>
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-12">
+                <div className="flex gap-4">
                   <button
                     onClick={handleDownloadExcel}
                     disabled={isExporting}
-                    className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="px-8 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isExporting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-6 h-6 animate-spin" />
                     ) : (
-                      <Download className="w-5 h-5" />
+                      <Download className="w-6 h-6" />
                     )}
                     {isExporting ? "Generating..." : "Export Excel"}
                   </button>

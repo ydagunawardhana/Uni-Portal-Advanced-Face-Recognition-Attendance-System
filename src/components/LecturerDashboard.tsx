@@ -12,6 +12,7 @@ import LecturerProfile from "./LecturerProfile";
 import Appointments from "./Appointments";
 import LecturerTimetable from "./LecturerTimetable";
 import LecturerDailySessions from "./LecturerDailySessions";
+import PostSessionReview from "./PostSessionReview";
 
 interface AttendanceRecord {
   id: number;
@@ -45,6 +46,8 @@ export default function LecturerDashboard({
     if (location.pathname.includes("history")) return "history";
     if (location.pathname.includes("manual-attendances"))
       return "mark-attendance";
+    if (location.pathname.includes("session-review"))
+      return "session-review";
     return "dashboard";
   });
 
@@ -64,6 +67,8 @@ export default function LecturerDashboard({
       setActiveTab("profile");
     } else if (location.pathname.includes("history")) {
       setActiveTab("history");
+    } else if (location.pathname.includes("session-review")) {
+      setActiveTab("session-review");
     } else if (location.pathname === "/lecturer") {
       setActiveTab("dashboard");
     }
@@ -264,6 +269,9 @@ export default function LecturerDashboard({
       case "mark-attendance":
         navigate("/lecturer/manual-attendances");
         break;
+      case "session-review":
+        navigate("/lecturer/session-review");
+        break;
       default:
         navigate("/lecturer");
     }
@@ -287,6 +295,8 @@ export default function LecturerDashboard({
         return "Settings";
       case "appointments":
         return "Appointments";
+      case "session-review":
+        return "Session Summary & Review";
       default:
         return "Lecturer Dashboard";
     }
@@ -325,6 +335,7 @@ export default function LecturerDashboard({
     activeTab === "settings" ||
     activeTab === "mark-attendance" ||
     activeTab === "appointments" ||
+    activeTab === "session-review" ||
     activeTab === "live-class"
   ) {
     return (
@@ -420,6 +431,7 @@ export default function LecturerDashboard({
               {activeTab === "timetable" && <LecturerTimetable />}
               {activeTab === "settings" && <LecturerSettings />}
               {activeTab === "appointments" && <Appointments />}
+              {activeTab === "session-review" && <PostSessionReview />}
               {activeTab === "live-class" && <LecturerDailySessions />}
             </main>
           )}

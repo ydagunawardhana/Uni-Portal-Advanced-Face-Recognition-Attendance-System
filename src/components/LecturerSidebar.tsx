@@ -9,6 +9,7 @@ import {
   Settings,
   ClipboardCheck,
   GraduationCap,
+  CheckSquare,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -43,6 +44,11 @@ export default function LecturerSidebar({
       id: "live-class",
       label: "Mark Attendances",
       icon: Video,
+    },
+    {
+      id: "session-review",
+      label: "Session Review",
+      icon: CheckSquare,
     },
     {
       id: "history",

@@ -27,7 +27,8 @@ from fastapi import Query
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Header
+from utils.email_utils import send_rejection_email
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -689,7 +690,13 @@ def get_pre_registrations(db: Session = Depends(get_db), current_user: models.Us
     if current_user.role != "Admin":
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    pre_regs = db.query(models.PreRegistration).order_by(models.PreRegistration.created_at.desc()).all()
+    # Filter for 'Pending' only so rejected ones leave the queue
+    pre_regs = (
+        db.query(models.PreRegistration)
+        .filter(models.PreRegistration.status == "Pending")
+        .order_by(models.PreRegistration.created_at.desc())
+        .all()
+    )
     
     # Convert to dict for easier serialization if needed, though SQLAlchemy models work too
     return [
@@ -709,13 +716,14 @@ def get_pre_registrations(db: Session = Depends(get_db), current_user: models.Us
     ]
 
 
-@router.delete("/pre-registrations/{pre_reg_id}", status_code=204)
-def delete_pre_registration(
+@router.delete("/pre-registrations/{pre_reg_id}")
+def reject_pre_registration(
     pre_reg_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
+    x_rejection_reason: Optional[str] = Header(None),
 ):
-    """Reject and delete a pre-registration record."""
+    """Update status to 'Rejected' and notify the student via email."""
     if current_user.role != "Admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -723,8 +731,31 @@ def delete_pre_registration(
     if not record:
         raise HTTPException(status_code=404, detail="Pre-registration record not found")
 
-    db.delete(record)
+    # Capture details for the email
+    student_email = record.personal_email
+    student_name = record.name
+    reason = x_rejection_reason or "Your application did not meet the required criteria."
+
+    # Send rejection email synchronously within a try-except block to report errors
+    try:
+        send_rejection_email(
+            student_email=student_email, 
+            student_name=student_name, 
+            reason=reason
+        )
+    except Exception as e:
+        # If email fails, we stop the rejection and inform the admin
+        print(f"Email failure: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Rejection aborted: Failed to send notification email. Please check SMTP settings. Error: {str(e)}"
+        )
+
+    # If email sent successfully, update DB status
+    record.status = "Rejected"
     db.commit()
+
+    return {"message": "Registration rejected and email sent successfully"}
 
 
 @router.post(
