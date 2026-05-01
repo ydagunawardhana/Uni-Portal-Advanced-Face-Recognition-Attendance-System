@@ -15,7 +15,7 @@ import numpy as np
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, String
+from sqlalchemy import cast, String, func
 
 import crud
 import models
@@ -124,11 +124,82 @@ async def process_attendance_frame(
 
 @router.get("/history", response_model=schemas.AttendanceHistoryResponse)
 def get_attendance_history(
-    limit: int = 50, offset: int = 0, student_id: Optional[int] = None,
-    date: Optional[str] = None, db: Session = Depends(get_db)
+    limit: int = 50, 
+    offset: int = 0, 
+    degree: Optional[str] = None,
+    semester: Optional[str] = None,
+    module: Optional[str] = None,
+    batch: Optional[str] = None,
+    date: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
 ):
-    total, records = crud.get_attendance_history(db, limit=limit, offset=offset, student_id=student_id, date=date)
-    return schemas.AttendanceHistoryResponse(total=total, records=records)
+    # Base query joining Records with Metadata
+    query = db.query(
+        models.AttendanceRecord,
+        models.Student,
+        models.ClassSession,
+        models.Module
+    ).join(
+        models.Student, models.AttendanceRecord.student_id == models.Student.id
+    ).join(
+        models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
+    ).outerjoin(
+        models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
+    ).outerjoin(
+        models.Module, models.ClassSession.subject_id == models.Module.module_name
+    )
+
+    # Apply Filters
+    if degree:
+        query = query.filter(func.trim(models.Module.degree) == degree.strip())
+    if semester:
+        query = query.filter(func.trim(models.Module.level) == semester.strip())
+    if module:
+        query = query.filter(func.trim(models.Module.module_code) == module.strip())
+    if batch:
+        query = query.filter(func.trim(models.Timetable.batch_id) == batch.strip())
+    if date:
+        # Check date part of start_time
+        query = query.filter(cast(models.ClassSession.start_time, String).like(f"{date}%"))
+    if search:
+        query = query.filter(
+            models.Student.name.ilike(f"%{search}%") | 
+            models.Student.index_number.ilike(f"%{search}%")
+        )
+
+    total = query.count()
+    results = query.offset(offset).limit(limit).all()
+
+    records_out = []
+    for r, s, cs, m in results:
+        # Get Time In / Time Out from logs for this specific session
+        first_in = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.session_id == cs.id,
+            models.AttendanceLog.student_id == s.id,
+            models.AttendanceLog.status.in_(['entered', 'late', 'present'])
+        ).order_by(models.AttendanceLog.timestamp.asc()).first()
+        
+        last_out = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.session_id == cs.id,
+            models.AttendanceLog.student_id == s.id,
+            models.AttendanceLog.status.in_(['exited'])
+        ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+        records_out.append({
+            "id": r.id,
+            "date": cs.start_time.strftime("%Y-%m-%d"),
+            "studentName": s.name,
+            "indexNumber": s.index_number,
+            "subject": m.module_name if m else cs.subject_id,
+            "module_code": m.module_code if m else None,
+            "timeIn": first_in.timestamp.strftime("%I:%M %p") if first_in else "--",
+            "timeOut": last_out.timestamp.strftime("%I:%M %p") if last_out else "--",
+            "status": r.status,
+            "photoUrl": s.profile_picture
+        })
+
+    return {"total": total, "records": records_out}
 
 
 last_seen_times: dict = {}
@@ -207,13 +278,7 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
                     # 1. Fetch Student Record to check Account Status / Enrollment
                     student_record = db.query(models.Student).filter(models.Student.index_number == name).first()
                     
-                    # 2. Block/Inactive check
-                    if student_record and not student_record.is_active:
-                        color = (0, 0, 255) # Red for Blocked
-                        label = f"{name} - BLOCKED!"
-                    
-                    # 3. NEW: Wrong Batch / Not Enrolled Validation
-                    # Resolve the actual batch string (e.g., "23.2") from the Timetable entry
+                    # 2. Resolve the actual batch string (e.g., "23.2") from the Timetable entry
                     session_batch_str = "UNKNOWN"
                     if active_session:
                         tt_entry = db.query(models.Timetable).filter(models.Timetable.id == active_session.batch_id).first()
@@ -225,7 +290,13 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
 
                     student_intake = str(student_record.intake).strip() if student_record and student_record.intake else ""
                     
-                    if student_record and active_session and student_intake != session_batch_str:
+                    # 3. SECURITY GATE: Blocked/Inactive check OR Wrong Batch Validation
+                    if student_record and not student_record.is_active:
+                        color = (0, 0, 255) # Red for Blocked
+                        label = f"{name} - BLOCKED!"
+                        # Strict Block: By hitting this IF, we bypass the ELSE block where logging happens.
+
+                    elif student_record and active_session and student_intake != session_batch_str:
                         color = (0, 165, 255) # Orange for Warning
                         label = f"{name} - Not Allowed!"
                         
@@ -791,3 +862,30 @@ def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db))
     session.status = "Completed"
     db.commit()
     return {"message": "Attendance records finalized successfully"}
+
+@router.get("/sessions")
+def get_attendance_sessions(
+    module_code: str,
+    batch_id: str,
+    db: Session = Depends(get_db)
+):
+    """Fetch all sessions for a specific module and batch."""
+    sessions = db.query(models.ClassSession).join(
+        models.Module, models.ClassSession.subject_id.ilike(func.concat('%', models.Module.module_name, '%'))
+    ).join(
+        models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
+    ).filter(
+        models.Module.module_code == module_code,
+        models.Timetable.batch_id == batch_id
+    ).order_by(models.ClassSession.start_time.asc()).all()
+
+    result = []
+    for idx, s in enumerate(sessions):
+        date_str = s.start_time.strftime("%Y-%m-%d") if s.start_time else ""
+        result.append({
+            "session_id": s.id,
+            "session_name": f"Session {idx + 1}",
+            "session_type": s.session_type,
+            "date": date_str
+        })
+    return {"sessions": result}

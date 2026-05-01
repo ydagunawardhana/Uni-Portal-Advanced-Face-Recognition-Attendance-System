@@ -68,11 +68,26 @@ class AttendanceResponse(BaseModel):
 
 
 
+class AttendanceRecordOut(BaseModel):
+    id: int
+    date: str
+    studentName: str
+    indexNumber: str
+    subject: str
+    module_code: Optional[str] = None
+    timeIn: Optional[str]
+    timeOut: Optional[str]
+    status: str
+    photoUrl: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 # History endpoint
 
 class AttendanceHistoryResponse(BaseModel):
-    total:   int
-    records: list[AttendanceLogOut]
+    total: int
+    records: list[AttendanceRecordOut]
 
 
 

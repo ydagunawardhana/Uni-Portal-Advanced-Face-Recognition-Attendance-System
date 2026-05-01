@@ -293,7 +293,7 @@ export default function Appointments() {
           </div>
         ) : (
           <div className="bg-white border border-gray-200 border-dashed rounded-xl p-12 text-center shadow-md">
-            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3 animate-pulse" />
             <p className="text-gray-500">No pending consultation requests</p>
           </div>
         )}

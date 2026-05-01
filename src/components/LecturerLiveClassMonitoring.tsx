@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -196,7 +196,6 @@ export default function LecturerLiveClassMonitoring({
   const [selectedSubject, setSelectedSubject] = useState("");
   const [sessionLocation, setSessionLocation] = useState("");
   const [sessionTime, setSessionTime] = useState("");
-  const [isOvertime, setIsOvertime] = useState(false);
   const [lecturerId, setLecturerId] = useState<number | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -222,13 +221,6 @@ export default function LecturerLiveClassMonitoring({
 
   // Attendance log state
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
-
-  // Live stats (derived from log entries)
-  const [liveStats, setLiveStats] = useState({
-    currentlyInside: 0,
-    totalEntered: 0,
-    leftEarly: 0,
-  });
 
   // Attendance notification toast
   const [attendanceToast, setAttendanceToast] = useState<string | null>(null);
@@ -429,13 +421,6 @@ export default function LecturerLiveClassMonitoring({
         setElapsedTime(
           `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
         );
-
-        // FIX: Check if elapsed time exceeds scheduled duration
-        if (scheduledDurationMs > 0 && diff > scheduledDurationMs) {
-          setIsOvertime(true);
-        } else {
-          setIsOvertime(false);
-        }
       }, 1000);
     } else {
       setElapsedTime("00:00:00");
@@ -500,47 +485,6 @@ export default function LecturerLiveClassMonitoring({
 
     checkCameraPermissions();
   }, []);
-
-  // Proactive Overtime Check
-  useEffect(() => {
-    if (!selectedSessionDetails && !sessionDetails) return;
-
-    const checkOvertime = () => {
-      try {
-        const date = selectedSessionDetails?.date || sessionDetails?.date;
-        const endTime =
-          selectedSessionDetails?.end_time || sessionDetails?.end_time;
-
-        if (!date || !endTime) return;
-
-        // Construct standard ISO-like string: YYYY-MM-DD HH:MM AM/PM
-        const parseDateTime = (dStr: string, tStr: string) => {
-          const [time, period] = tStr.split(" ");
-          let [hours, minutes] = time.split(":").map(Number);
-
-          if (period?.toUpperCase() === "PM" && hours < 12) hours += 12;
-          if (period?.toUpperCase() === "AM" && hours === 12) hours = 0;
-
-          const dateObj = new Date(dStr);
-          dateObj.setHours(hours, minutes, 0, 0);
-          return dateObj.getTime();
-        };
-
-        const endTimeMillis = parseDateTime(date, endTime);
-
-        if (!isNaN(endTimeMillis) && Date.now() > endTimeMillis) {
-          setIsOvertime(true);
-        } else {
-          setIsOvertime(false);
-        }
-      } catch (e) {
-        console.error("Overtime check error:", e);
-      }
-    };
-
-    const interval = setInterval(checkOvertime, 1000);
-    return () => clearInterval(interval);
-  }, [selectedSessionDetails, sessionDetails]);
 
   // Absolute cleanup to prevent memory/hardware leaks when navigating away
   useEffect(() => {
@@ -834,11 +778,6 @@ export default function LecturerLiveClassMonitoring({
 
         if (statsRes.ok) {
           const statsData = await statsRes.json();
-          setLiveStats({
-            currentlyInside: statsData.currently_inside || 0,
-            totalEntered: statsData.total_entered || 0,
-            leftEarly: statsData.left_early || 0,
-          });
 
           // Fallback: If the backend bundles logs directly inside the stats response, use them!
           if (!fetchedLogsData && statsData.logs) {
@@ -896,40 +835,6 @@ export default function LecturerLiveClassMonitoring({
   }, [sessionActive, currentSessionId, isViewOnly, selectedSession]);
 
   // Step 1: Calculate precise stats from the latest logEntries
-  useEffect(() => {
-    if (!logEntries || logEntries.length === 0) return;
-
-    // 1. Find the absolute LATEST status for each unique student
-    const latestStatusMap = new Map();
-    // Safe approach: sort a copy by time ascending just to be sure
-    const sortedLogs = [...logEntries].sort(
-      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
-    );
-
-    sortedLogs.forEach((log) => {
-      // Use indexNumber as the unique key
-      const uniqueId = log.indexNumber;
-      latestStatusMap.set(uniqueId, log.status);
-    });
-
-    // 2. Count based on the LATEST status only
-    let currentlyInside = 0;
-    let totalExited = 0;
-    latestStatusMap.forEach((status) => {
-      // Backend uses 'entered' and 'exited' lowercase
-      if (status.toLowerCase() === "entered") currentlyInside++;
-      if (status.toLowerCase() === "exited") totalExited++;
-    });
-
-    // Total unique students who showed up at least once
-    const totalUniqueEntered = latestStatusMap.size;
-
-    setLiveStats({
-      currentlyInside: currentlyInside,
-      totalEntered: totalUniqueEntered,
-      leftEarly: totalExited, // Kept as leftEarly in state to avoid renaming everywhere
-    });
-  }, [logEntries]);
 
   // Auto-dismiss toasts
   useEffect(() => {
@@ -946,15 +851,47 @@ export default function LecturerLiveClassMonitoring({
     }
   }, [attendanceToast]);
 
-  // Update live stats whenever logEntries changes
-  useEffect(() => {
-    const entered = logEntries.filter((e) => e.status === "entered").length;
-    const exited = logEntries.filter((e) => e.status === "exited").length;
-    setLiveStats({
-      totalEntered: entered,
-      currentlyInside: Math.max(0, entered - exited),
-      leftEarly: exited,
+  // Strictly calculate derived stats to count UNIQUE students
+  const derivedStats = useMemo(() => {
+    let currentlyInside = 0;
+    let currentlyExited = 0;
+
+    if (!logEntries || !Array.isArray(logEntries) || logEntries.length === 0) {
+      return { currentlyInside: 0, totalEntered: 0, currentlyExited: 0 };
+    }
+
+    const latestStatusMap = new Map();
+    const uniqueEnteredStudents = new Set();
+
+    logEntries.forEach((log) => {
+      // Use indexNumber as the unique key
+      const uniqueKey = log.indexNumber || log.studentName || log.id;
+      if (!uniqueKey) return;
+
+      const cleanId = String(uniqueKey).trim().toLowerCase();
+      const status = String(log.status).toLowerCase();
+
+      if (status === "entered" || status === "in") {
+        uniqueEnteredStudents.add(cleanId);
+      }
+
+      // CRITICAL FIX: Since logEntries is newest-first, we only set the status
+      // if it hasn't been added to the map yet. This ensures we keep the LATEST state.
+      if (!latestStatusMap.has(cleanId)) {
+        latestStatusMap.set(cleanId, status);
+      }
     });
+
+    latestStatusMap.forEach((status) => {
+      if (status === "entered" || status === "in") currentlyInside++;
+      if (status === "exited" || status === "out") currentlyExited++;
+    });
+
+    return {
+      currentlyInside,
+      totalEntered: uniqueEnteredStudents.size,
+      currentlyExited,
+    };
   }, [logEntries]);
 
   const startCamera = useCallback(async () => {
@@ -1270,6 +1207,9 @@ export default function LecturerLiveClassMonitoring({
         });
       }
 
+      // Artificial delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+
       toast.success("Attendance processed successfully!", { id: loadingToast });
       setShowEndSessionModal(false);
 
@@ -1326,6 +1266,40 @@ export default function LecturerLiveClassMonitoring({
       setShowEditModal(false);
     }
   };
+
+  // Bulletproof synchronous Overtime calculation based on the stable elapsedTime string
+  const isOvertime = useMemo(() => {
+    if (
+      !selectedSessionDetails?.start_time ||
+      !selectedSessionDetails?.end_time ||
+      !elapsedTime ||
+      elapsedTime === "00:00:00"
+    ) {
+      return false;
+    }
+
+    const parseToMins = (timeStr: string) => {
+      const match = timeStr.match(/(\d+):(\d+)\s*([AP]M)/i);
+      if (!match) return 0;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const isPM = match[3].toUpperCase() === "PM";
+      if (isPM && h !== 12) h += 12;
+      if (!isPM && h === 12) h = 0;
+      return h * 60 + m;
+    };
+
+    const startMins = parseToMins(selectedSessionDetails.start_time);
+    const endMins = parseToMins(selectedSessionDetails.end_time);
+    let durationMins = endMins - startMins;
+    if (durationMins <= 0) durationMins += 24 * 60; // Handle overnight
+
+    const [eh, em, es] = elapsedTime.split(":").map(Number);
+    const elapsedSecs = eh * 3600 + em * 60 + (es || 0);
+    const durationSecs = durationMins * 60;
+
+    return elapsedSecs > durationSecs;
+  }, [elapsedTime, selectedSessionDetails]);
 
   // RENDER
   return (
@@ -1506,7 +1480,7 @@ export default function LecturerLiveClassMonitoring({
                 {/* STOP: Only show if NOT view-only AND active */}
                 {!isViewOnly && sessionActive && (
                   <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-end justify-center min-h-[40px]">
                       <div className="flex items-center gap-2">
                         <span
                           className={`w-2 h-2 rounded-full animate-pulse ${isOvertime ? "bg-orange-500" : "bg-red-600"}`}
@@ -1517,9 +1491,10 @@ export default function LecturerLiveClassMonitoring({
                           Live: {elapsedTime}
                         </span>
                       </div>
+
                       {isOvertime && (
-                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-wider bg-orange-100 px-2 py-0.5 rounded mt-0.5">
-                          Over Time
+                        <span className="text-sm font-bold text-white bg-orange-500 uppercase tracking-wider px-2 py-0.5 rounded-xl shadow-sm mt-0.5">
+                          OVER TIME
                         </span>
                       )}
                     </div>
@@ -2061,7 +2036,9 @@ export default function LecturerLiveClassMonitoring({
                   Currently Inside
                 </p>
                 <p className="text-3xl font-bold text-blue-600">
-                  {sessionActive || isViewOnly ? liveStats.currentlyInside : 0}
+                  {sessionActive || isViewOnly
+                    ? derivedStats.currentlyInside
+                    : 0}
                 </p>
               </div>
             </div>
@@ -2073,7 +2050,7 @@ export default function LecturerLiveClassMonitoring({
               <div>
                 <p className="text-md text-gray-700 font-bold">Total Entered</p>
                 <p className="text-3xl font-bold text-green-600">
-                  {sessionActive || isViewOnly ? liveStats.totalEntered : 0}
+                  {sessionActive || isViewOnly ? derivedStats.totalEntered : 0}
                 </p>
               </div>
             </div>
@@ -2085,7 +2062,9 @@ export default function LecturerLiveClassMonitoring({
               <div>
                 <p className="text-md text-gray-700 font-bold">Total Exited</p>
                 <p className="text-3xl font-bold text-red-600">
-                  {sessionActive || isViewOnly ? liveStats.leftEarly : 0}
+                  {sessionActive || isViewOnly
+                    ? derivedStats.currentlyExited
+                    : 0}
                 </p>
               </div>
             </div>
@@ -2102,7 +2081,7 @@ export default function LecturerLiveClassMonitoring({
             backdropFilter: "blur(6px)",
           }}
         >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             {/* Header & Warning Context */}
             <div className="p-6 pb-4 flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4 ring-4 ring-red-50/50">
@@ -2126,7 +2105,7 @@ export default function LecturerLiveClassMonitoring({
                 <h4 className="text-[11px] font-bold text-gray-500 tracking-wider mb-3">
                   Final Session Summary
                 </h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="flex items-start gap-2">
                     <div className="mt-0.5">
                       <Users className="w-5 h-5 text-purple-600" />
@@ -2147,22 +2126,11 @@ export default function LecturerLiveClassMonitoring({
                       <UserCheck className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-md font-bold text-green-600">Present</p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {liveStats?.currentlyInside || 0}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="mt-0.5">
-                      <LogOut className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-md font-bold text-orange-600">
-                        Total Exited
+                      <p className="text-md font-bold text-green-600 ">
+                        Present
                       </p>
                       <p className="text-lg font-bold text-gray-900">
-                        {liveStats?.leftEarly || 0}
+                        {derivedStats.totalEntered || 0}
                       </p>
                     </div>
                   </div>
@@ -2177,7 +2145,7 @@ export default function LecturerLiveClassMonitoring({
                           0,
                           (selectedSessionDetails?.enrolled_count ||
                             sessionDetails?.enrolled_count ||
-                            0) - (liveStats?.totalEntered || 0),
+                            0) - (derivedStats.totalEntered || 0),
                         )}
                       </p>
                     </div>
@@ -2189,21 +2157,49 @@ export default function LecturerLiveClassMonitoring({
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-300">
               <button
                 onClick={() => setShowEndSessionModal(false)}
-                className="px-5 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors shadow-sm cursor-pointer"
+                className="px-5 py-2.5 text-md font-bold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 hover:text-gray-900 transition-colors shadow-sm cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEndSession}
                 disabled={isEndingSession}
-                className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                className={`flex items-center justify-center gap-2 px-5 py-2.5 text-md font-bold text-white rounded-xl transition-all shadow-sm ${
+                  isEndingSession
+                    ? "bg-red-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 active:bg-red-800 cursor-pointer"
+                }`}
               >
                 {isEndingSession ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
+                  <>
+                    <svg
+                      className="w-4 h-4 text-white animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Saving...
+                  </>
                 ) : (
-                  <CheckCircle className="w-5 h-5" />
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Finalize & Save
+                  </>
                 )}
-                {isEndingSession ? "Processing..." : "Finalize & Save"}
               </button>
             </div>
           </div>

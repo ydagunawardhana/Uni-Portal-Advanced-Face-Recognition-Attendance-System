@@ -21,7 +21,7 @@ interface Subject {
   module_name: string;
   module_code: string;
   schedule: string;
-  students_enrolled: number;
+  enrolled_students: number;
   batch?: string;
   intake?: string;
   semester?: string;
@@ -82,18 +82,14 @@ export default function LecturerMySubjects() {
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
-  const handleViewAttendance = (subjectCode: string) => {
-    const subject = subjects.find((s) => s.module_code === subjectCode);
-    if (subject) {
-      // Map to the format AttendanceReports expects
-      setSelectedSubject({
-        ...subject,
-        id: subject.module_code as any,
-        name: subject.module_name,
-        code: subject.module_code,
-        studentCount: subject.students_enrolled,
-      } as any);
-    }
+  const handleViewAttendance = (subject: Subject) => {
+    setSelectedSubject({
+      ...subject,
+      id: subject.module_code as any,
+      name: subject.module_name,
+      code: subject.module_code,
+      studentCount: subject.enrolled_students,
+    } as any);
   };
 
   if (selectedSubject) {
@@ -207,71 +203,48 @@ export default function LecturerMySubjects() {
         {filteredSubjects.length > 0 ? (
           filteredSubjects.map((subject, index) => (
             <div
-              key={subject.module_code}
-              className={`bg-white rounded-xl shadow-md hover:shadow-md transition-all duration-200 overflow-hidden border-2 border-gray-200 border-t-2 p-2 flex flex-col ${
-                topBorderColors[index % topBorderColors.length]
-              }`}
+              key={`${subject.module_code}-${subject.batch}`}
+              className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex flex-col h-full hover:shadow-md transition-shadow"
             >
-              <div className="p-6">
-                {/* Subject Name and Code */}
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 min-h-[3.5rem]">
-                    {subject.module_name}
-                  </h3>
-                  <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-sm font-bold rounded-lg border-2 border-blue-100">
-                    {subject.module_code}
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                  {subject.module_name}
+                </h3>
+                <span className="bg-purple-100 text-purple-700 text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap border border-purple-200">
+                  Batch {subject.batch}
+                </span>
+              </div>
+
+              <div className="mb-4">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-md font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  {subject.module_code}
+                </span>
+              </div>
+
+              <div className="space-y-2 mb-6 flex-grow">
+                <div className="flex items-center text-sm text-gray-600 font-medium">
+                  <GraduationCap className="w-5 h-5 mr-2 text-blue-500" />
+                  {subject.semester}
+                </div>
+                <div className="flex items-center text-sm text-gray-600 rounnde font-medium">
+                  <Award className="w-5 h-5 mr-2 text-blue-500" />
+                  <span className="line-clamp-1">
+                    {subject.degree || "Degree Program TBA"}
                   </span>
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  {/* Subject Info - Dynamic formatting to prevent duplicate text */}
-                  {(() => {
-                    const batchInfo = subject.batch || subject.intake || "All Batches";
-                    const semInfo = subject.semester || "";
-
-                    // Check if the batch string already contains the semester string
-                    let displayString = batchInfo;
-                    if (
-                      semInfo &&
-                      !batchInfo.toLowerCase().includes(semInfo.toLowerCase())
-                    ) {
-                      displayString = `${batchInfo} • ${semInfo}`;
-                    }
-
-                    return (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                        <GraduationCap className="w-5 h-5 text-blue-500 shrink-0" />
-                        <span className="truncate">{displayString}</span>
-                      </div>
-                    );
-                  })()}
-
-                  {/* NEW: Degree / Program Row */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                    <Award className="w-5 h-5 text-blue-500 shrink-0" />
-                    <span className="truncate font-semibold">
-                      {subject.degree || 'Degree Program TBA'}
-                    </span>
-                  </div>
-
-                  {/* Student Count */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                    <Users className="w-5 h-5 text-green-500 font-bold shrink-0" />
-                    <span>{subject.students_enrolled || 0} Students Enrolled</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-3 pt-4 border-t border-gray-100">
-                  <button
-                    onClick={() => handleViewAttendance(subject.module_code)}
-                    className="flex-1 inline-flex cursor-pointer items-center justify-center space-x-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    <BarChart3 className="w-5 h-5" />
-                    <span>View Attendance</span>
-                  </button>
+                <div className="flex items-center text-sm font-bold text-green-600">
+                  <Users className="w-5 h-5 mr-2 text-green-600" />
+                  {subject.enrolled_students || 0} Students Enrolled
                 </div>
               </div>
+
+              <button
+                onClick={() => handleViewAttendance(subject)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg flex justify-center items-center transition-colors shadow-sm cursor-pointer"
+              >
+                <BarChart3 className="w-5 h-5 mr-2" />
+                View Attendance
+              </button>
             </div>
           ))
         ) : (
