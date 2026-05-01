@@ -460,20 +460,40 @@ def get_live_logs(session_id: int, db: Session = Depends(get_db)):
 
 @router.get("/session_stats/{session_id}")
 def get_session_stats(session_id: int, db: Session = Depends(get_db)):
-    entered_count = db.query(models.AttendanceLog.student_id).filter(
-        models.AttendanceLog.session_id == session_id, 
-        models.AttendanceLog.status == "entered"
-    ).distinct().count()
-    
-    exited_count = db.query(models.AttendanceLog.student_id).filter(
-        models.AttendanceLog.session_id == session_id, 
-        models.AttendanceLog.status == "exited"
-    ).distinct().count()
-    
+    # 1. Fetch session object to resolve the target batch
+    session_obj = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
+    if not session_obj:
+        return {"currently_inside": 0, "left_early": 0, "total_entered": 0}
+
+    # Resolve actual batch ID (handle Timetable pointers)
+    tt_record = db.query(models.Timetable).filter(models.Timetable.id == session_obj.batch_id).first()
+    target_batch = str(tt_record.batch_id).strip() if tt_record else str(session_obj.batch_id).strip()
+
+    # 2. Fetch logs ONLY for students legitimately in the correct batch
+    logs = db.query(models.AttendanceLog).join(
+        models.Student, models.AttendanceLog.student_id == models.Student.id
+    ).filter(
+        models.AttendanceLog.session_id == session_id,
+        models.Student.intake == target_batch
+    ).order_by(models.AttendanceLog.timestamp.asc()).all()
+
+    # 3. This dictionary will naturally keep ONLY the absolute LATEST status of each unique student
+    latest_status_map = {}
+    for log in logs:
+        # Use lowercase for robust comparison with DB storage
+        status = log.status.lower() if log.status else ""
+        latest_status_map[log.student_id] = status
+        
+    currently_inside = sum(1 for status in latest_status_map.values() if status == "entered")
+    total_exited = sum(1 for status in latest_status_map.values() if status == "exited")
+
+    # 4. Total unique students who showed up at least once
+    total_unique_entered = len(latest_status_map)
+
     return {
-        "total_entered": entered_count,
-        "left_early": exited_count,
-        "currently_inside": entered_count - exited_count
+        "currently_inside": currently_inside,
+        "left_early": total_exited, # This maps to 'Total Exited' in frontend
+        "total_entered": total_unique_entered
     }
 @router.post("/manual")
 def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session = Depends(get_db)):
@@ -555,7 +575,7 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
         session_id=active_session.id,
         student_id=student.id,
         status=db_status,
-        timestamp=datetime.now(),
+        timestamp=datetime.utcnow(),
         remarks="Admin/Manual"
     )
     db.add(new_log)

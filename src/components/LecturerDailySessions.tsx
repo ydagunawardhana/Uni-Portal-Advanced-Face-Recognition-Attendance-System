@@ -14,6 +14,7 @@ import {
   X,
   Info,
   Lock,
+  Users,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -37,6 +38,7 @@ interface Session {
   cover_requested?: boolean;
   cover_reason?: string;
   actual_start_time?: string;
+  enrolled_count?: number;
 }
 
 export default function LecturerDailySessions() {
@@ -626,12 +628,18 @@ export default function LecturerDailySessions() {
                   <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">
                     {session.module_name}
                   </h3>
-                  <p className="text-sm font-bold text-gray-700 mb-2">
-                    {session.module_code} - Batch {session.batch}
+                  <p className="text-sm font-medium text-gray-500 mb-3 flex items-center flex-wrap gap-1.5">
+                    <span>{session.module_code}</span>
+                    <span className="text-gray-400">•</span>
+                    <span>Batch {session.batch}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-xl text-sm">
+                      {session.enrolled_count !== undefined ? session.enrolled_count : 0} Enrolled Students
+                    </span>
                   </p>
 
                   {/* Session Date Indicator */}
-                  <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 w-max mb-3 mt-1">
+                  <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 w-max mb-2">
                     <Calendar className="w-3.5 h-3.5" />
                     {new Date(session.date).toLocaleDateString("en-US", {
                       weekday: "short",

@@ -8,6 +8,7 @@ import {
   Clock,
   Users,
   UserMinus,
+  UserPlus,
   Pencil,
   Square,
   CameraOff,
@@ -18,6 +19,9 @@ import {
   ArrowLeft,
   Info,
   VideoOff,
+  AlertTriangle,
+  UserCheck,
+  LogOut,
 } from "lucide-react";
 
 // Constants
@@ -127,16 +131,16 @@ const LiveTimer = ({
   if (!isSessionActive) return null;
 
   return (
-    <span
-      className={`font-bold text-md flex items-center gap-3 min-w-[100px] ${
-        isOvertime ? "text-red-600 animate-pulse" : "text-red-600 animate-pulse"
-      }`}
-    >
+    <div className="flex items-center gap-2">
       <span
-        className={`w-2.5 h-2.5 rounded-full ${isOvertime ? "bg-red-600" : "bg-green-600"}`}
+        className={`w-2 h-2 rounded-full animate-pulse ${isOvertime ? "bg-orange-500" : "bg-red-600"}`}
       ></span>
-      ● Live: {displayTime} {isOvertime && "(Overtime)"}
-    </span>
+      <span
+        className={`font-bold ${isOvertime ? "text-orange-600" : "text-red-600"}`}
+      >
+        Live: {displayTime} {isOvertime ? "(Over Time)" : ""}
+      </span>
+    </div>
   );
 };
 
@@ -209,6 +213,7 @@ export default function LecturerLiveClassMonitoring({
     location: "Lab 01",
     date: "" as string | undefined,
     end_time: "" as string | undefined,
+    enrolled_count: undefined as number | undefined,
   });
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
@@ -387,10 +392,50 @@ export default function LecturerLiveClassMonitoring({
       }
     }
 
+    // 1. Calculate Scheduled Duration in MS
+    const parseTimeToMs = (timeStr: string) => {
+      const match = timeStr.match(/(\d+):(\d+)\s*([AP]M)/i);
+      if (!match) return 0;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const isPM = match[3].toUpperCase() === "PM";
+      if (isPM && h !== 12) h += 12;
+      if (!isPM && h === 12) h = 0;
+      return (h * 60 + m) * 60 * 1000;
+    };
+
+    let scheduledDurationMs = 0;
+    if (
+      selectedSessionDetails?.start_time &&
+      selectedSessionDetails?.end_time
+    ) {
+      const startMs = parseTimeToMs(selectedSessionDetails.start_time);
+      const endMs = parseTimeToMs(selectedSessionDetails.end_time);
+      scheduledDurationMs = endMs - startMs;
+      if (scheduledDurationMs < 0) scheduledDurationMs += 24 * 60 * 60 * 1000; // Handle overnight sessions
+    }
+
+    // 2. Set Interval
     if ((sessionActive || isViewOnly) && startTimeMs && !isNaN(startTimeMs)) {
       setElapsedTime(formatElapsedTime(startTimeMs)); // Immediate tick
       interval = setInterval(() => {
-        setElapsedTime(formatElapsedTime(startTimeMs));
+        const now = new Date().getTime();
+        const diff = Math.max(0, now - startTimeMs); // Elapsed time in MS
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setElapsedTime(
+          `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+        );
+
+        // FIX: Check if elapsed time exceeds scheduled duration
+        if (scheduledDurationMs > 0 && diff > scheduledDurationMs) {
+          setIsOvertime(true);
+        } else {
+          setIsOvertime(false);
+        }
       }, 1000);
     } else {
       setElapsedTime("00:00:00");
@@ -850,6 +895,42 @@ export default function LecturerLiveClassMonitoring({
     };
   }, [sessionActive, currentSessionId, isViewOnly, selectedSession]);
 
+  // Step 1: Calculate precise stats from the latest logEntries
+  useEffect(() => {
+    if (!logEntries || logEntries.length === 0) return;
+
+    // 1. Find the absolute LATEST status for each unique student
+    const latestStatusMap = new Map();
+    // Safe approach: sort a copy by time ascending just to be sure
+    const sortedLogs = [...logEntries].sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+    );
+
+    sortedLogs.forEach((log) => {
+      // Use indexNumber as the unique key
+      const uniqueId = log.indexNumber;
+      latestStatusMap.set(uniqueId, log.status);
+    });
+
+    // 2. Count based on the LATEST status only
+    let currentlyInside = 0;
+    let totalExited = 0;
+    latestStatusMap.forEach((status) => {
+      // Backend uses 'entered' and 'exited' lowercase
+      if (status.toLowerCase() === "entered") currentlyInside++;
+      if (status.toLowerCase() === "exited") totalExited++;
+    });
+
+    // Total unique students who showed up at least once
+    const totalUniqueEntered = latestStatusMap.size;
+
+    setLiveStats({
+      currentlyInside: currentlyInside,
+      totalEntered: totalUniqueEntered,
+      leftEarly: totalExited, // Kept as leftEarly in state to avoid renaming everywhere
+    });
+  }, [logEntries]);
+
   // Auto-dismiss toasts
   useEffect(() => {
     if (showSuccessToast) {
@@ -1145,9 +1226,11 @@ export default function LecturerLiveClassMonitoring({
 
   const handleEndSession = useCallback(async () => {
     if (isViewOnly) return;
-    
+
     setIsEndingSession(true);
-    const loadingToast = toast.loading("Calculating final attendance and processing logs...");
+    const loadingToast = toast.loading(
+      "Calculating final attendance and processing logs...",
+    );
 
     try {
       // 1. Mark session as inactive in local state
@@ -1157,7 +1240,7 @@ export default function LecturerLiveClassMonitoring({
       setIsExitActive(false);
       setMediaStream(null);
       setAnnotatedFrame(null);
-      
+
       // 2. Clear persisted session
       localStorage.removeItem(storageKey);
       localStorage.removeItem("activeAttendanceSession");
@@ -1166,39 +1249,57 @@ export default function LecturerLiveClassMonitoring({
 
       // 3. Close session in backend & Trigger Calculation
       if (currentSessionId) {
-        const res = await fetch(`${API_BASE}/api/attendance/end_session/${currentSessionId}`, { 
-          method: "POST" 
-        });
+        const res = await fetch(
+          `${API_BASE}/api/attendance/end_session/${currentSessionId}`,
+          {
+            method: "POST",
+          },
+        );
         if (!res.ok) throw new Error("Failed to end session");
       }
 
       // 4. Release hardware
-      await fetch(`${API_BASE}/api/attendance/stop_cameras`, { method: "POST" });
-      
+      await fetch(`${API_BASE}/api/attendance/stop_cameras`, {
+        method: "POST",
+      });
+
       // 5. Sync timetable status
       if (selectedSession) {
-        await fetch(`${API_BASE}/api/timetable/${selectedSession}/stop`, { method: "POST" });
+        await fetch(`${API_BASE}/api/timetable/${selectedSession}/stop`, {
+          method: "POST",
+        });
       }
 
       toast.success("Attendance processed successfully!", { id: loadingToast });
       setShowEndSessionModal(false);
-      
+
       // 6. Navigate to review
       const targetSessionId = currentSessionId || selectedSession;
       if (targetSessionId) {
         localStorage.setItem("pendingReviewSessionId", String(targetSessionId));
       }
-      navigate(isAdminRoute ? "/admin/live-sessions" : "/lecturer/session-review", { 
-        state: { sessionId: targetSessionId } 
-      });
-
+      navigate(
+        isAdminRoute ? "/admin/live-sessions" : "/lecturer/session-review",
+        {
+          state: { sessionId: targetSessionId },
+        },
+      );
     } catch (err) {
       console.error("End session error:", err);
-      toast.error("An error occurred while ending the session.", { id: loadingToast });
+      toast.error("An error occurred while ending the session.", {
+        id: loadingToast,
+      });
     } finally {
       setIsEndingSession(false);
     }
-  }, [stopCamera, currentSessionId, selectedSession, isAdminRoute, storageKey, isViewOnly]);
+  }, [
+    stopCamera,
+    currentSessionId,
+    selectedSession,
+    isAdminRoute,
+    storageKey,
+    isViewOnly,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -1405,11 +1506,23 @@ export default function LecturerLiveClassMonitoring({
                 {/* STOP: Only show if NOT view-only AND active */}
                 {!isViewOnly && sessionActive && (
                   <div className="flex items-center gap-3">
-                    <LiveTimer
-                      isSessionActive={sessionActive}
-                      displayTime={elapsedTime}
-                      isOvertime={isOvertime}
-                    />
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-2 h-2 rounded-full animate-pulse ${isOvertime ? "bg-orange-500" : "bg-red-600"}`}
+                        ></span>
+                        <span
+                          className={`font-bold text-md ${isOvertime ? "text-orange-600" : "text-red-600"}`}
+                        >
+                          Live: {elapsedTime}
+                        </span>
+                      </div>
+                      {isOvertime && (
+                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-wider bg-orange-100 px-2 py-0.5 rounded mt-0.5">
+                          Over Time
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => setShowEndSessionModal(true)}
                       className="px-6 py-2.5 cursor-pointer bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition shadow-md"
@@ -1922,13 +2035,29 @@ export default function LecturerLiveClassMonitoring({
 
         {/* Bottom Stats Bar */}
         <div className="bg-white border-t-2 border-gray-200 px-6 py-4 shadow-md">
-          <div className="grid grid-cols-3 gap-6">
-            <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="p-3 bg-blue-600 rounded-lg">
-                <Users className="w-6 h-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6">
+            <div className="flex items-center space-x-4 p-4 bg-purple-100 rounded-xl border-2 border-purple-200">
+              <div className="p-3 bg-purple-500 rounded-lg">
+                <Users className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="text-md text-gray-600 font-medium">
+                <p className="text-md text-gray-700 font-bold">
+                  Total Enrolled
+                </p>
+                <p className="text-3xl font-bold text-purple-600">
+                  {selectedSessionDetails?.enrolled_count ||
+                    sessionDetails?.enrolled_count ||
+                    0}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 p-4 bg-blue-100 rounded-xl border-2 border-blue-200">
+              <div className="p-3 bg-blue-600 rounded-lg">
+                <UserPlus className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <p className="text-md text-gray-700 font-bold">
                   Currently Inside
                 </p>
                 <p className="text-3xl font-bold text-blue-600">
@@ -1937,26 +2066,24 @@ export default function LecturerLiveClassMonitoring({
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex items-center space-x-4 p-4 bg-green-100 rounded-xl border-2 border-green-200">
               <div className="p-3 bg-green-600 rounded-lg">
-                <ArrowUp className="w-6 h-6 text-white" />
+                <ArrowUp className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="text-md text-gray-600 font-medium">
-                  Total Entered
-                </p>
+                <p className="text-md text-gray-700 font-bold">Total Entered</p>
                 <p className="text-3xl font-bold text-green-600">
                   {sessionActive || isViewOnly ? liveStats.totalEntered : 0}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 p-4 bg-red-50 rounded-lg border border-red-200">
+            <div className="flex items-center space-x-4 p-4 bg-red-100 rounded-xl border-2 border-red-200">
               <div className="p-3 bg-red-600 rounded-lg">
-                <UserMinus className="w-6 h-6 text-white" />
+                <UserMinus className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="text-md text-gray-600 font-medium">Left Early</p>
+                <p className="text-md text-gray-700 font-bold">Total Exited</p>
                 <p className="text-3xl font-bold text-red-600">
                   {sessionActive || isViewOnly ? liveStats.leftEarly : 0}
                 </p>
@@ -1968,64 +2095,115 @@ export default function LecturerLiveClassMonitoring({
 
       {/* End Session Confirmation Modal */}
       {showEndSessionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-            onClick={() => setShowEndSessionModal(false)}
-          />
-          <div className="relative bg-white rounded-xl border border-gray-200 shadow-2xl max-w-md w-full mx-4 animate-fade-in">
-            <div className="px-6 py-5 border-b border-gray-200">
+        <div
+          className="fixed inset-0 bg- backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          style={{
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header & Warning Context */}
+            <div className="p-6 pb-4 flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4 ring-4 ring-red-50/50">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
               <h2 className="text-2xl font-bold text-gray-900">
                 End Class Session?
               </h2>
-            </div>
-            <div className="px-6 py-5">
-              <p className="text-gray-700 text-base mb-5">
-                Are you sure you want to end this session? Attendance for{" "}
-                <span className="font-bold">
-                  {liveStats.totalEntered} students
+              <p className="text-gray-700 mt-2 text-sm px-2 leading-relaxed">
+                You are about to finalize the{" "}
+                <span className="font-bold text-gray-800">
+                  {selectedSessionDetails?.module_name || "current"}
                 </span>{" "}
-                will be saved.
+                session. This action cannot be undone and attendance records
+                will be permanently saved.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                  Session Summary
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <span className="text-sm text-gray-700">Present:</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {liveStats.currentlyInside}
-                    </span>
+            </div>
+
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                <h4 className="text-[11px] font-bold text-gray-500 tracking-wider mb-3">
+                  Final Session Summary
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <Users className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-md font-bold text-purple-600">
+                        Enrolled
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {selectedSessionDetails?.enrolled_count ||
+                          sessionDetails?.enrolled_count ||
+                          0}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                    <span className="text-sm text-gray-700">Left Early:</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {liveStats.leftEarly}
-                    </span>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <UserCheck className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-md font-bold text-green-600">Present</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {liveStats?.currentlyInside || 0}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <LogOut className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-md font-bold text-orange-600">
+                        Total Exited
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {liveStats?.leftEarly || 0}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <UserMinus className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-md font-bold text-red-600">Absent</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {Math.max(
+                          0,
+                          (selectedSessionDetails?.enrolled_count ||
+                            sessionDetails?.enrolled_count ||
+                            0) - (liveStats?.totalEntered || 0),
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex items-center justify-end gap-3">
+
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-300">
               <button
                 onClick={() => setShowEndSessionModal(false)}
-                className="px-6 py-2.5 border-2 cursor-pointer border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                className="px-5 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors shadow-sm cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEndSession}
                 disabled={isEndingSession}
-                className="px-6 py-2.5 cursor-pointer bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isEndingSession ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
-                ) : null}
-                {isEndingSession ? "Processing..." : "Confirm & Save"}
+                ) : (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {isEndingSession ? "Processing..." : "Finalize & Save"}
               </button>
             </div>
           </div>

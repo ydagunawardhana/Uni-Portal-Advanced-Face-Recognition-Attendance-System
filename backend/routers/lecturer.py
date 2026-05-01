@@ -635,6 +635,20 @@ def get_lecturer_timetable(
         .all()
     )
 
+    # Calculate exact student counts dynamically based on session batch and department
+    # Using a dictionary to cache counts and prevent duplicate queries for identical batch/dept pairs
+    enrollment_counts = {}
+    for r in results:
+        batch = r.Timetable.batch_id
+        dept = r.Timetable.department
+        key = f"{batch}_{dept}"
+        if key not in enrollment_counts:
+            student_count = db.query(models.Student).filter(
+                models.Student.intake == batch,
+                models.Student.department == dept
+            ).count()
+            enrollment_counts[key] = student_count
+
     from datetime import datetime as dt_class
     now_time = dt_class.now().time()
 
@@ -683,6 +697,7 @@ def get_lecturer_timetable(
             "module_name": r.Timetable.module_name,
             "location": r.Timetable.location or "TBA",
             "batch": r.Timetable.batch_id,
+            "enrolled_count": enrollment_counts.get(f"{r.Timetable.batch_id}_{r.Timetable.department}", 0),
             "semester": r.level or r.Timetable.semester or "N/A",
             "degree": r.degree or "N/A",
             "level": r.level,

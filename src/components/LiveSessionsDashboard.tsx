@@ -60,6 +60,7 @@ interface Session {
   status?: string;
   cover_requested?: boolean;
   cover_reason?: string;
+  enrolled_count?: number;
 }
 
 interface DashboardData {
@@ -482,8 +483,14 @@ export default function LiveSessionsDashboard() {
                   <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
                     {session.module_name}
                   </h3>
-                  <p className="text-sm font-bold text-gray-700 tracking-tight">
-                    {session.module_code} - Batch {session.batch}
+                  <p className="text-sm font-medium text-gray-500 mb-3 flex items-center flex-wrap gap-1.5 mt-1">
+                    <span>{session.module_code}</span>
+                    <span className="text-gray-400">•</span>
+                    <span>Batch {session.batch}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-xl text-sm">
+                      {session.enrolled_count !== undefined ? session.enrolled_count : 0} Enrolled Students
+                    </span>
                   </p>
                   {/* Date Display (Forced Render with Fallback) */}
                   <div className="flex items-center mt-2 px-2.5 py-1.5 gap-2 text-sm text-blue-700 font-bold bg-blue-50 mr-2 border rounded-lg">

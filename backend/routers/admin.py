@@ -1277,6 +1277,19 @@ def get_today_timetable_admin(
         .all()
     )
 
+    # Calculate exact student counts dynamically based on session batch and department
+    enrollment_counts = {}
+    for entry, _, _, _, _ in results:
+        batch = entry.batch_id
+        dept = entry.department
+        key = f"{batch}_{dept}"
+        if key not in enrollment_counts:
+            student_count = db.query(models.Student).filter(
+                models.Student.intake == batch,
+                models.Student.department == dept
+            ).count()
+            enrollment_counts[key] = student_count
+
     sessions_data = []
     live_count = 0
     visiting_count = 0
@@ -1340,6 +1353,7 @@ def get_today_timetable_admin(
             "status": status,
             "is_completed": status == "Completed",
             "date": entry.date,
+            "enrolled_count": enrollment_counts.get(f"{entry.batch_id}_{entry.department}", 0),
             "cover_requested": getattr(entry, 'cover_requested', False),
             "cover_reason": getattr(entry, 'cover_reason', None)
         })
