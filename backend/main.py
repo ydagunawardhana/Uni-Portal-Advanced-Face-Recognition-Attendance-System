@@ -78,6 +78,7 @@ app = FastAPI(
 
 # Ensure uploads directory exists
 os.makedirs("uploads/profiles", exist_ok=True)
+os.makedirs("uploads/evidence", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 

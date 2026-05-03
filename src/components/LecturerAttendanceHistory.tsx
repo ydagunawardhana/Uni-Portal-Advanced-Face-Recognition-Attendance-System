@@ -432,25 +432,25 @@ export default function LecturerAttendanceHistory() {
                       <td className="px-6 py-4 text-sm  font-bold text-gray-600">
                         {record.indexNumber || record.index_number}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
                         {record.module_code ? `${record.module_code} - ${record.subject}` : record.subject}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 font-bold">
                         {record.timeIn || record.time_in}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 font-bold">
                         {record.timeOut || record.time_out}
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
+                          className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
                             record.status === "Present"
                               ? "bg-green-100 text-green-700"
                               : record.status === "Late"
                                 ? "bg-yellow-100 text-yellow-700"
                                 : record.status === "Left Early"
                                   ? "bg-orange-100 text-orange-700"
-                                  : "bg-red-100 text-red-700"
+                                  : "bg-red-100 text-red-600"
                           }`}
                         >
                           {record.status}

@@ -13,6 +13,7 @@ import Appointments from "./Appointments";
 import LecturerTimetable from "./LecturerTimetable";
 import LecturerDailySessions from "./LecturerDailySessions";
 import PostSessionReview from "./PostSessionReview";
+import LecturerAttendanceRequests from "./LecturerAttendanceRequests";
 
 interface AttendanceRecord {
   id: number;
@@ -46,8 +47,9 @@ export default function LecturerDashboard({
     if (location.pathname.includes("history")) return "history";
     if (location.pathname.includes("manual-attendances"))
       return "mark-attendance";
-    if (location.pathname.includes("session-review"))
-      return "session-review";
+    if (location.pathname.includes("session-review")) return "session-review";
+    if (location.pathname.includes("correction-requests"))
+      return "correction-requests";
     return "dashboard";
   });
 
@@ -69,6 +71,8 @@ export default function LecturerDashboard({
       setActiveTab("history");
     } else if (location.pathname.includes("session-review")) {
       setActiveTab("session-review");
+    } else if (location.pathname.includes("correction-requests")) {
+      setActiveTab("correction-requests");
     } else if (location.pathname === "/lecturer") {
       setActiveTab("dashboard");
     }
@@ -272,6 +276,9 @@ export default function LecturerDashboard({
       case "session-review":
         navigate("/lecturer/session-review");
         break;
+      case "correction-requests":
+        navigate("/lecturer/correction-requests");
+        break;
       default:
         navigate("/lecturer");
     }
@@ -297,6 +304,10 @@ export default function LecturerDashboard({
         return "Appointments";
       case "session-review":
         return "Session Summary & Review";
+      case "mark-attendance":
+        return "Manual Attendances";
+      case "correction-requests":
+        return "Student Attendance Requests";
       default:
         return "Lecturer Dashboard";
     }
@@ -320,6 +331,10 @@ export default function LecturerDashboard({
         return "Manage your account and preferences";
       case "appointments":
         return "Manage student consultation requests and upcoming meetings";
+      case "mark-attendance":
+        return "Select a completed session to perform manual corrections";
+      case "correction-requests":
+        return "Review and manage attendance correction requests submitted by students";
       default:
         return "Overview of your classes and attendance";
     }
@@ -336,6 +351,7 @@ export default function LecturerDashboard({
     activeTab === "mark-attendance" ||
     activeTab === "appointments" ||
     activeTab === "session-review" ||
+    activeTab === "correction-requests" ||
     activeTab === "live-class"
   ) {
     return (
@@ -351,36 +367,34 @@ export default function LecturerDashboard({
         <div
           className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"}`}
         >
-          {/* Header (Hide for mark-attendance since it has its own) */}
-          {activeTab !== "mark-attendance" && (
-            <header className="bg-white shadow-sm border-b border-gray-200">
-              <div className="px-8 py-4 flex justify-between items-center">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {getHeaderTitle()}
-                  </h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {getHeaderDescription()}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg border-2 border-gray-200 shadow-sm transition-all hover:bg-gray-200 cursor-default">
-                    <User className="w-5 h-5 text-gray-600" />
-                    <span className="text-sm font-bold text-gray-700">
-                      {lecturerName}
-                    </span>
-                  </div>
-                  <button
-                    onClick={onLogout}
-                    className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold shadow-sm"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b border-gray-200">
+            <div className="px-8 py-4 flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {getHeaderTitle()}
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {getHeaderDescription()}
+                </p>
               </div>
-            </header>
-          )}
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg border-2 border-gray-200 shadow-sm transition-all hover:bg-gray-200 cursor-default">
+                  <User className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">
+                    {lecturerName}
+                  </span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center space-x-2 cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold shadow-sm"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </header>
 
           {/* Main Content */}
           {activeTab === "mark-attendance" ? (
@@ -432,6 +446,9 @@ export default function LecturerDashboard({
               {activeTab === "settings" && <LecturerSettings />}
               {activeTab === "appointments" && <Appointments />}
               {activeTab === "session-review" && <PostSessionReview />}
+              {activeTab === "correction-requests" && (
+                <LecturerAttendanceRequests />
+              )}
               {activeTab === "live-class" && <LecturerDailySessions />}
             </main>
           )}

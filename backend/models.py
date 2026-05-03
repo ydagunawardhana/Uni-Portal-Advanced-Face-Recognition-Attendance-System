@@ -244,7 +244,21 @@ class AttendanceRecord(Base):
     session_id = Column(Integer, ForeignKey("class_sessions.id"), nullable=False)
     total_duration_minutes = Column(Integer, nullable=False, default=0)
     status = Column(String, nullable=False) # 'Present', 'Absent', 'Flagged', 'Incomplete'
+    reason = Column(String, nullable=True)  # Store manual overrides or flag reasons
     calculated_at = Column(DateTime, server_default=func.now())
 
     student = relationship("Student")
     session = relationship("ClassSession")
+
+class CorrectionRequest(Base):
+    __tablename__ = "correction_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(String, index=True) # Using String since index numbers like 'CS202602' are used
+    session_id = Column(Integer, index=True) 
+    reason_type = Column(String)
+    description = Column(Text)
+    evidence_url = Column(String, nullable=True)
+    status = Column(String, default="Pending") # Options: Pending, Approved, Rejected
+    rejection_reason = Column(Text, nullable=True) # Feedback for student
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())

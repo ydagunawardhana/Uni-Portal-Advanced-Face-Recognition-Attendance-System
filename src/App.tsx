@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import PostSessionReview from "./components/PostSessionReview";
 import { Toaster, toast } from "react-hot-toast";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import LandingPage from "./components/LandingPage";
 import LoginScreen from "./components/LoginScreen";
 import LecturerDashboard from "./components/LecturerDashboard";
@@ -32,9 +38,21 @@ export default function App() {
   const location = useLocation();
 
   const [userRole, setUserRole] = useState<UserRole>(() => {
-    if (localStorage.getItem("adminToken") && localStorage.getItem("admin_role") === "Admin") return "Admin";
-    if (localStorage.getItem("lecturerToken") && localStorage.getItem("lecturer_role") === "Lecturer") return "Lecturer";
-    if (localStorage.getItem("studentToken") && localStorage.getItem("student_role") === "Student") return "Student";
+    if (
+      localStorage.getItem("adminToken") &&
+      localStorage.getItem("admin_role") === "Admin"
+    )
+      return "Admin";
+    if (
+      localStorage.getItem("lecturerToken") &&
+      localStorage.getItem("lecturer_role") === "Lecturer"
+    )
+      return "Lecturer";
+    if (
+      localStorage.getItem("studentToken") &&
+      localStorage.getItem("student_role") === "Student"
+    )
+      return "Student";
     return null;
   });
 
@@ -64,49 +82,113 @@ export default function App() {
         toastOptions={{
           style: { fontFamily: "inherit", fontSize: "0.95rem" },
           success: { iconTheme: { primary: "#16a34a", secondary: "#fff" } },
-          error:   { iconTheme: { primary: "#dc2626", secondary: "#fff" } },
+          error: { iconTheme: { primary: "#dc2626", secondary: "#fff" } },
         }}
       />
-      
-      <Routes>
-        <Route path="/" element={
-          <LandingPage 
-            onNavigateToLogin={(role) => {
-              if (role === "Admin") navigate("/admin-login");
-              else {
-                setLoginRole(role ?? "Student");
-                navigate("/login");
-              }
-            }} 
-            onNavigateToEnroll={() => navigate("/enroll")}
-          />
-        } />
 
-        <Route path="/login" element={<LoginScreen initialRole={loginRole} onLogin={handleLogin} onForgotPassword={() => navigate("/forgot-password")} onBackToHome={() => navigate("/")} />} />
-        <Route path="/admin-login" element={<AdminLogin onLogin={handleLogin} onBackToHome={() => navigate("/")} />} />
-        <Route path="/enroll" element={<StudentEnrollment onBackToHome={() => navigate("/")} />} />
-        <Route path="/forgot-password" element={<ForgotPasswordScreen onBackToLogin={() => navigate("/login")} />} />
-        
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              onNavigateToLogin={(role) => {
+                if (role === "Admin") navigate("/admin-login");
+                else {
+                  setLoginRole(role ?? "Student");
+                  navigate("/login");
+                }
+              }}
+              onNavigateToEnroll={() => navigate("/enroll")}
+            />
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            <LoginScreen
+              initialRole={loginRole}
+              onLogin={handleLogin}
+              onForgotPassword={() => navigate("/forgot-password")}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/admin-login"
+          element={
+            <AdminLogin
+              onLogin={handleLogin}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/enroll"
+          element={<StudentEnrollment onBackToHome={() => navigate("/")} />}
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <ForgotPasswordScreen onBackToLogin={() => navigate("/login")} />
+          }
+        />
+
         {/* Admin Portal (Route-Based) */}
-        <Route 
-          path="/admin" 
-          element={userRole === "Admin" ? <AdminLayout onLogout={handleLogout} /> : <Navigate to="/admin-login" />}
+        <Route
+          path="/admin"
+          element={
+            userRole === "Admin" ? (
+              <AdminLayout onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/admin-login" />
+            )
+          }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardHome onTabChange={(tab) => navigate(`/admin/${tab}`)} />} />
+          <Route
+            path="dashboard"
+            element={
+              <DashboardHome onTabChange={(tab) => navigate(`/admin/${tab}`)} />
+            }
+          />
           <Route path="students" element={<StudentRegistration />} />
-          <Route path="pre-registrations" element={<PendingRegistrations onProcess={(data) => navigate("/admin/students", { state: { preFill: data } })} />} />
-          <Route path="manage-students" element={<ManageStudents onRegisterNew={() => navigate("/admin/students")} />} />
+          <Route
+            path="pre-registrations"
+            element={
+              <PendingRegistrations
+                onProcess={(data) =>
+                  navigate("/admin/students", { state: { preFill: data } })
+                }
+              />
+            }
+          />
+          <Route
+            path="manage-students"
+            element={
+              <ManageStudents
+                onRegisterNew={() => navigate("/admin/students")}
+              />
+            }
+          />
           <Route path="manage-lecturers" element={<ManageLecturers />} />
           <Route path="manage-modules" element={<ManageModules />} />
           <Route path="timetable" element={<TimetableUpload />} />
           <Route path="live-sessions" element={<LiveSessionsDashboard />} />
-          <Route path="live-camera" element={<LecturerLiveClassMonitoring onLogout={handleLogout} onNavigate={() => {}} />} />
+          <Route
+            path="live-camera"
+            element={
+              <LecturerLiveClassMonitoring
+                onLogout={handleLogout}
+                onNavigate={() => {}}
+              />
+            }
+          />
           <Route path="reports" element={<AttendanceReporting />} />
           <Route path="audit-logs" element={<SystemAuditLogs />} />
           <Route path="settings" element={<SettingsScreen />} />
         </Route>
-        
+
         {/* Lecturer Routes */}
         <Route
           path="/lecturer"
@@ -199,6 +281,16 @@ export default function App() {
           }
         />
         <Route
+          path="/lecturer/correction-requests"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
           path="/lecturer/live-class-monitoring"
           element={
             userRole === "Lecturer" ? (
@@ -211,14 +303,35 @@ export default function App() {
             )
           }
         />
-        
+
         {/* Student Routes */}
-        <Route path="/student" element={userRole === "Student" ? <StudentDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
-        <Route path="/student-correction" element={userRole === "Student" ? <StudentCorrectionRequestScreen onLogout={handleLogout} onNavigate={() => navigate("/student")} /> : <Navigate to="/login" />} />
+        <Route
+          path="/student"
+          element={
+            userRole === "Student" ? (
+              <StudentDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/student-correction"
+          element={
+            userRole === "Student" ? (
+              <StudentCorrectionRequestScreen
+                onLogout={handleLogout}
+                onNavigate={() => navigate("/student")}
+              />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
 
         {/* Global Reporting */}
         <Route path="/reporting" element={<AttendanceReporting />} />
-        
+
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

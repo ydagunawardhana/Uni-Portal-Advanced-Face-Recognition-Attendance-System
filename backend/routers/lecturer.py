@@ -1,7 +1,7 @@
 import os
 import uuid
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
@@ -545,15 +545,15 @@ def get_subject_attendance(
     # 2. Get all enrolled student IDs for this subject
     # Find all batches taking this subject from Timetable
     timetable_batches = db.query(models.Timetable.batch_id).filter(
-        models.Timetable.module_code == subject_id
+        func.trim(models.Timetable.module_code) == func.trim(subject_id)
     ).distinct().all()
-    batch_list = [b[0] for b in timetable_batches]
+    batch_list = [str(b[0]).strip() for b in timetable_batches]
     
     enrolled_query = db.query(models.Student.id).filter(
-        models.Student.intake.in_(batch_list)
+        func.trim(models.Student.intake).in_(batch_list)
     )
     if batch:
-        enrolled_query = enrolled_query.filter(models.Student.intake == batch)
+        enrolled_query = enrolled_query.filter(func.trim(models.Student.intake) == func.trim(batch))
         
     enrolled_rows = enrolled_query.distinct().all()
     enrolled_student_ids = [r[0] for r in enrolled_rows]
@@ -617,16 +617,48 @@ def get_subject_attendance(
         student = db.query(models.Student).filter(models.Student.id == sid).first()
         if not student: continue
 
-        # A. Attendance Status for the specific session/date
+        # A. Attendance Status and Details for the specific session/date
         status = "No Session"
+        in_time_str = None
+        out_time_str = None
+        reason_str = None
+        tz_lk = timezone(timedelta(hours=5, minutes=30))
+
         if session_today:
             status = "Absent"
             ar_today = db.query(models.AttendanceRecord).filter(
                 models.AttendanceRecord.student_id == student.id,
                 models.AttendanceRecord.session_id == session_today.id
             ).first()
-            if ar_today and ar_today.status:
-                status = ar_today.status
+            if ar_today:
+                if ar_today.status:
+                    status = ar_today.status
+                if hasattr(ar_today, 'reason') and ar_today.reason:
+                    reason_str = ar_today.reason
+
+            # Fetch the first 'entered' log as in_time
+            in_log = db.query(models.AttendanceLog).filter(
+                models.AttendanceLog.student_id == student.id,
+                models.AttendanceLog.session_id == session_today.id,
+                models.AttendanceLog.status.in_(["entered", "Present"])
+            ).order_by(models.AttendanceLog.timestamp.asc()).first()
+            
+            if in_log:
+                local_in_time = in_log.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk)
+                in_time_str = local_in_time.strftime("%I:%M %p")
+                if not reason_str and in_log.remarks:
+                    reason_str = in_log.remarks
+
+            # Fetch the last 'exited' log as out_time
+            out_log = db.query(models.AttendanceLog).filter(
+                models.AttendanceLog.student_id == student.id,
+                models.AttendanceLog.session_id == session_today.id,
+                models.AttendanceLog.status == "exited"
+            ).order_by(models.AttendanceLog.timestamp.desc()).first()
+
+            if out_log:
+                local_out_time = out_log.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk)
+                out_time_str = local_out_time.strftime("%I:%M %p")
 
         # B. Longitudinal Attendance Percentage
         attended_count = 0
@@ -641,12 +673,16 @@ def get_subject_attendance(
         percentage = round((attended_count / total_sessions_held) * 100, 1) if total_sessions_held > 0 else 0.0
 
         students_data.append({
-            "student_id": student.index_number,
+            "id": student.id,
+            "index_number": student.index_number,
             "name": student.name,
             "status": status,
             "attendance_percentage": percentage,
             "total_sessions": total_sessions_held,
-            "attended_sessions": attended_count
+            "attended_sessions": attended_count,
+            "in_time": in_time_str,
+            "out_time": out_time_str,
+            "reason": reason_str
         })
 
     return {
@@ -874,5 +910,56 @@ def cancel_admin_cover(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.get("/recent-sessions")
+def get_recent_completed_sessions(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetch the last 12 completed sessions for the manual override dashboard."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == current_user.email).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer not found")
+
+    sessions = db.query(
+        models.ClassSession,
+        models.Timetable,
+        models.Module
+    ).outerjoin(
+        models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
+    ).outerjoin(
+        models.Module, models.Timetable.module_code == models.Module.module_code
+    ).filter(
+        models.ClassSession.lecturer_id == lecturer.id,
+        models.ClassSession.status.in_(["Completed", "Closed"])
+    ).order_by(models.ClassSession.start_time.desc()).limit(12).all()
+    
+    # Simple manual deduplication
+    seen_ids = set()
+    deduplicated_sessions = []
+    for s, tt, m in sessions:
+        if s.id not in seen_ids:
+            deduplicated_sessions.append((s, tt, m))
+            seen_ids.add(s.id)
+
+    result = []
+    for s, tt, m in deduplicated_sessions:
+        result.append({
+            "id": s.id,
+            "module_name": tt.module_name if tt else s.subject_id,
+            "module_code": tt.module_code if tt else "N/A",
+            "batch": tt.batch_id if tt else s.batch_id,
+            "date": s.start_time.strftime("%Y-%m-%d"),
+            "time": s.start_time.strftime("%I:%M %p"),
+            "status": s.status,
+            "degree": m.degree if m else "N/A",
+            "semester": tt.semester if tt else "N/A",
+            "level": m.level if m else "N/A"
+        })
+
+    return result
 
 

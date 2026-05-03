@@ -1,8 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users, Check, X, Clock, Search, Loader2 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import {
+  Users,
+  Check,
+  X,
+  Search,
+  Loader2,
+  Calendar,
+  BookOpen,
+  Save,
+  RefreshCw,
+  User,
+  ArrowLeft,
+  LogOut,
+} from "lucide-react";
 import toast from "react-hot-toast";
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 const API_BASE = "http://localhost:8000";
 
@@ -11,131 +23,238 @@ interface Student {
   name: string;
   indexNumber: string;
   avatar: string;
-  attendance: "present" | "absent" | "late";
+  status: string;
+  reason?: string;
+  in_time?: string;
+  out_time?: string;
+}
+
+interface CompletedSession {
+  id: number;
+  module_name: string;
+  module_code: string;
+  batch: string;
+  date: string;
+  time: string;
+  status: string;
+  degree: string;
+  semester: string;
+  level?: string;
 }
 
 export default function ManualAttendanceMarking() {
-  const location = useLocation();
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedSession, setSelectedSession] = useState("");
+  const [completedSessions, setCompletedSessions] = useState<
+    CompletedSession[]
+  >([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
+    null,
+  );
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
+  const [edits, setEdits] = useState<
+    Record<number, { status: string; reason: string }>
+  >({});
 
-  const subjects = [
-    { value: "cs301", label: "Database Management Systems" },
-    { value: "cs302", label: "Software Engineering" },
-    { value: "cs303", label: "Web Development" },
-    { value: "cs304", label: "Data Structures" },
-  ];
+  // Helper function to get initials from a name (e.g., "Yashan dinusha" -> "YD")
+  const getInitials = (name?: string) => {
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
-  const sessions = [
-    { value: "today-09", label: "Today - 09:00 AM" },
-    { value: "today-11", label: "Today - 11:00 AM" },
-    { value: "today-14", label: "Today - 02:00 PM" },
-    { value: "yesterday-09", label: "Yesterday - 09:00 AM" },
-  ];
+  // 1. Fetch recently completed sessions
+  const fetchSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const lecturerToken = localStorage.getItem("lecturerToken");
+      const res = await fetch(`${API_BASE}/api/lecturer/recent-sessions`, {
+        headers: { Authorization: `Bearer ${lecturerToken}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch sessions");
+      const data = await res.json();
+      setCompletedSessions(data);
+    } catch (error) {
+      console.error("Fetch sessions error:", error);
+      toast.error("Failed to load completed sessions.");
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
 
-  const handleLoadStudentList = useCallback(async (sessionId?: string) => {
-    const idToLoad = sessionId || selectedSession;
-    if (!idToLoad) {
-      toast.error("Please select a session");
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  // 2. Load student list for a specific session
+  useEffect(() => {
+    if (!selectedSessionId) {
+      setStudents([]);
+      setIsLoaded(false);
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/attendance/session_summary/${idToLoad}`);
-      if (!res.ok) throw new Error("Failed to load students");
-      const data = await res.json();
-      setStudents(data);
-      setIsLoaded(true);
-      toast.success(`Loaded ${data.length} students from AI logs`);
-    } catch (error) {
-      console.error("Load error:", error);
-      toast.error("Failed to load student list for this session.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedSession]);
+    const loadStudents = async () => {
+      setIsLoadingStudents(true);
+      setEdits({}); // Clear previous edits
 
-  useEffect(() => {
-    if (location.state?.sessionId) {
-      const { sessionId, subjectId } = location.state;
-      setSelectedSession(String(sessionId));
-      setSelectedSubject(subjectId || "");
-      
-      // Auto-load if we have a sessionId
-      handleLoadStudentList(String(sessionId));
-    }
-  }, [location.state, handleLoadStudentList]);
+      const session = completedSessions.find((s) => s.id === selectedSessionId);
+      if (!session) {
+        setIsLoadingStudents(false);
+        return;
+      }
 
-  const handleAttendanceChange = (
-    studentId: number,
-    status: "present" | "absent" | "late",
-  ) => {
-    setStudents(
-      students.map((student) =>
-        student.id === studentId
-          ? { ...student, attendance: status }
-          : student,
-      ),
-    );
+      try {
+        const lecturerToken = localStorage.getItem("lecturerToken");
+        // Use the specialized subject attendance endpoint
+        const apiUrl = `${API_BASE}/api/lecturer/attendance/${encodeURIComponent(session.module_code)}?date=${encodeURIComponent(session.date)}&batch=${encodeURIComponent(session.batch)}&session_id=${selectedSessionId}`;
+
+        const res = await fetch(apiUrl, {
+          headers: { Authorization: `Bearer ${lecturerToken}` },
+        });
+
+        if (!res.ok) throw new Error("Failed to load students");
+        const data = await res.json();
+
+        // The endpoint returns { students: [...], subject_details: {...} }
+        const studentList = data.students || [];
+
+        // Transform the data if necessary
+        const transformedStudents = studentList.map((s: any) => ({
+          id: s.id, // Use the numeric PK
+          name: s.name,
+          indexNumber: s.index_number,
+          avatar: s.avatar || "https://via.placeholder.com/150",
+          status: s.status,
+          reason: s.reason,
+          in_time: s.in_time,
+          out_time: s.out_time,
+        }));
+
+        setStudents(transformedStudents);
+        setIsLoaded(true);
+      } catch (error) {
+        console.error("Load students error:", error);
+        toast.error("Failed to load student list.");
+      } finally {
+        setIsLoadingStudents(false);
+      }
+    };
+
+    loadStudents();
+  }, [selectedSessionId]);
+
+  const handleLoadStudentList = (sessionId: number) => {
+    setSelectedSessionId(sessionId);
+    setSearchQuery("");
   };
 
-  const handleMarkAllPresent = () => {
-    setStudents(
-      students.map((student) => ({
-        ...student,
-        attendance: "present",
-      })),
-    );
+  // 3. Handle Status and Reason changes
+  const handleStatusChange = (studentId: number, newStatus: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId], // Keep existing reason if any
+        status: newStatus,
+        // Auto-clear reason if marked present
+        reason: newStatus.toLowerCase() === "present" ? "" : (prev[studentId]?.reason || "")
+      },
+    }));
   };
 
+  const handleReasonChange = (studentId: number, newReason: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId], // Keep existing status if any
+        reason: newReason,
+      },
+    }));
+  };
+
+  // 4. Save Logic
   const handleSave = async () => {
-    if (!selectedSession && !location.state?.sessionId) {
-      toast.error("Session ID missing");
+    if (Object.keys(edits).length === 0) {
+      toast.error("No changes to save.");
       return;
     }
 
     setIsSaving(true);
-    const sessionId = selectedSession || location.state?.sessionId;
-    
-    try {
-      const payload = {
-        session_id: parseInt(String(sessionId)),
-        overrides: students.map(s => ({
-          student_id: s.id,
-          status: s.attendance
-        }))
-      };
+    const loadingToast = toast.loading("Saving manual overrides...");
 
-      const res = await fetch(`${API_BASE}/api/attendance/bulk_save`, {
+    try {
+      // 1. Construct the payload safely
+      const payload = Object.keys(edits)
+        .filter((key) => key !== "undefined" && key !== "NaN") // Prevent bad keys
+        .map((studentIdStr) => {
+          const studentId = parseInt(studentIdStr, 10);
+          const edit = edits[studentId];
+          // Find the original record safely
+          const originalRecord = students.find((r) => r.id === studentId);
+
+          const finalStatus = edit?.status || originalRecord?.status || "Absent";
+          let finalReason = edit?.reason !== undefined ? edit.reason : (originalRecord?.reason || "");
+
+          // If explicitly marked present manually, set a standard note
+          if (finalStatus.toLowerCase() === "present") {
+            finalReason = "Manual Override (Present)";
+          } else if (!finalReason) {
+            finalReason = "Manual Override (Absent)";
+          }
+
+          return {
+            student_id: studentId, // STRICTLY INTEGER
+            session_id: parseInt(String(selectedSessionId), 10), // STRICTLY INTEGER
+            status: finalStatus,
+            reason: finalReason,
+          };
+        });
+
+      if (payload.length === 0) {
+        toast.error("No valid changes to save.");
+        return;
+      }
+
+      const token = localStorage.getItem("lecturerToken");
+      const res = await fetch(`${API_BASE}/api/attendance/manual-override`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ records: payload }),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
-      
-      toast.success("Attendance Record Finalized Successfully!");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("FastAPI Validation Error Details:", JSON.stringify(errorData, null, 2));
+        throw new Error("Failed to save overrides");
+      }
+
+      toast.success("Manual overrides saved successfully!", {
+        id: loadingToast,
+      });
+
+      // Clear edits and refresh the list to reflect saved state
+      setEdits({});
+      if (selectedSessionId) {
+        // We need a small delay or just wait for the effect to re-run
+        // Actually, re-calling handleLoadStudentList is safer
+        const currentId = selectedSessionId;
+        setSelectedSessionId(null); // Force reset
+        setTimeout(() => setSelectedSessionId(currentId), 10);
+      }
     } catch (error) {
       console.error("Save error:", error);
-      toast.error("Failed to save attendance record.");
+      toast.error("Failed to save changes.", { id: loadingToast });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (confirm("Are you sure you want to cancel? All unsaved overrides will be lost.")) {
-      setIsLoaded(false);
-      if (!location.state?.sessionId) {
-        setSelectedSubject("");
-        setSelectedSession("");
-      }
     }
   };
 
@@ -147,285 +266,359 @@ export default function ManualAttendanceMarking() {
     );
   });
 
-  const totalStudents = students.length;
-  const presentCount = students.filter((s) => s.attendance === "present").length;
-  const absentCount = students.filter((s) => s.attendance === "absent").length;
-  const lateCount = students.filter((s) => s.attendance === "late").length;
-
   return (
-    <div className="flex-1 flex flex-col bg-gray-50 relative">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Mark Manual Attendance
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Manually record or edit class attendance
-        </p>
-      </div>
+    <div className="flex-1 px-8 py-8 space-y-8 pb-20">
+      {selectedSessionId ? (
+        /* Detail View (Student List) */
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <button
+            onClick={() => {
+              setSelectedSessionId(null);
+              setIsLoaded(false);
+            }}
+            className="flex items-center mt-6 cursor-pointer text-md font-semibold text-gray-600 hover:text-blue-600 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Sessions
+          </button>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto px-8 py-6 pb-24">
-        {/* Selection Bar */}
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-6 mb-6">
-          <div className="flex items-end gap-4">
-            {/* Dropdown 1: Select Subject */}
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Select Subject
-              </label>
-              <select
-                title="Select Subject"
-                value={selectedSubject}
-                onChange={(e) =>
-                  setSelectedSubject(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-              >
-                <option value="">-- Choose a subject --</option>
-                {subjects.map((subject) => (
-                  <option
-                    key={subject.value}
-                    value={subject.value}
-                  >
-                    {subject.label}
-                  </option>
-                ))}
-              </select>
+          <div className="bg-blue-600 rounded-xl p-8 text-white shadow-xl flex justify-between items-center relative overflow-hidden">
+            <div className="relative z-10">
+              <h2 className="text-3xl font-bold mb-4">
+                {completedSessions.find((s) => s.id === selectedSessionId)
+                  ?.module_name || "Selected Module"}
+              </h2>
+              <div className="flex items-center text-blue-100 text-sm font-bold space-x-8">
+                <span className="bg-blue-700 px-3 py-0.5 rounded-xl border-2 border-white">
+                  {
+                    completedSessions.find((s) => s.id === selectedSessionId)
+                      ?.module_code
+                  }
+                </span>
+                <span className="flex items-center">
+                  <Users className="w-5 h-5 mr-2" /> Batch{" "}
+                  {
+                    completedSessions.find((s) => s.id === selectedSessionId)
+                      ?.batch
+                  }
+                </span>
+                <span className="flex items-center">
+                  <Calendar className="w-5 h-5 mr-2" />{" "}
+                  {
+                    completedSessions.find((s) => s.id === selectedSessionId)
+                      ?.date
+                  }
+                </span>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md px-4 py-1 rounded-xl border-2 border-white animate-pulse relative z-10">
+              <span className="text-sm font-semibold uppercase tracking-widest">
+                Manual Override Mode
+              </span>
+            </div>
+            {/* Decorative Circle */}
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500 rounded-full blur-3xl opacity-50" />
+          </div>
+
+          <section>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+              {/* Student List Toolbar and Table would be here, but we are wrapping the existing logic */}
+              {/* Toolbar */}
+              <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Filter students..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm w-64"
+                    />
+                  </div>
+                  <div className="text-sm font-bold text-gray-500">
+                    Showing{" "}
+                    <span className="text-blue-700">
+                      {filteredStudents.length}
+                    </span>{" "}
+                    students
+                  </div>
+
+                  <div className="flex items-center gap-2 pl-4 ml-2 border-gray-200">
+                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                      Global Action :
+                    </span>
+                    <button
+                      onClick={() => {
+                        filteredStudents.forEach((s) =>
+                          handleStatusChange(s.id, "Present"),
+                        );
+                      }}
+                      className="px-2 py-1 bg-green-100 cursor-pointer text-green-700 rounded-lg text-sm font-bold border-2 border-green-100 hover:bg-green-200 transition-colors"
+                    >
+                      Mark All Present
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  {Object.keys(edits).length > 0 && (
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex items-end justify-end px-5 py-2 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-all shadow-md animate-in fade-in zoom-in-95 duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-5 h-5 mr-2" />
+                      )}
+                      Save {Object.keys(edits).length} Changes
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-100">
+                      <th className="px-6 py-4 text-sm font-black text-gray-500  tracking-widest">
+                        Student
+                      </th>
+                      <th className="px-6 py-4 text-sm font-black text-gray-500  tracking-widest">
+                        Current Logs
+                      </th>
+                      <th className="px-6 py-4 text-sm font-black text-gray-500  tracking-widest text-center">
+                        Original Status
+                      </th>
+                      <th className="px-6 py-4 text-sm font-black text-gray-500  tracking-widest text-center">
+                        Status Override
+                      </th>
+                      <th className="px-2 py-4 text-sm font-black text-gray-500  tracking-widest">
+                        Reason / Justification
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {isLoadingStudents ? (
+                      <tr>
+                        <td colSpan={5} className="py-20 text-center">
+                          <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
+                          <p className="mt-4 text-gray-500 font-bold">
+                            Loading student records...
+                          </p>
+                        </td>
+                      </tr>
+                    ) : filteredStudents.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="py-20 text-center text-gray-400 font-bold"
+                        >
+                          No students found matching your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map((record) => {
+                        const currentStatus = (
+                          edits[record.id]?.status || record.status
+                        )?.toLowerCase();
+                        const currentReason =
+                          edits[record.id]?.reason ?? (record.reason || "");
+
+                        return (
+                          <tr
+                            key={record.id}
+                            className="hover:bg-gray-50/50 transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex flex-shrink-0 items-center justify-center text-sm font-bold shadow-sm">
+                                  {getInitials(record.name)}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-bold text-gray-900">
+                                    {record.name}
+                                  </div>
+                                  <div className="text-sm font-bold text-gray-400 uppercase">
+                                    {record.indexNumber}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex gap-6">
+                                <div className="text-sm font-bold text-gray-500 flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                                  IN:{" "}
+                                  <span className="text-gray-900">
+                                    {record.in_time || "--:--"}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-bold text-gray-500 flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                  OUT:{" "}
+                                  <span className="text-gray-900">
+                                    {record.out_time || "--:--"}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-xl text-sm font-bold tracking-widest ${
+                                  record.status?.toLowerCase() === "present"
+                                    ? "bg-green-100 text-green-600 border border-green-200"
+                                    : "bg-red-100 text-red-600 border border-red-200"
+                                }`}
+                              >
+                                {record.status || "Absent"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() =>
+                                    handleStatusChange(record.id, "Present")
+                                  }
+                                  className={`px-3 py-0.5 rounded-xl text-sm cursor-pointer font-bold transition-all transform active:scale-95 ${
+                                    currentStatus === "present"
+                                      ? "bg-green-600 text-white border-2 border-green-600"
+                                      : "bg-green-100 text-green-600 border-2 border-green-200 hover:border-green-400 hover:bg-green-200"
+                                  }`}
+                                >
+                                  Present
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleStatusChange(record.id, "Absent")
+                                  }
+                                  className={`px-3 py-0.5 rounded-xl text-sm cursor-pointer font-bold transition-all transform active:scale-95 ${
+                                    currentStatus === "absent"
+                                      ? "bg-red-600 text-white border-2 border-red-600"
+                                      : "bg-red-100 text-red-600 border-2 border-red-200 hover:border-red-400 hover:text-red-600"
+                                  }`}
+                                >
+                                  Absent
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              {currentStatus === "present" ? (
+                                <span className="text-gray-400 font-semibold text-sm italic">
+                                  N/A - No Override Needed
+                                </span>
+                              ) : (
+                                <span className="inline-block bg-red-50 text-red-600 text-sm font-bold px-2.5 py-1 rounded-xl border border-red-100">
+                                  {edits[record.id] &&
+                                  record.status?.toLowerCase() === "present"
+                                    ? "Manual Override (Absent)"
+                                    : record.reason ||
+                                      "Absent - No Reason Provided"}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Info */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <div className="text-sm font-bold text-gray-400 tracking-widest flex items-center gap-2">
+                  <div
+                    className={`w-3 h-3 rounded-full ${Object.keys(edits).length > 0 ? "bg-red-500 animate-pulse" : "bg-gray-400"}`}
+                  />
+                  {Object.keys(edits).length} pending changes to be saved
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : (
+        /* MASTER VIEW (Session Cards) */
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between mb-8 mt-8">
+            <div className="flex items-center">
+              <Calendar className="w-8 h-8 text-blue-600 mr-3" />
+              <h2 className="text-2xl font-bold text-gray-800">
+                Recent Completed Sessions
+              </h2>
             </div>
 
-            {/* Dropdown 2: Select Session */}
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Select Session
-              </label>
-              <select
-                title="Select Session"
-                value={selectedSession}
-                onChange={(e) =>
-                  setSelectedSession(e.target.value)
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-              >
-                <option value="">-- Choose a session --</option>
-                {sessions.map((session) => (
-                  <option
-                    key={session.value}
-                    value={session.value}
-                  >
-                    {session.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Load Button */}
             <button
-              onClick={() => handleLoadStudentList()}
-              disabled={isLoading || isLoaded}
-              className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              onClick={fetchSessions}
+              className="flex items-center px-4 py-2 cursor-pointer text-sm font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:bg-gray-100 hover:border-blue-400 transition-all shadow-sm active:scale-95"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {isLoading ? "Loading List..." : "Load Student List"}
+              <RefreshCw className="w-4 h-4 mr-2 text-gray-500" />
+              Refresh
             </button>
           </div>
-        </div>
 
-        {/* Toolbar and Student List (Only show when loaded) */}
-        {isLoaded && (
-          <>
-            {/* Toolbar */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 flex items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-5 h-5 text-gray-600" />
-                  <span className="font-semibold text-gray-900">
-                    Total Students:{" "}
-                    <span className="text-blue-600">
-                      {totalStudents}
+          {isLoadingSessions ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+            </div>
+          ) : completedSessions.length === 0 ? (
+            <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl p-10 text-center">
+              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                No sessions found
+              </h3>
+              <p className="text-gray-500 font-medium">
+                There are no completed attendance sessions available for your
+                modules.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {completedSessions.map((session, index) => (
+                <div
+                  key={`${session.id}-${index}`}
+                  onClick={() => handleLoadStudentList(session.id)}
+                  className="p-6 rounded-3xl border-2 border-gray-200 bg-white rounded-xl shadow-md transition-all duration-300 transform cursor-pointer hover:border-blue-400 hover:shadow-lg hover:-translate-y-1 group"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="px-3 py-0.5 bg-green-100 text-green-600 text-sm font-bold rounded-lg uppercase ">
+                      {session.status}
                     </span>
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  <span className="text-green-600 font-medium">
-                    Present: {presentCount}
-                  </span>
-                  <span className="mx-2">|</span>
-                  <span className="text-red-600 font-medium">
-                    Absent: {absentCount}
-                  </span>
-                  <span className="mx-2">|</span>
-                  <span className="text-yellow-600 font-medium">
-                    Late: {lateCount}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleMarkAllPresent}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm hover:underline"
-              >
-                Mark All as Present
-              </button>
-            </div>
-
-            {/* Search Bar */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search student by name or ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                />
-              </div>
-            </div>
-
-            {/* Student List */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              {/* Table Header */}
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 grid grid-cols-12 gap-4 font-semibold text-sm text-gray-700">
-                <div className="col-span-1">Avatar</div>
-                <div className="col-span-3">Student Name</div>
-                <div className="col-span-3">Index Number</div>
-                <div className="col-span-5">
-                  Attendance Status
-                </div>
-              </div>
-
-              {/* Student Rows */}
-              <div className="divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
-                  <div
-                    key={student.id}
-                    className="px-6 py-4 grid grid-cols-12 gap-4 items-center hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Avatar */}
-                    <div className="col-span-1">
-                      <div className="w-10 h-10 rounded-full overflow-hidden">
-                        <ImageWithFallback
-                          src={student.avatar}
-                          alt={student.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Student Name */}
-                    <div className="col-span-3">
-                      <p className="font-semibold text-gray-900">
-                        {student.name}
-                      </p>
-                    </div>
-
-                    {/* Index Number */}
-                    <div className="col-span-3">
-                      <p className="text-gray-600">
-                        {student.indexNumber}
-                      </p>
-                    </div>
-
-                    {/* Attendance Toggles */}
-                    <div className="col-span-5">
-                      <div className="inline-flex rounded-lg border-2 border-gray-300 overflow-hidden">
-                        {/* Present Button */}
-                        <button
-                          onClick={() =>
-                            handleAttendanceChange(
-                              student.id,
-                              "present",
-                            )
-                          }
-                          className={`flex items-center space-x-2 px-6 py-2 font-medium transition-all ${
-                            student.attendance === "present"
-                              ? "bg-green-600 text-white border-r-2 border-green-700"
-                              : "bg-white text-gray-700 hover:bg-gray-50 border-r-2 border-gray-300"
-                          }`}
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>Present</span>
-                        </button>
-
-                        {/* Absent Button */}
-                        <button
-                          onClick={() =>
-                            handleAttendanceChange(
-                              student.id,
-                              "absent",
-                            )
-                          }
-                          className={`flex items-center space-x-2 px-6 py-2 font-medium transition-all ${
-                            student.attendance === "absent"
-                              ? "bg-red-600 text-white border-r-2 border-red-700"
-                              : "bg-white text-gray-700 hover:bg-gray-50 border-r-2 border-gray-300"
-                          }`}
-                        >
-                          <X className="w-4 h-4" />
-                          <span>Absent</span>
-                        </button>
-
-                        {/* Late Button */}
-                        <button
-                          onClick={() =>
-                            handleAttendanceChange(
-                              student.id,
-                              "late",
-                            )
-                          }
-                          className={`flex items-center space-x-2 px-6 py-2 font-medium transition-all ${
-                            student.attendance === "late"
-                              ? "bg-yellow-500 text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          <Clock className="w-4 h-4" />
-                          <span>Late</span>
-                        </button>
-                      </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">
+                        {session.date}
+                      </span>
+                      <span className="text-gray-600 text-xs font-semibold mt-1">
+                        {session.time}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4">
+                    {session.module_name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm font-bold text-gray-400">
+                    <span className="px-2.5 py-0.5 bg-blue-600 text-white rounded-xl">
+                      {session.module_code}
+                    </span>
+
+                    <span>
+                      Batch{" "}
+                      <span className="text-gray-800 text">
+                        {session.batch}
+                      </span>
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 font-bold mt-2">
+                    {session.degree} <span className="text-gray-400">|</span>{" "}
+                    {session.semester || session.level}
+                  </p>
+                </div>
+              ))}
             </div>
-          </>
-        )}
-
-        {/* Empty State */}
-        {!isLoaded && (
-          <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Student List Loaded
-            </h3>
-            <p className="text-gray-600">
-              Please select a subject and session, then click
-              "Load Student List" to begin marking attendance.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Sticky Footer (Only show when loaded) */}
-      {isLoaded && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 px-8 py-4 shadow-lg">
-          <div className="flex items-center justify-end space-x-4">
-            <button
-              onClick={handleCancel}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              <span>{isSaving ? "Finalizing..." : "Save Attendance Record"}</span>
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ All routes under /api/attendance.
 
 from __future__ import annotations
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from typing import Optional, List
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ import numpy as np
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, String, func
+from sqlalchemy import cast, String, func, and_
 
 import crud
 import models
@@ -172,6 +172,7 @@ def get_attendance_history(
     results = query.offset(offset).limit(limit).all()
 
     records_out = []
+    tz_lk = timezone(timedelta(hours=5, minutes=30))
     for r, s, cs, m in results:
         # Get Time In / Time Out from logs for this specific session
         first_in = db.query(models.AttendanceLog).filter(
@@ -186,6 +187,14 @@ def get_attendance_history(
             models.AttendanceLog.status.in_(['exited'])
         ).order_by(models.AttendanceLog.timestamp.desc()).first()
 
+        time_in_str = "--"
+        if first_in:
+            time_in_str = first_in.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk).strftime("%I:%M %p")
+            
+        time_out_str = "--"
+        if last_out:
+            time_out_str = last_out.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk).strftime("%I:%M %p")
+
         records_out.append({
             "id": r.id,
             "date": cs.start_time.strftime("%Y-%m-%d"),
@@ -193,8 +202,8 @@ def get_attendance_history(
             "indexNumber": s.index_number,
             "subject": m.module_name if m else cs.subject_id,
             "module_code": m.module_code if m else None,
-            "timeIn": first_in.timestamp.strftime("%I:%M %p") if first_in else "--",
-            "timeOut": last_out.timestamp.strftime("%I:%M %p") if last_out else "--",
+            "timeIn": time_in_str,
+            "timeOut": time_out_str,
             "status": r.status,
             "photoUrl": s.profile_picture
         })
@@ -679,8 +688,6 @@ def get_session_summary(session_id: int, db: Session = Depends(get_db)):
     logs = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.session_id == session_id
     ).all()
-    
-    # Map student_id to their status
     attendance_map = {}
     for log in logs:
         if log.status == 'entered':
@@ -697,14 +704,28 @@ def get_session_summary(session_id: int, db: Session = Depends(get_db)):
         if tt_record and student.intake != tt_record.batch_id:
             continue
 
-        status = attendance_map.get(sid, 'absent')
+        # Map student_id to their status from AttendanceRecord if finalized
+        record = db.query(models.AttendanceRecord).filter_by(
+            student_id=sid, session_id=session_id
+        ).first()
         
+        status = record.status if record else attendance_map.get(sid, 'absent')
+        reason = record.reason if record else None
+
+        # Get logs for times
+        s_logs = [l for l in logs if l.student_id == sid]
+        in_log = next((l for l in s_logs if l.status in ['entered', 'Present']), None)
+        out_log = next(reversed([l for l in s_logs if l.status == 'exited']), None)
+
         students_data.append({
             "id": student.id,
             "name": student.name,
             "indexNumber": student.index_number,
             "avatar": student.profile_picture or "https://via.placeholder.com/150",
-            "attendance": status
+            "status": status,
+            "reason": reason,
+            "in_time": in_log.timestamp.strftime("%I:%M %p") if in_log else None,
+            "out_time": out_log.timestamp.strftime("%I:%M %p") if out_log else None
         })
         
     return students_data
@@ -769,37 +790,49 @@ def get_session_review(session_id: int, db: Session = Depends(get_db)):
     else:
         session, timetable, module = query
 
-    records = db.query(models.AttendanceRecord).filter(
-        models.AttendanceRecord.session_id == session_id
+    # 2. Outer Join Students with AttendanceRecords to include absent students
+    target_batch = timetable.batch_id if timetable else session.batch_id
+    
+    results = db.query(
+        models.Student,
+        models.AttendanceRecord
+    ).outerjoin(
+        models.AttendanceRecord,
+        and_(
+            models.Student.id == models.AttendanceRecord.student_id,
+            models.AttendanceRecord.session_id == session_id
+        )
+    ).filter(
+        func.trim(models.Student.intake) == func.trim(target_batch)
     ).all()
     
     res = []
-    for r in records:
+    for student, record in results:
+        # Fetch logs for precise time tracking
         first_in = db.query(models.AttendanceLog).filter(
             models.AttendanceLog.session_id == session_id,
-            models.AttendanceLog.student_id == r.student_id,
+            models.AttendanceLog.student_id == student.id,
             models.AttendanceLog.status.ilike("%in%") | models.AttendanceLog.status.in_(['entered', 'late', 'present'])
         ).order_by(models.AttendanceLog.timestamp.asc()).first()
         
         last_out = db.query(models.AttendanceLog).filter(
             models.AttendanceLog.session_id == session_id,
-            models.AttendanceLog.student_id == r.student_id,
+            models.AttendanceLog.student_id == student.id,
             models.AttendanceLog.status.ilike("%out%") | models.AttendanceLog.status.in_(['exited'])
         ).order_by(models.AttendanceLog.timestamp.desc()).first()
         
-        # Return strict ISO format with Z for UTC explicitly
         time_in_str = first_in.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if first_in else None
         time_out_str = last_out.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ") if last_out else None
 
         res.append({
-            "student_id": r.student_id,
-            "name": r.student.name,
-            "indexNumber": r.student.index_number,
-            "avatar": r.student.profile_picture,
+            "student_id": student.id,
+            "name": student.name,
+            "indexNumber": student.index_number,
+            "avatar": student.profile_picture,
             "timeIn": time_in_str,
             "timeOut": time_out_str,
-            "duration": r.total_duration_minutes,
-            "status": r.status
+            "duration": record.total_duration_minutes if record else 0,
+            "status": record.status if record else "Absent"
         })
         
     # Calculate total scheduled minutes from timetable
@@ -828,6 +861,7 @@ def get_session_review(session_id: int, db: Session = Depends(get_db)):
 class FinalizeRecord(BaseModel):
     student_id: int
     status: str
+    reason: Optional[str] = None
 
 class FinalizePayload(BaseModel):
     session_id: int
@@ -847,6 +881,8 @@ def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db))
         
         if record:
             record.status = item.status
+            if item.reason is not None:
+                record.reason = item.reason
             record.calculated_at = datetime.utcnow()
         else:
             # Should not happen if calculation ran, but handle for safety
@@ -854,7 +890,8 @@ def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db))
                 student_id=item.student_id,
                 session_id=payload.session_id,
                 total_duration_minutes=0,
-                status=item.status
+                status=item.status,
+                reason=item.reason
             )
             db.add(new_record)
             
@@ -862,6 +899,33 @@ def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db))
     session.status = "Completed"
     db.commit()
     return {"message": "Attendance records finalized successfully"}
+
+@router.post("/manual-override")
+def manual_override_attendance(payload: schemas.ManualOverridePayload, db: Session = Depends(get_db)):
+    """Batch update or insert manual attendance overrides."""
+    for item in payload.records:
+        record = db.query(models.AttendanceRecord).filter_by(
+            student_id=item.student_id, session_id=item.session_id
+        ).first()
+        
+        if record:
+            record.status = item.status
+            record.reason = item.reason
+            # Optional: marking_status = 'Manual Override' if you add that column
+            record.calculated_at = datetime.utcnow()
+        else:
+            # UPSERT: If record doesn't exist (e.g. late enrollment)
+            new_record = models.AttendanceRecord(
+                student_id=item.student_id,
+                session_id=item.session_id,
+                total_duration_minutes=0, # Manual entries usually don't have log minutes
+                status=item.status,
+                reason=item.reason
+            )
+            db.add(new_record)
+            
+    db.commit()
+    return {"message": f"Successfully updated {len(payload.records)} records."}
 
 @router.get("/sessions")
 def get_attendance_sessions(
@@ -889,3 +953,250 @@ def get_attendance_sessions(
             "date": date_str
         })
     return {"sessions": result}
+
+# Student Correction Requests 
+
+from auth import get_current_user
+
+import shutil
+import uuid
+import os
+
+# Create uploads directory if it doesn't exist
+os.makedirs("uploads/evidence", exist_ok=True)
+
+@router.post("/student/requests", response_model=schemas.CorrectionRequestResponse)
+async def submit_correction_request(
+    session_id: int = Form(...),
+    reason_type: str = Form(...),
+    description: str = Form(...),
+    evidence: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Allows a student to submit a correction request with optional evidence file."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can submit correction requests")
+        
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found for this user account")
+
+    evidence_url = None
+    if evidence:
+        # Generate a unique filename to prevent overwrites
+        file_extension = evidence.filename.split(".")[-1]
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = f"uploads/evidence/{unique_filename}"
+        
+        # Save the file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(evidence.file, buffer)
+        
+        # Store the accessible URL
+        evidence_url = f"/uploads/evidence/{unique_filename}"
+        
+    new_request = models.CorrectionRequest(
+        student_id=student.index_number,
+        session_id=session_id,
+        reason_type=reason_type,
+        description=description,
+        evidence_url=evidence_url
+    )
+    db.add(new_request)
+    db.commit()
+    db.refresh(new_request)
+    return new_request
+
+@router.get("/lecturer/requests", response_model=List[schemas.SubjectRequestsSummary])
+def get_correction_requests_grouped(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Allows a lecturer to view correction requests grouped by subject/batch."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Only lecturers can view correction requests")
+        
+    # 1. Join CorrectionRequest -> Timetable (using session_id) -> Module
+    results = db.query(
+        models.CorrectionRequest,
+        models.Timetable, 
+        models.Module     
+    ).outerjoin(
+        models.Timetable, models.CorrectionRequest.session_id == models.Timetable.id
+    ).outerjoin(
+        models.Module, models.Timetable.module_code == models.Module.module_code
+    ).order_by(models.CorrectionRequest.submitted_at.desc()).all()
+
+    # 2. Grouping Logic
+    grouped_data = {}
+    
+    for req, timetable, module in results:
+        # Extract data safely from joined tables
+        mod_code = getattr(timetable, 'module_code', 'UNKNOWN')
+        batch = getattr(timetable, 'batch_id', 'Unknown Batch')
+        
+        mod_name = getattr(module, 'module_name', 'Unknown Subject')
+        degree = getattr(module, 'degree', '')
+        
+        # Safely try to get 'semester', if it fails, try 'level'. 
+        raw_semester = getattr(module, 'semester', None)
+        if not raw_semester:
+             raw_level = getattr(module, 'level', '')
+             semester_val = f"Level {raw_level}" if raw_level else ""
+        else:
+             semester_val = f"Semester {raw_semester}" if str(raw_semester).isdigit() else str(raw_semester)
+        
+        group_key = f"{mod_code}_{batch}"
+        
+        if group_key not in grouped_data:
+            grouped_data[group_key] = {
+                "subject_id": mod_code, 
+                "subject_code": mod_code,
+                "subject_name": mod_name,
+                "batch": str(batch),
+                "degree": str(degree),
+                "semester": semester_val,
+                "pending_count": 0,
+                "requests": []
+            }
+        
+        if req.status == "Pending":
+            grouped_data[group_key]["pending_count"] += 1
+            
+        grouped_data[group_key]["requests"].append(req)
+
+    return list(grouped_data.values())
+
+@router.put("/lecturer/requests/{request_id}/status")
+def update_request_status(
+    request_id: int, 
+    payload: schemas.CorrectionRequestUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Lecturer approves or rejects a request. If approved, the master AttendanceRecord is updated."""
+    if current_user.role != "Lecturer":
+        raise HTTPException(status_code=403, detail="Only lecturers can update request status")
+        
+    req = db.query(models.CorrectionRequest).filter(models.CorrectionRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if payload.status not in ["Approved", "Rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    req.status = payload.status
+    
+    # Save the rejection reason if provided
+    if payload.status == "Rejected" and payload.rejection_reason:
+        req.rejection_reason = payload.rejection_reason
+    elif payload.status == "Approved":
+        req.rejection_reason = None # Clear if it was previously rejected and now approved
+
+    # If approved, update the master attendance record
+    if payload.status == "Approved":
+        # 1. MAPPING FIX: Find the correct class_session.id
+        # req.session_id in correction_requests refers to the Timetable entry ID.
+        # Based on the system architecture, ClassSession.batch_id stores this Timetable ID as a string.
+        actual_class_session = db.query(models.ClassSession).filter(
+            models.ClassSession.batch_id == str(req.session_id)
+        ).first()
+
+        if actual_class_session:
+            # 2. Find the student's internal integer ID
+            student = db.query(models.Student).filter(
+                models.Student.index_number == req.student_id
+            ).first()
+
+            if student:
+                # 3. Check if an attendance record already exists for this exact class session
+                existing_att = db.query(models.AttendanceRecord).filter(
+                    models.AttendanceRecord.student_id == student.id,
+                    models.AttendanceRecord.session_id == actual_class_session.id
+                ).first()
+
+                if existing_att:
+                    # Update existing record (e.g. from Absent to Present)
+                    existing_att.status = "Present"
+                    existing_att.reason = f"Excused: {req.reason_type}"
+                    existing_att.calculated_at = datetime.now()
+                else:
+                    # Create new attendance record using the correctly mapped actual_class_session.id
+                    new_att = models.AttendanceRecord(
+                        student_id=student.id,
+                        session_id=actual_class_session.id, # <-- Correctly mapped ID
+                        total_duration_minutes=0,
+                        status="Present",
+                        reason=f"Excused: {req.reason_type}"
+                    )
+                    db.add(new_att)
+            else:
+                 raise HTTPException(status_code=404, detail="Student record not found for this request")
+        else:
+            print(f"DEBUG: No class_session found matching timetable ID {req.session_id}")
+            # We don't raise 404 here yet as there might be orphan requests during testing, 
+            # but in production, this should ideally be handled.
+
+    try:
+        db.commit()
+        return {"message": f"Request {payload.status.lower()} successfully"}
+    except Exception as e:
+        db.rollback()
+        print(f"DATABASE ERROR during request approval: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update database records")
+
+@router.get("/student/requests", response_model=List[schemas.CorrectionRequestResponse])
+def get_student_correction_requests(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Allows a student to view their own correction requests."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can view their requests here")
+        
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found")
+        
+    return db.query(models.CorrectionRequest).filter(
+        models.CorrectionRequest.student_id == student.index_number
+    ).order_by(models.CorrectionRequest.submitted_at.desc()).all()
+
+@router.delete("/student/requests/{request_id}")
+def delete_correction_request(
+    request_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Allows a student to delete their own pending correction request."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can delete their requests")
+        
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found")
+
+    req = db.query(models.CorrectionRequest).filter(
+        models.CorrectionRequest.id == request_id,
+        models.CorrectionRequest.student_id == student.index_number
+    ).first()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found or you don't have permission to delete it")
+    
+    if req.status != "Pending":
+        raise HTTPException(status_code=400, detail="Only pending requests can be deleted")
+
+    # Delete the physical file if evidence_url exists
+    if req.evidence_url:
+        file_path = req.evidence_url.lstrip("/") # Remove leading slash
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Failed to delete file: {e}")
+
+    db.delete(req)
+    db.commit()
+    return {"message": "Request deleted successfully"}

@@ -6,7 +6,7 @@ Keeping these separate from SQLAlchemy models avoids tight coupling.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 
@@ -185,6 +185,52 @@ class ManualAttendanceSchema(BaseModel):
     action_type: str      # 'IN' or 'OUT'
 
 
+class ManualOverrideRecord(BaseModel):
+    student_id: int
+    session_id: int
+    status: str
+    reason: Optional[str] = None
+
+class ManualOverridePayload(BaseModel):
+    records: List[ManualOverrideRecord]
+
 class CoverRequestUpdate(BaseModel):
     reason: str
+
+# Correction Requests
+
+class CorrectionRequestCreate(BaseModel):
+    session_id: int
+    reason_type: str
+    description: str
+    evidence_url: Optional[str] = None
+
+class CorrectionRequestUpdate(BaseModel):
+    status: str # 'Approved' or 'Rejected'
+    rejection_reason: Optional[str] = None
+
+class CorrectionRequestResponse(BaseModel):
+    id: int
+    student_id: str
+    session_id: int
+    reason_type: str
+    description: str
+    evidence_url: Optional[str]
+    status: str
+    rejection_reason: Optional[str] = None
+    submitted_at: datetime
+
+    model_config = {"from_attributes": True}
+
+class SubjectRequestsSummary(BaseModel):
+    subject_id: str
+    subject_code: str
+    subject_name: str
+    batch: str
+    degree: str
+    semester: str
+    pending_count: int
+    requests: List[CorrectionRequestResponse]
+
+    model_config = {"from_attributes": True}
 

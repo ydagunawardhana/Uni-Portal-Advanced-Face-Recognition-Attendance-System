@@ -240,10 +240,24 @@ export default function PostSessionReview() {
     try {
       const payload = {
         session_id: sessionId,
-        records: records.map((r) => ({
-          student_id: r.student_id,
-          status: attendanceDecisions[r.indexNumber] || "Absent",
-        })),
+        records: records.map((r) => {
+          const finalStatus = attendanceDecisions[r.indexNumber] || "Absent";
+          let reason = null;
+
+          if (finalStatus === "Absent") {
+            const evalStatus = evaluateStudentStatus(r, dynamicTotalMinutes);
+            if (evalStatus === "Flagged") reason = "Flagged: No Exit Log";
+            else if (evalStatus === "Auto-Absent")
+              reason = "Insufficient Duration";
+            else reason = "Manually Marked Absent";
+          }
+
+          return {
+            student_id: r.student_id,
+            status: finalStatus,
+            reason: reason,
+          };
+        }),
       };
 
       const res = await fetch(`${API_BASE}/api/attendance/finalize`, {
@@ -260,7 +274,9 @@ export default function PostSessionReview() {
       // Add a slight artificial delay (1.5 seconds) so the loading state is visible to the user
       await new Promise((resolve) => setTimeout(resolve, 2500));
 
-      toast.success("Attendance confirmed and saved successfully!", { id: loadingToast });
+      toast.success("Attendance confirmed and saved successfully!", {
+        id: loadingToast,
+      });
 
       // Redirect to the My Subjects page instead of History
       navigate("/lecturer/my-subjects");
@@ -453,7 +469,7 @@ export default function PostSessionReview() {
               }`}
             >
               <div className="bg-red-100 p-3 rounded-xl shrink-0 flex items-center justify-center">
-                <AlertCircle className="w-7 h-7 text-red-600" />
+                <AlertCircle className="w-7 h-7 text-red-600 animate-pulse" />
               </div>
               <div>
                 <p className="text-md font-bold text-gray-600 mb-0.5">
@@ -660,22 +676,31 @@ export default function PostSessionReview() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          {calculatedStatus === "Flagged" && (
-                            <span className="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-xl text-sm font-bold border border-orange-200 inline-flex items-center">
-                              <AlertCircle className="w-4 h-4 mr-2" /> Flagged
+                          {record.status === "Absent" ? (
+                            <span className="bg-red-100 text-red-600 px-2.5 py-1 rounded-xl text-sm font-bold border border-red-200 inline-flex items-center">
+                              <XCircle className="w-4 h-4 mr-2" /> Absent
                             </span>
-                          )}
-                          {calculatedStatus === "Auto-Present" && (
-                            <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-xl text-sm font-bold border border-green-200 inline-flex items-center">
-                              <CheckCircle className="w-4 h-4 mr-2" />{" "}
-                              Auto-Marked
-                            </span>
-                          )}
-                          {calculatedStatus === "Auto-Absent" && (
-                            <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-xl text-sm font-bold border border-red-200 inline-flex items-center">
-                              <XCircle className="w-4 h-4 mr-2" /> Time
-                              Insufficient
-                            </span>
+                          ) : (
+                            <>
+                              {calculatedStatus === "Flagged" && (
+                                <span className="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-xl text-sm font-bold border border-orange-200 inline-flex items-center">
+                                  <AlertCircle className="w-4 h-4 mr-2" />{" "}
+                                  Flagged
+                                </span>
+                              )}
+                              {calculatedStatus === "Auto-Present" && (
+                                <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-xl text-sm font-bold border border-green-200 inline-flex items-center">
+                                  <CheckCircle className="w-4 h-4 mr-2" />{" "}
+                                  Auto-Marked
+                                </span>
+                              )}
+                              {calculatedStatus === "Auto-Absent" && (
+                                <span className="bg-red-100 text-red-600 px-2.5 py-1 rounded-xl text-sm font-bold border border-red-200 inline-flex items-center">
+                                  <XCircle className="w-4 h-4 mr-2" /> Time
+                                  Insufficient
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -730,8 +755,8 @@ export default function PostSessionReview() {
               onClick={handleFinalize}
               disabled={isSaving}
               className={`px-6 py-2.5 rounded-lg text-white font-semibold transition-all duration-200 flex items-center justify-center min-w-[250px] cursor-pointer ${
-                isSaving 
-                  ? "bg-blue-600 cursor-not-allowed" 
+                isSaving
+                  ? "bg-blue-600 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"
               }`}
             >

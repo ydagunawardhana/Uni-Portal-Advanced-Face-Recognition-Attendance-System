@@ -206,7 +206,7 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// Main Component 
 export default function PendingRegistrations({
   onProcess,
 }: PendingRegistrationsProps) {
@@ -361,7 +361,7 @@ export default function PendingRegistrations({
       </div>
 
       {/* Main Table Container */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border-2 border-dashed border-gray-300 overflow-hidden">
         {/* Table */}
         <div className="overflow-x-auto">
           {loading ? (
@@ -372,12 +372,12 @@ export default function PendingRegistrations({
               </p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-24 text-center mb-5">
-              <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-2">
+            <div className="py-20 text-center mb-5">
+              <div className="w-20 h-20 bg-gray-100 animate-pulse text-gray-500 border rounded-full flex items-center justify-center mx-auto mb-2">
                 <AlertTriangle size={38} />
               </div>
               <p className="text-gray-600 font-bold text-lg">Queue is Empty</p>
-              <p className="text-gray-400 text-sm max-w-xs mx-auto mt-1.5">
+              <p className="text-gray-500 text-sm max-w-xs mx-auto mt-2 font-semibold">
                 {search
                   ? "No results match your search."
                   : "No pending applications found."}

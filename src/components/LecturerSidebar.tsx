@@ -12,6 +12,7 @@ import {
   CheckSquare,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
 } from "lucide-react";
 
 interface LecturerSidebarProps {
@@ -56,6 +57,11 @@ export default function LecturerSidebar({
       icon: History,
     },
     { id: "subjects", label: "My Subjects", icon: BookOpen },
+    {
+      id: "correction-requests",
+      label: "Attendance Requests",
+      icon: FileText,
+    },
     {
       id: "timetable",
       label: "My Timetable",

@@ -25,6 +25,9 @@ interface StudentRecord {
   intake?: string;
   total_sessions?: number;
   attended_sessions?: number;
+  in_time?: string;
+  out_time?: string;
+  reason?: string;
 }
 
 interface Subject {
@@ -33,6 +36,9 @@ interface Subject {
   students_enrolled?: number;
   enrolled_students?: number;
   batch?: string;
+  degree?: string;
+  semester?: string;
+  level?: string;
 }
 
 interface AttendanceReportsProps {
@@ -73,8 +79,17 @@ export default function AttendanceReports({
     setIsLoading(true);
     try {
       const token = localStorage.getItem("lecturerToken");
+      // Build query params dynamically to prevent date filtering when "Overall" is selected
+      const params = new URLSearchParams();
+      if (subject.batch) params.append("batch", subject.batch);
+      
+      if (selectedSessionId !== "all") {
+        params.append("session_id", selectedSessionId);
+        if (fromDate) params.append("date", fromDate);
+      }
+
       const res = await fetch(
-        `http://localhost:8000/api/lecturer/attendance/${subject.module_code}?date=${fromDate}${subject.batch ? `&batch=${subject.batch}` : ""}${selectedSessionId !== "all" ? `&session_id=${selectedSessionId}` : ""}`,
+        `http://localhost:8000/api/lecturer/attendance/${subject.module_code}?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -104,8 +119,10 @@ export default function AttendanceReports({
   };
 
   useEffect(() => {
-    fetchAttendance();
-  }, [subject?.module_code, fromDate, selectedSessionId]);
+    if (subject?.module_code) {
+      fetchAttendance();
+    }
+  }, [subject?.module_code, fromDate, selectedSessionId, riskFilter]);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -237,17 +254,19 @@ export default function AttendanceReports({
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance Report");
 
-      // 1. Column Widths (Wider layout to accommodate side-by-side tables)
+      const isOverall = selectedSessionId === "all";
       worksheet.columns = [
         { width: 18 }, // A: Index / Labels
         { width: 35 }, // B: Names / Values
-        { width: 20 }, // C: Total Sessions / Date
-        { width: 5 }, // D: (Spacer)
-        { width: 25 }, // E: Risk Labels / Status
-        { width: 18 }, // F: Risk Counts / Overall %
+        { width: 15 }, // C: Total Sessions / Date
+        { width: 0 },  // D: (Spacer)
+        { width: 20 }, // E: Risk Labels / Status / Attended
+        { width: 18 }, // F: Risk Counts / Overall % / In Time
+        { width: 18 }, // G: Out Time (Only for Session View)
+        { width: 30 }  // H: Reason (Only for Session View)
       ];
 
-      const isOverall = selectedSessionId === "all";
+      const maxCol = isOverall ? "F" : "H"; // Dynamic merging limit
 
       // Calculate Stats
       const enrolledCount = students.length;
@@ -274,7 +293,7 @@ export default function AttendanceReports({
       ).length;
 
       // --- Section 1: Main Titles ---
-      worksheet.mergeCells("A1", "F1");
+      worksheet.mergeCells("A1", `${maxCol}1`);
       const titleCell = worksheet.getCell("A1");
       titleCell.value = `Attendance Report: ${subject?.module_name || "Module"} - Batch ${subject?.batch || ""}`;
       titleCell.font = {
@@ -290,7 +309,7 @@ export default function AttendanceReports({
       };
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-      worksheet.mergeCells("A2", "F2");
+      worksheet.mergeCells("A2", `${maxCol}2`);
       worksheet.getCell("A2").value =
         `Generated on: ${new Date().toLocaleDateString()} | View: ${isOverall ? "Overall Summary" : `Session on ${fromDate}`}`;
       worksheet.getCell("A2").font = { italic: true };
@@ -306,14 +325,18 @@ export default function AttendanceReports({
 
       setInfo("A4", "Module Code:", true);
       setInfo("B4", subject?.module_code || "N/A");
-      setInfo("A5", "Lecturer:", true);
-      setInfo("B5", localStorage.getItem("lecturerName") || "Dr. Mark Dixon");
-      setInfo("A6", "Total Enrolled:", true);
-      setInfo("B6", enrolledCount);
-      setInfo("A7", "Total Present:", true);
-      setInfo("B7", presentCount);
-      setInfo("A8", "Total Absent:", true);
-      setInfo("B8", absentCount);
+      setInfo("A5", "Degree:", true);
+      setInfo("B5", subject?.degree || "N/A");
+      setInfo("A6", "Semester:", true);
+      setInfo("B6", subject?.semester || subject?.level || "N/A");
+      setInfo("A7", "Lecturer:", true);
+      setInfo("B7", localStorage.getItem("lecturerName") || "Dr. Mark Dixon");
+      setInfo("A8", "Total Enrolled:", true);
+      setInfo("B8", enrolledCount);
+      setInfo("A9", "Total Present:", true);
+      setInfo("B9", presentCount);
+      setInfo("A10", "Total Absent:", true);
+      setInfo("B10", absentCount);
 
       // Right Side: Risk Summary Table
       worksheet.getCell("E4").value = "Risk Category";
@@ -362,7 +385,7 @@ export default function AttendanceReports({
       addRiskRow(7, "Critical (20% - 49%)", criticalCount, "FFF97316");
       addRiskRow(8, "Fail (< 20%)", failCount, "FFDC2626");
 
-      // --- Section 3: Main Student Table (Starts Row 11) ---
+      // --- Section 3: Main Student Table ---
       const headerRowValues = isOverall
         ? [
             "Index Number",
@@ -372,9 +395,18 @@ export default function AttendanceReports({
             "Attended",
             "Overall %",
           ] // Blank string for Spacer Col D
-        : ["Index Number", "Student Name", "Date", "", "Status", "Overall %"];
+        : [
+            "Index Number",
+            "Student Name",
+            "Date",
+            "",
+            "Status",
+            "In Time",
+            "Out Time",
+            "Reason / Excuse",
+          ];
 
-      const headerRow = worksheet.getRow(11);
+      const headerRow = worksheet.getRow(13);
       headerRow.values = headerRowValues;
       headerRow.eachCell((cell, colNumber) => {
         if (colNumber === 4) return; // Skip Spacer
@@ -394,8 +426,19 @@ export default function AttendanceReports({
       });
 
       students.forEach((record, index) => {
-        const rowIndex = 12 + index;
+        const rowIndex = 14 + index;
         const row = worksheet.getRow(rowIndex);
+
+        // Helper to get reason safely
+        const getReason = () => {
+          if (
+            record.status?.toLowerCase() === "absent" ||
+            record.status?.toLowerCase() === "flagged"
+          ) {
+            return record.reason || "Manually marked absent";
+          }
+          return "-";
+        };
 
         row.values = isOverall
           ? [
@@ -412,7 +455,9 @@ export default function AttendanceReports({
               fromDate,
               "",
               record.status || "Absent",
-              `${parseFloat(String(record.attendance_percentage || 0)).toFixed(1)}%`,
+              record.in_time || "--:--",
+              record.out_time || "--:--",
+              getReason(),
             ];
 
         row.eachCell((cell, colNumber) => {
@@ -428,21 +473,31 @@ export default function AttendanceReports({
             horizontal: colNumber > 2 ? "center" : "left",
           };
 
-          if (!isOverall && colNumber === 5) {
-            // Status Color
-            const status = cell.value?.toString().toLowerCase();
-            if (status === "present")
-              cell.font = { color: { argb: "FF16A34A" }, bold: true };
-            if (status === "absent")
-              cell.font = { color: { argb: "FFDC2626" }, bold: true };
+          // Specific formatting for Single Session View
+          if (!isOverall) {
+            if (colNumber === 5) {
+              // Status Column
+              const status = cell.value?.toString().toLowerCase();
+              if (status === "present")
+                cell.font = { color: { argb: "FF16A34A" }, bold: true };
+              if (status === "absent" || status === "flagged")
+                cell.font = { color: { argb: "FFDC2626" }, bold: true };
+            }
+            if (colNumber === 8 && cell.value !== "-") {
+              // Reason Column (Highlight issues in red text)
+              cell.font = { color: { argb: "FFDC2626" }, italic: true };
+            }
           }
-          if (colNumber === 6) {
-            // Percentage Color
-            const percentage = parseFloat(
-              cell.value?.toString().replace("%", "") || "0",
-            );
-            if (percentage < 70)
-              cell.font = { color: { argb: "FFDC2626" }, bold: true };
+          // Specific formatting for Overall View
+          else {
+            if (colNumber === 6) {
+              // Percentage Column
+              const percentage = parseFloat(
+                cell.value?.toString().replace("%", "") || "0",
+              );
+              if (percentage < 70)
+                cell.font = { color: { argb: "FFDC2626" }, bold: true };
+            }
           }
         });
       });
@@ -739,9 +794,23 @@ export default function AttendanceReports({
                     </th>
                   )}
 
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
-                    Overall Attendance %
-                  </th>
+                  {selectedSessionId === "all" ? (
+                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
+                      Overall Attendance %
+                    </th>
+                  ) : (
+                    <>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 tracking-wider">
+                        In Time
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 tracking-wider">
+                        Out Time
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 tracking-wider">
+                        Reason / Excuse
+                      </th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -827,44 +896,76 @@ export default function AttendanceReports({
                           </td>
                         )}
 
-                        {/* Overall Percentage */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 max-w-[100px] h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-500 ${
+                        {/* Overall Percentage OR Session Details */}
+                        {selectedSessionId === "all" ? (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 max-w-[100px] h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${
+                                    (subjectDetails.total_sessions_held === 0
+                                      ? 0
+                                      : student.attendance_percentage) >= 80
+                                      ? "bg-green-500"
+                                      : "bg-red-500"
+                                  }`}
+                                  style={{
+                                    width: `${subjectDetails.total_sessions_held === 0 ? 0 : student.attendance_percentage}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <span
+                                className={`text-sm font-bold ${
                                   (subjectDetails.total_sessions_held === 0
                                     ? 0
                                     : student.attendance_percentage) >= 80
-                                    ? "bg-green-500"
-                                    : "bg-red-500"
+                                    ? "text-green-700"
+                                    : "text-red-600"
                                 }`}
-                                style={{
-                                  width: `${subjectDetails.total_sessions_held === 0 ? 0 : student.attendance_percentage}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span
-                              className={`text-sm font-bold ${
-                                (subjectDetails.total_sessions_held === 0
+                              >
+                                {subjectDetails.total_sessions_held === 0
                                   ? 0
-                                  : student.attendance_percentage) >= 80
-                                  ? "text-green-700"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {subjectDetails.total_sessions_held === 0
+                                  : student.attendance_percentage}
+                                %
+                              </span>
+                              {(subjectDetails.total_sessions_held === 0
                                 ? 0
-                                : student.attendance_percentage}
-                              %
-                            </span>
-                            {(subjectDetails.total_sessions_held === 0
-                              ? 0
-                              : student.attendance_percentage) < 80 && (
-                              <AlertTriangle className="w-5 h-5 text-red-500 animate-pulse" />
-                            )}
-                          </div>
-                        </td>
+                                : student.attendance_percentage) < 80 && (
+                                <AlertTriangle className="w-5 h-5 text-red-500 animate-pulse" />
+                              )}
+                            </div>
+                          </td>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 text-center text-sm text-gray-700 font-medium">
+                              {student.in_time ? student.in_time : '----'}
+                            </td>
+                            <td className="px-6 py-4 text-center text-sm text-gray-700 font-medium">
+                              {student.out_time ? student.out_time : '----'}
+                            </td>
+                            <td className="px-6 py-4 text-sm whitespace-nowrap text-center">
+                              {student.reason &&
+                              student.reason.trim() !== "" &&
+                              student.reason !== "-" ? (
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold shadow-sm ${
+                                    student.reason.toLowerCase().includes("manual")
+                                      ? "bg-purple-100 text-purple-700 border border-purple-200 rounded-xl"
+                                      : student.reason
+                                          .toLowerCase()
+                                          .includes("insufficient")
+                                        ? "bg-orange-50 text-orange-700 border border-orange-200 rounded-xl"
+                                        : "bg-red-50 text-red-600 border border-red-200 rounded-xl"
+                                  }`}
+                                >
+                                  {student.reason}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 font-medium">-</span>
+                              )}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })

@@ -44,6 +44,8 @@ dataset/
 /uploads/
 *.jpg
 *.png
+*.pdf
+*.jpeg
 
 # Ignore Pickle files
 *.pkl
