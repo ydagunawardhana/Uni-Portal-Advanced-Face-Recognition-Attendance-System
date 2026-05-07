@@ -29,6 +29,9 @@ interface CorrectionRequest {
   evidence_url: string | null;
   status: string;
   submitted_at: string;
+  student_name: string;
+  session_date: string;
+  session_time: string;
 }
 
 interface SubjectGroup {
@@ -53,10 +56,7 @@ const LecturerAttendanceRequests = () => {
   const [degreeFilter, setDegreeFilter] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
 
-  // Modal State
-  const [modalType, setModalType] = useState<"Approve" | "Reject" | null>(null);
-  const [activeRequestId, setActiveRequestId] = useState<number | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
+  // Modal State removed - actions moved to Admin portal
 
   const fetchRequests = async () => {
     try {
@@ -95,82 +95,7 @@ const LecturerAttendanceRequests = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openModal = (requestId: number, type: "Approve" | "Reject") => {
-    setActiveRequestId(requestId);
-    setModalType(type);
-    setRejectReason(""); // Reset reason
-  };
 
-  const closeModal = () => {
-    setModalType(null);
-    setActiveRequestId(null);
-    setRejectReason("");
-  };
-
-  const confirmAction = async () => {
-    if (!activeRequestId || !modalType) return;
-
-    if (modalType === "Reject" && !rejectReason.trim()) {
-      toast.error("Please provide a reason for rejection.");
-      return;
-    }
-
-    const toastId = toast.loading(`Marking as ${modalType}...`);
-
-    try {
-      const token = localStorage.getItem("lecturerToken");
-
-      // FIX: Map "Approve" -> "Approved" and "Reject" -> "Rejected"
-      const apiStatus = modalType === "Approve" ? "Approved" : "Rejected";
-
-      // Build payload dynamically to avoid sending 'null' fields
-      const payload: { status: string; rejection_reason?: string } = {
-        status: apiStatus,
-      };
-
-      // Only attach rejection_reason if it's a Reject action
-      if (modalType === "Reject") {
-        payload.rejection_reason = rejectReason;
-      }
-
-      const response = await fetch(
-        `http://localhost:8000/api/attendance/lecturer/requests/${activeRequestId}/status`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      // Try to parse the error message from the backend if it fails
-      if (!response.ok) {
-        let errorDetail = "Failed to update status";
-        try {
-          const errData = await response.json();
-          errorDetail = errData.detail || errorDetail;
-        } catch (e) {}
-        throw new Error(errorDetail);
-      }
-
-      // ARTIFICIAL DELAY: Wait 2 seconds to show the loading animation gracefully
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast.success(`Request ${apiStatus.toLowerCase()} successfully!`, {
-        id: toastId,
-      });
-
-      closeModal();
-      fetchRequests(); // Refresh data
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Failed to update the request.", {
-        id: toastId,
-      });
-    }
-  };
 
   // Updated Filter Logic for Cards
   const filteredGroups = useMemo(() => {
@@ -203,8 +128,8 @@ const LecturerAttendanceRequests = () => {
                 Filter Subjects & Requests
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Use the options below to quickly find specific modules, batches,
-                or degrees.
+                View attendance correction appeals submitted by students for
+                your modules.
               </p>
             </div>
 
@@ -224,6 +149,19 @@ const LecturerAttendanceRequests = () => {
               />
               Refresh Data
             </button>
+          </div>
+
+          <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+            <Info className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="text-sm font-bold text-blue-800">Read-Only View</h4>
+              <p className="text-sm font-semibold text-blue-700 mt-0.5 leading-relaxed">
+                This page is for your reference to track student absences and
+                excuses. Please note that all attendance correction requests are
+                reviewed, approved, or rejected directly by the{" "}
+                <strong>University Administration</strong>.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col-3 gap-4 mb-6">
@@ -396,7 +334,7 @@ const LecturerAttendanceRequests = () => {
             </button>
 
             <div className="flex flex-col">
-              <h3 className="font-bold text-2xl text-blue-600 mb-2">
+              <h3 className="font-bold text-2xl text-blue-700 mb-2">
                 {selectedGroup.subject_name}
               </h3>
               <div className="flex items-center gap-2 text-md text-gray-600 font-bold">
@@ -425,11 +363,11 @@ const LecturerAttendanceRequests = () => {
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-100 text-gray-700 text-sm font-bold tracking-wider">
                   <th className="p-4 font-bold">Student</th>
+                  <th className="p-4 font-bold">Session Details</th>
                   <th className="p-4 font-bold">Date Submitted</th>
                   <th className="p-4 font-bold">Reason & Description</th>
                   <th className="p-4 font-bold text-center">Evidence</th>
                   <th className="p-4 font-bold text-center">Status</th>
-                  <th className="p-4 font-bold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -455,8 +393,25 @@ const LecturerAttendanceRequests = () => {
                         key={req.id}
                         className="hover:bg-gray-50/50 transition-colors"
                       >
-                        <td className="p-4 font-bold text-gray-900">
-                          {req.student_id}
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 text-md">
+                              {req.student_name}
+                            </span>
+                            <span className="text-sm text-gray-500 font-bold">
+                              {req.student_id}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700 text-sm">
+                              {req.session_date}
+                            </span>
+                            <span className="text-sm text-gray-500 font-medium">
+                              {req.session_time}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-4">
                           <div className="text-sm text-gray-800 font-semibold flex items-center gap-2">
@@ -469,7 +424,7 @@ const LecturerAttendanceRequests = () => {
                             {req.reason_type}
                           </div>
                           <p
-                            className="text-sm text-gray-600 font-medium italic line-clamp-2"
+                            className="text-xs text-gray-600 font-bold italic line-clamp-2"
                             title={req.description}
                           >
                             {req.description}
@@ -485,7 +440,7 @@ const LecturerAttendanceRequests = () => {
                               }
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border-2 border-blue-200 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 border-2 border-blue-200 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
                             >
                               <Eye className="w-5 h-5" /> View
                             </a>
@@ -506,30 +461,6 @@ const LecturerAttendanceRequests = () => {
                             {req.status}
                           </span>
                         </td>
-                        <td className="p-4 text-center">
-                          {req.status === "Pending" ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => openModal(req.id, "Approve")}
-                                className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors cursor-pointer"
-                                title="Approve Request"
-                              >
-                                <CheckCircle className="w-6 h-6" />
-                              </button>
-                              <button
-                                onClick={() => openModal(req.id, "Reject")}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
-                                title="Reject Request"
-                              >
-                                <XCircle className="w-6 h-6" />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400 font-medium italic">
-                              Done
-                            </span>
-                          )}
-                        </td>
                       </tr>
                     ))
                 )}
@@ -539,74 +470,6 @@ const LecturerAttendanceRequests = () => {
         </div>
       )}
 
-      {/* --- ACTION MODAL (Approve / Reject) --- */}
-      {modalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-gray-300 shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${modalType === "Approve" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
-                >
-                  {modalType === "Approve" ? (
-                    <CheckCircle className="w-7 h-7" />
-                  ) : (
-                    <AlertTriangle className="w-7 h-7" />
-                  )}
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {modalType === "Approve" ? "Approve Request?" : "Reject Request?"}
-                </h3>
-              </div>
-
-              {modalType === "Reject" && (
-                <div className="mb-4">
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Reason for Rejection *
-                  </label>
-                  <textarea
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Explain to the student why this request is being rejected..."
-                    className="w-full border border-gray-300 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-red-500 outline-none resize-none h-24"
-                    required
-                  ></textarea>
-                </div>
-              )}
-
-              <div
-                className={`p-4 mb-6 rounded-xl border-l-4 border-2 ${modalType === "Approve" ? "bg-blue-50 border-blue-200" : "bg-red-100 border-red-300"}`}
-              >
-                <p
-                  className={`text-xs leading-relaxed font-semibold ${modalType === "Approve" ? "text-blue-800" : "text-red-700"}`}
-                >
-                  <strong className="font-bold flex items-center gap-1 mb-1 text-sm">
-                    <Info className="w-5 h-5" /> Important Note:
-                  </strong>
-                  {modalType === "Approve"
-                    ? "Approving this request will automatically update the student's main attendance record to 'Present'. This action is final."
-                    : "This action cannot be undone. The student will be notified of this rejection along with the reason you provided."}
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={closeModal}
-                  className="px-5 py-2.5 text-sm font-bold text-gray-700 border-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmAction}
-                  className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-colors shadow-md cursor-pointer ${modalType === "Approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
-                >
-                  Yes, {modalType}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

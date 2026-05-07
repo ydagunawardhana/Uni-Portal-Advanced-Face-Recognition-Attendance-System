@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   FileText,
@@ -25,6 +26,7 @@ export default function AttendanceCorrectionRequest({
   onLogout,
   onNavigate,
 }: AttendanceCorrectionRequestProps) {
+  const location = useLocation();
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [reasonType, setReasonType] = useState("");
@@ -41,6 +43,16 @@ export default function AttendanceCorrectionRequest({
 
   // Filter state
   const [timeFilter, setTimeFilter] = useState<"week" | "all">("week");
+
+  // Auto-select session when navigated from My Attendance with a prefilledSessionId
+  useEffect(() => {
+    const prefilled = location.state?.prefilledSessionId;
+    if (prefilled) {
+      setSessionId(prefilled.toString());
+      // Switch to 'all' so the pre-selected session is visible regardless of date
+      setTimeFilter("all");
+    }
+  }, [location.state]);
 
   // Compute filtered and sorted sessions
   const filteredSessions = useMemo(() => {
@@ -80,9 +92,9 @@ export default function AttendanceCorrectionRequest({
   const fetchSessions = async () => {
     setIsLoadingSessions(true);
     try {
-      const token = localStorage.getItem("studentToken");
+      const studentToken = localStorage.getItem("studentToken");
       const res = await fetch("http://localhost:8000/api/student/timetable", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${studentToken}` },
       });
       if (!res.ok) throw new Error("Failed to fetch sessions");
       const data = await res.json();
@@ -98,12 +110,12 @@ export default function AttendanceCorrectionRequest({
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
     try {
-      const token = localStorage.getItem("studentToken");
+      const studentToken = localStorage.getItem("studentToken");
 
       const res = await fetch(
         "http://localhost:8000/api/attendance/student/requests",
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${studentToken}` },
         },
       );
       if (!res.ok) throw new Error("Failed to fetch history");
@@ -119,16 +131,48 @@ export default function AttendanceCorrectionRequest({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!sessionId) {
-      toast.error("Please select a session.");
+    if (!sessionId || !reasonType || !description.trim() || !evidenceFile) {
+      toast.error(
+        "Please fill in all required fields and upload the evidence document.",
+      );
       return;
+    }
+
+    // --- NEW VALIDATION: Check for existing requests ---
+    const existingRequests = pastRequests.filter(
+      (req) => req.session_id.toString() === sessionId.toString(),
+    );
+
+    if (existingRequests.length > 0) {
+      // Assuming history is sorted newest first
+      const latestRequest = existingRequests[0];
+
+      if (latestRequest.status === "Pending") {
+        toast.error(
+          "You already have a Pending request for this session. Please wait for the lecturer to review it.",
+          {
+            duration: 5000,
+          },
+        );
+        return;
+      }
+
+      if (latestRequest.status === "Approved") {
+        toast.error(
+          "Your attendance for this session has already been Approved. You cannot submit another request.",
+          {
+            duration: 5000,
+          },
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);
     const toastId = toast.loading("Submitting your request...");
 
     try {
-      const token = localStorage.getItem("studentToken");
+      const studentToken = localStorage.getItem("studentToken");
 
       // Construct FormData for file upload
       const formData = new FormData();
@@ -144,7 +188,7 @@ export default function AttendanceCorrectionRequest({
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${studentToken}`,
             // Do NOT set Content-Type; let the browser handle it for FormData
           },
           body: formData,
@@ -359,7 +403,7 @@ export default function AttendanceCorrectionRequest({
               {/* File Upload */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Upload Evidence (Optional)
+                  Upload Evidence <span className="text-red-500">*</span>
                 </label>
 
                 {evidenceFile ? (
@@ -413,7 +457,7 @@ export default function AttendanceCorrectionRequest({
                         Click to upload or drag and drop
                       </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        PNG, JPG, PDF up to 5MB
+                        PNG, JPG, PDF up to 5MB - Required
                       </p>
                     </label>
                   </div>
@@ -471,7 +515,7 @@ export default function AttendanceCorrectionRequest({
 
             <div className="flex-1 overflow-y-auto min-h-0 pr-4 space-y-4 custom-scrollbar">
               {pastRequests.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-red-200">
                   <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2 animate-pulse" />
                   <p className="text-gray-400 text-md font-bold ">
                     No Requests Yet
@@ -489,9 +533,7 @@ export default function AttendanceCorrectionRequest({
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-bold text-md text-gray-900">
-                          {sessionInfo
-                            ? sessionInfo.module_name || sessionInfo.module_code
-                            : `Session #${request.session_id}`}
+                          {request.module_name || request.subject_name || (sessionInfo ? (sessionInfo.module_name || sessionInfo.module_code) : `Session #${request.session_id}`)}
                         </h4>
                         <div className="flex items-center gap-2">
                           <span
@@ -523,7 +565,7 @@ export default function AttendanceCorrectionRequest({
                           <span>
                             Session Date :{" "}
                             <span className="font-bold">
-                              {sessionInfo?.date || "N/A"}
+                              {request.session_date || sessionInfo?.date || "N/A"}
                             </span>
                           </span>
                         </div>
@@ -538,6 +580,15 @@ export default function AttendanceCorrectionRequest({
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
+                          <span>
+                            Session Time :{" "}
+                            <span className="font-bold">
+                              {request.session_time || (sessionInfo ? `${sessionInfo.start_time} - ${sessionInfo.end_time}` : "N/A")}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4 text-blue-500" />
                           <span>
                             Submitted :{" "}
                             <span className="font-bold">

@@ -35,6 +35,7 @@ export default function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [preRegCount, setPreRegCount] = useState(0);
   const [reTrainCount, setReTrainCount] = useState(0);
+  const [pendingCorrectionCount, setPendingCorrectionCount] = useState(0);
 
   // Fetch the pre-registration queue count using the admin token.
   // Runs once on mount and every 60 seconds to stay fresh.
@@ -43,7 +44,7 @@ export default function Sidebar({
       const token = localStorage.getItem("adminToken");
       if (!token) return;
       try {
-        const [preRegRes, reTrainRes] = await Promise.all([
+        const [preRegRes, reTrainRes, correctionRes] = await Promise.all([
           fetch(`${API_BASE}/api/admin/pre-registrations`, {
             method: "GET",
             headers: {
@@ -58,6 +59,13 @@ export default function Sidebar({
               Authorization: `Bearer ${token}`,
             },
           }),
+          fetch(`${API_BASE}/api/attendance/admin/attendance-requests`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ]);
         if (preRegRes.ok) {
           const data = await preRegRes.json();
@@ -66,6 +74,13 @@ export default function Sidebar({
         if (reTrainRes.ok) {
           const data = await reTrainRes.json();
           setReTrainCount(Array.isArray(data) ? data.length : 0);
+        }
+        if (correctionRes.ok) {
+          const data = await correctionRes.json();
+          const pending = Array.isArray(data)
+            ? data.filter((r: any) => r.status === "Pending").length
+            : 0;
+          setPendingCorrectionCount(pending);
         }
       } catch {
         // Silently fail — badges simply won't show if network is down
@@ -137,9 +152,27 @@ export default function Sidebar({
       icon: Video,
       path: "/admin/live-sessions",
     },
+    {
+      id: "attendance_requests",
+      label: "Attendance Requests",
+      icon: History,
+      path: "/admin/attendance-requests",
+      badgeCount: pendingCorrectionCount,
+      badgeTheme: "red" as const,
+    },
     { id: "reports", label: "Reports", icon: FileText, path: "/admin/reports" },
-    { id: "audit", label: "Audit Logs", icon: History, path: "/admin/audit-logs" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
+    {
+      id: "audit",
+      label: "Audit Logs",
+      icon: History,
+      path: "/admin/audit-logs",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      path: "/admin/settings",
+    },
   ];
 
   return (
@@ -188,11 +221,13 @@ export default function Sidebar({
             <NavLink
               key={item.id}
               to={item.path}
-              className={({ isActive }) => `w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
+              className={({ isActive }) =>
+                `w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                }`
+              }
               title={isCollapsed ? item.label : ""}
             >
               <Icon

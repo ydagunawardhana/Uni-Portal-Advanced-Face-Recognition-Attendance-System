@@ -158,6 +158,20 @@ export default function PostSessionReview() {
     return { presentCount, timeInsufficient, flagged, absentCount };
   }, [records, dynamicTotalMinutes, attendanceDecisions]);
 
+  const calculatePercentage = (count: number, total: number) => {
+    if (!total || total === 0) return 0;
+    return Math.round((count / total) * 100);
+  };
+
+  const presentPercentage = calculatePercentage(
+    summaryStats.presentCount,
+    sessionInfo.enrolled_count,
+  );
+  const absentPercentage = calculatePercentage(
+    summaryStats.absentCount,
+    sessionInfo.enrolled_count,
+  );
+
   const filteredRecords = useMemo(() => {
     if (!records) return [];
 
@@ -420,12 +434,16 @@ export default function PostSessionReview() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div
               onClick={() => handleFilterClick("PRESENT")}
-              className={`bg-green-50 border-2 rounded-xl p-5 gap-4 flex items-center shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+              className={`relative bg-green-50 border-2 rounded-xl p-5 gap-4 flex items-center shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
                 activeFilter === "PRESENT"
                   ? "border-green-500 ring-2 ring-green-200"
                   : "border-green-200"
               }`}
             >
+              <span className="absolute top-4 right-4 text-xl font-bold text-green-700 bg-green-100 border-2 border-green-200 px-2 rounded-xl">
+                {presentPercentage}%
+              </span>
+
               <div className="bg-green-100 p-3 rounded-xl shrink-0 flex items-center justify-center">
                 <CheckCircle className="w-7 h-7 text-green-600" />
               </div>
@@ -483,12 +501,16 @@ export default function PostSessionReview() {
 
             <div
               onClick={() => handleFilterClick("ABSENT")}
-              className={`bg-purple-50 border-2 rounded-xl gap-4 p-5 flex items-center shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+              className={`relative bg-purple-50 border-2 rounded-xl gap-4 p-5 flex items-center shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
                 activeFilter === "ABSENT"
-                  ? "border-gray-300 ring-2 ring-gray-300"
-                  : "border-purple-100"
+                  ? "border-purple-200 ring-2 ring-purple-300"
+                  : "border-purple-200"
               }`}
             >
+              <span className="absolute top-4 right-4 text-xl font-bold text-purple-700 bg-purple-100 border-2 border-purple-200 px-2 rounded-xl">
+                {absentPercentage}%
+              </span>
+
               <div className="bg-purple-100 p-3 rounded-xl shrink-0 flex items-center justify-center">
                 <XCircle className="w-7 h-7 text-purple-600" />
               </div>

@@ -209,6 +209,9 @@ class CorrectionRequestUpdate(BaseModel):
     status: str # 'Approved' or 'Rejected'
     rejection_reason: Optional[str] = None
 
+class RejectionPayload(BaseModel):
+    reason: str
+
 class CorrectionRequestResponse(BaseModel):
     id: int
     student_id: str
@@ -219,6 +222,11 @@ class CorrectionRequestResponse(BaseModel):
     status: str
     rejection_reason: Optional[str] = None
     submitted_at: datetime
+    student_name: str
+    session_date: str
+    session_time: str
+    module_code: str
+    module_name: str
 
     model_config = {"from_attributes": True}
 
@@ -234,3 +242,120 @@ class SubjectRequestsSummary(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
+class AdminCorrectionRequestResponse(BaseModel):
+    request_id: int
+    student_id: str
+    student_name: str
+    module_code: str
+    session_id: int
+    reason_type: str
+    description: str
+    evidence_url: Optional[str]
+    status: str
+    submitted_at: datetime
+    rejection_reason: Optional[str] = None
+    batch: str
+    degree: str
+    department: str
+    faculty: str
+    session_date: str
+    session_time: str
+    lecturer_name: str
+
+    model_config = {"from_attributes": True}
+
+
+class StudentSubjectSummary(BaseModel):
+    module_code: str
+    module_name: str
+    total_sessions: int
+    attended_sessions: int
+    attendance_percentage: float
+    level: str = "Unknown Semester"     
+    lecturer_name: str = "TBA"          
+
+    model_config = {"from_attributes": True}
+
+
+class StudentSessionDetail(BaseModel):
+    session_id: int
+    date: str
+    start_time: str
+    end_time: str
+    session_type: str
+    status: str  # 'Present', 'Absent', 'Excused', etc.
+    request_status: Optional[str] = None # 'Pending', 'Approved', 'Rejected' or None
+
+    model_config = {"from_attributes": True}
+
+
+class RecentClass(BaseModel):
+    class_name: str
+    date: str
+    status: str
+
+    model_config = {"from_attributes": True}
+
+
+class DashboardSummary(BaseModel):
+    overall_percentage: float
+    present_count: int
+    absent_count: int
+
+    model_config = {"from_attributes": True}
+
+
+class StudentProfile(BaseModel):
+    name: str
+    student_id: str
+    batch: str
+    profile_picture: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class StudentDashboardResponse(BaseModel):
+    profile: StudentProfile
+    summary: DashboardSummary
+    recent_history: List[RecentClass]
+
+class StudentDashboardSummaryStats(BaseModel):
+    overall_percentage: float
+    present: int
+    absent: int
+
+class RecentCorrectionRequest(BaseModel):
+    module_name: str
+    status: str
+    submitted_at: str
+
+class ModuleStats(BaseModel):
+    module_name: str
+    module_code: str
+    present: int
+    absent: int
+    percentage: float
+
+class RecentClassSummary(BaseModel):
+    module_name: str
+    date: str
+    time: str
+    status: str
+
+class TodaysScheduleSummary(BaseModel):
+    module_name: str
+    start_time: str
+    end_time: str
+    location: str
+    session_type: str
+
+class StudentDashboardSummaryResponse(BaseModel):
+    profile: StudentProfile
+    stats: StudentDashboardSummaryStats
+    recent_classes: List[RecentClassSummary]
+    recent_requests: List[RecentCorrectionRequest] = []
+    module_stats: dict = {} # module_code -> {name, present, absent, total, percentage}
+    todays_schedule: List[TodaysScheduleSummary] = []
+
+    model_config = {"from_attributes": True}

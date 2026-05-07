@@ -18,6 +18,7 @@ import { saveAs } from "file-saver";
 
 interface StudentRecord {
   student_id: string;
+  index_number?: string;   
   name: string;
   status: string;
   attendance_percentage: number;
@@ -82,7 +83,7 @@ export default function AttendanceReports({
       // Build query params dynamically to prevent date filtering when "Overall" is selected
       const params = new URLSearchParams();
       if (subject.batch) params.append("batch", subject.batch);
-      
+
       if (selectedSessionId !== "all") {
         params.append("session_id", selectedSessionId);
         if (fromDate) params.append("date", fromDate);
@@ -235,22 +236,23 @@ export default function AttendanceReports({
     const matchesSearch =
       !searchQuery ||
       s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.index_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.student_id?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesRisk && matchesSearch;
   });
 
   const handleExportExcel = async () => {
-    if (!students || students.length === 0) {
-      toast.error("No data available to export.");
+    if (!displayedStudents || displayedStudents.length === 0) {
+      toast.error("No records to export. Adjust your filters and try again.");
       return;
     }
 
-    const toastId = toast.loading("Generating Excel report...", {
-      duration: 3000,
-    });
+    const toastId = toast.loading("Preparing your Excel report...");
 
     try {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance Report");
 
@@ -259,36 +261,38 @@ export default function AttendanceReports({
         { width: 18 }, // A: Index / Labels
         { width: 35 }, // B: Names / Values
         { width: 15 }, // C: Total Sessions / Date
-        { width: 0 },  // D: (Spacer)
+        { width: 0 }, // D: (Spacer)
         { width: 20 }, // E: Risk Labels / Status / Attended
         { width: 18 }, // F: Risk Counts / Overall % / In Time
         { width: 18 }, // G: Out Time (Only for Session View)
-        { width: 30 }  // H: Reason (Only for Session View)
+        { width: 30 }, // H: Reason (Only for Session View)
       ];
 
       const maxCol = isOverall ? "F" : "H"; // Dynamic merging limit
 
-      // Calculate Stats
-      const enrolledCount = students.length;
+      // Derive stats from displayedStudents (respects active risk + search filters)
+      const enrolledCount = displayedStudents.length;
       const presentCount = isOverall
         ? "N/A (Overall View)"
-        : students.filter((r) => r.status?.toLowerCase() === "present").length;
+        : displayedStudents.filter((r) => r.status?.toLowerCase() === "present")
+            .length;
       const absentCount = isOverall
         ? "N/A (Overall View)"
-        : students.filter((r) => r.status?.toLowerCase() === "absent").length;
+        : displayedStudents.filter((r) => r.status?.toLowerCase() === "absent")
+            .length;
 
-      const safeCount = students.filter(
+      const safeCount = displayedStudents.filter(
         (r) => (parseFloat(String(r.attendance_percentage)) || 0) >= 70,
       ).length;
-      const warningCount = students.filter((r) => {
+      const warningCount = displayedStudents.filter((r) => {
         const a = parseFloat(String(r.attendance_percentage)) || 0;
         return a >= 50 && a < 70;
       }).length;
-      const criticalCount = students.filter((r) => {
+      const criticalCount = displayedStudents.filter((r) => {
         const a = parseFloat(String(r.attendance_percentage)) || 0;
         return a >= 20 && a < 50;
       }).length;
-      const failCount = students.filter(
+      const failCount = displayedStudents.filter(
         (r) => (parseFloat(String(r.attendance_percentage)) || 0) < 20,
       ).length;
 
@@ -330,13 +334,22 @@ export default function AttendanceReports({
       setInfo("A6", "Semester:", true);
       setInfo("B6", subject?.semester || subject?.level || "N/A");
       setInfo("A7", "Lecturer:", true);
-      setInfo("B7", localStorage.getItem("lecturerName") || "Dr. Mark Dixon");
+      setInfo("B7", localStorage.getItem("lecturerName") || "N/A");
       setInfo("A8", "Total Enrolled:", true);
       setInfo("B8", enrolledCount);
       setInfo("A9", "Total Present:", true);
       setInfo("B9", presentCount);
       setInfo("A10", "Total Absent:", true);
       setInfo("B10", absentCount);
+      setInfo("A11", "Risk Filter:", true);
+      setInfo(
+        "B11",
+        riskFilter === "all"
+          ? "All Students"
+          : riskFilter.charAt(0).toUpperCase() + riskFilter.slice(1),
+      );
+      setInfo("A12", "Search Query:", true);
+      setInfo("B12", searchQuery || "None");
 
       // Right Side: Risk Summary Table
       worksheet.getCell("E4").value = "Risk Category";
@@ -406,7 +419,7 @@ export default function AttendanceReports({
             "Reason / Excuse",
           ];
 
-      const headerRow = worksheet.getRow(13);
+      const headerRow = worksheet.getRow(15);
       headerRow.values = headerRowValues;
       headerRow.eachCell((cell, colNumber) => {
         if (colNumber === 4) return; // Skip Spacer
@@ -425,8 +438,8 @@ export default function AttendanceReports({
         };
       });
 
-      students.forEach((record, index) => {
-        const rowIndex = 14 + index;
+      displayedStudents.forEach((record, index) => {
+        const rowIndex = 16 + index;
         const row = worksheet.getRow(rowIndex);
 
         // Helper to get reason safely
@@ -442,7 +455,7 @@ export default function AttendanceReports({
 
         row.values = isOverall
           ? [
-              record.student_id,
+              record.index_number || record.student_id || "N/A",
               record.name,
               record.total_sessions || 0,
               "",
@@ -450,7 +463,7 @@ export default function AttendanceReports({
               `${parseFloat(String(record.attendance_percentage || 0)).toFixed(1)}%`,
             ]
           : [
-              record.student_id,
+              record.index_number || record.student_id || "N/A",
               record.name,
               fromDate,
               "",
@@ -491,30 +504,37 @@ export default function AttendanceReports({
           // Specific formatting for Overall View
           else {
             if (colNumber === 6) {
-              // Percentage Column
+              // Percentage Column — 4-tier colour coding
               const percentage = parseFloat(
                 cell.value?.toString().replace("%", "") || "0",
               );
-              if (percentage < 70)
-                cell.font = { color: { argb: "FFDC2626" }, bold: true };
+              if (percentage >= 70)
+                cell.font = { color: { argb: "FF16A34A" }, bold: true }; // green
+              else if (percentage >= 50)
+                cell.font = { color: { argb: "FFEAB308" }, bold: true }; // yellow
+              else if (percentage >= 20)
+                cell.font = { color: { argb: "FFF97316" }, bold: true }; // orange
+              else cell.font = { color: { argb: "FFDC2626" }, bold: true }; // red
             }
           }
         });
       });
 
       // Export
-      await new Promise((resolve) => setTimeout(resolve, 800)); // Smooth UX delay
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
+      const datePart = new Date().toISOString().split("T")[0];
       saveAs(
         blob,
-        `${subject?.module_code}_Batch_${subject?.batch}_${isOverall ? "Overall" : fromDate}.xlsx`,
+        `${subject?.module_code}_Batch${subject?.batch}_${isOverall ? "Overall" : fromDate}_${datePart}.xlsx`,
       );
 
       if (toast.dismiss) toast.dismiss(toastId);
-      toast.success("Excel report downloaded successfully!");
+      toast.success(
+        `Report downloaded: ${displayedStudents.length} record(s) exported.`,
+      );
     } catch (error) {
       console.error(error);
       if (toast.dismiss) toast.dismiss(toastId);
@@ -697,7 +717,10 @@ export default function AttendanceReports({
               </option>
               {sessions.map((session, idx) => (
                 <option key={idx} value={session.session_id}>
-                  {session.session_type} ({session.date})
+                  {session.session_type} — {session.date}
+                  {session.start_time
+                    ? ` (${session.start_time} - ${session.end_time || "?"})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -714,14 +737,10 @@ export default function AttendanceReports({
               className={`w-full h-[42px] px-3 py-2 border cursor-pointer rounded-lg text-sm font-bold outline-none transition-colors duration-200 ${getRiskDropdownColor(riskFilter)}`}
             >
               <option value="all">⚠️ All Students</option>
-              <option value="safe">🟢 Safe (≥ 70%) - Exam Eligible</option>
-              <option value="warning">
-                🟡 Warning (50% - 69%) - Needs Excuse
-              </option>
-              <option value="critical">
-                🟠 Critical (20% - 49%) - Contact Parents
-              </option>
-              <option value="fail">🔴 Fail (&lt; 20%) - Not Eligible</option>
+              <option value="safe">🟢 Exam Eligible - (≥ 70%)</option>
+              <option value="warning">🟡 Needs Excuse - (50% - 69%)</option>
+              <option value="critical">🟠 Contact Parents - (20% - 49%)</option>
+              <option value="fail">🔴 Not Eligible - (&lt; 20%)</option>
             </select>
           </div>
         </div>
@@ -861,22 +880,24 @@ export default function AttendanceReports({
                       >
                         {/* Student Details */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-3">
                             <div
-                              className={`w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold mr-3`}
+                              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
                             >
-                              {student.name
+                              {(student.name || "ST")
                                 .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
+                                .map((n: string) => n[0])
+                                .join("")
+                                .substring(0, 2)
+                                .toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900">
+                              <p className="font-bold text-gray-900 text-md leading-tight">
                                 {student.name}
-                              </div>
-                              <div className="text-sm text-gray-600  font-bold font-mono">
-                                {student.student_id}
-                              </div>
+                              </p>
+                              <p className="text-[11px] text-gray-500  font-bold mt-0.5 tracking-wide">
+                                {student.index_number || student.student_id || "N/A"}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -938,10 +959,10 @@ export default function AttendanceReports({
                         ) : (
                           <>
                             <td className="px-6 py-4 text-center text-sm text-gray-700 font-medium">
-                              {student.in_time ? student.in_time : '----'}
+                              {student.in_time ? student.in_time : "----"}
                             </td>
                             <td className="px-6 py-4 text-center text-sm text-gray-700 font-medium">
-                              {student.out_time ? student.out_time : '----'}
+                              {student.out_time ? student.out_time : "----"}
                             </td>
                             <td className="px-6 py-4 text-sm whitespace-nowrap text-center">
                               {student.reason &&
@@ -949,19 +970,23 @@ export default function AttendanceReports({
                               student.reason !== "-" ? (
                                 <span
                                   className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold shadow-sm ${
-                                    student.reason.toLowerCase().includes("manual")
+                                    student.reason
+                                      .toLowerCase()
+                                      .includes("manual")
                                       ? "bg-purple-100 text-purple-700 border border-purple-200 rounded-xl"
                                       : student.reason
-                                          .toLowerCase()
-                                          .includes("insufficient")
-                                        ? "bg-orange-50 text-orange-700 border border-orange-200 rounded-xl"
-                                        : "bg-red-50 text-red-600 border border-red-200 rounded-xl"
+                                            .toLowerCase()
+                                            .includes("insufficient")
+                                        ? "bg-orange-100 text-orange-700 border border-orange-200 rounded-xl"
+                                        : "bg-red-100 text-red-600 border border-red-200 rounded-xl"
                                   }`}
                                 >
                                   {student.reason}
                                 </span>
                               ) : (
-                                <span className="text-gray-400 font-medium">-</span>
+                                <span className="text-gray-400 font-medium">
+                                  -
+                                </span>
                               )}
                             </td>
                           </>

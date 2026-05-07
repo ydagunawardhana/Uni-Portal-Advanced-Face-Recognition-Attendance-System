@@ -30,6 +30,7 @@ import ManageModules from "./components/ManageModules";
 import LiveSessionsDashboard from "./components/LiveSessionsDashboard";
 import SystemAuditLogs from "./components/SystemAuditLogs";
 import StudentRegistration from "./components/StudentRegistration";
+import AdminAttendanceRequests from "./components/AdminAttendanceRequests";
 
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
@@ -185,6 +186,10 @@ export default function App() {
             }
           />
           <Route path="reports" element={<AttendanceReporting />} />
+          <Route
+            path="attendance-requests"
+            element={<AdminAttendanceRequests />}
+          />
           <Route path="audit-logs" element={<SystemAuditLogs />} />
           <Route path="settings" element={<SettingsScreen />} />
         </Route>

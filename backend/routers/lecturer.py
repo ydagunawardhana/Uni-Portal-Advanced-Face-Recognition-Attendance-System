@@ -225,14 +225,33 @@ def get_lecturer_filter_options(
     degrees = db.query(models.Module.degree).filter(models.Module.degree.isnot(None)).distinct().all()
     semesters = db.query(models.Module.level).filter(models.Module.level.isnot(None)).distinct().all()
 
-    # 2. Modules (Specific to subjects taught by the lecturer)
-    # Join with ClassSession to get module codes and names taught by this lecturer
-    session_modules = db.query(models.Module).join(
-        models.ClassSession, models.ClassSession.subject_id == models.Module.module_name
-    ).filter(
-        models.ClassSession.lecturer_id == lecturer.id
+    # 2. Modules — two reliable sources, merged and deduplicated:
+
+    # Source A: Directly from the lecturer's assigned_subjects codes
+    module_map: dict = {}
+    if subject_codes:
+        assigned_modules = db.query(models.Module).filter(
+            models.Module.module_code.in_(subject_codes)
+        ).all()
+        for m in assigned_modules:
+            module_map[m.module_code] = m.module_name
+
+    # Source B: Any module_code appearing in Timetable entries for this lecturer
+    timetable_module_codes = db.query(models.Timetable.module_code).filter(
+        models.Timetable.lecturer == lecturer.name
     ).distinct().all()
-    
+    extra_codes = [row[0] for row in timetable_module_codes if row[0] and row[0] not in module_map]
+    if extra_codes:
+        extra_modules = db.query(models.Module).filter(
+            models.Module.module_code.in_(extra_codes)
+        ).all()
+        for m in extra_modules:
+            module_map[m.module_code] = m.module_name
+        # Also handle codes that exist in timetable but not yet in the modules table
+        for code in extra_codes:
+            if code not in module_map:
+                module_map[code] = code  # Fall back to showing the code itself
+
     # 3. Batches (Human-readable mapping from Timetable)
     # We find batches where this lecturer actually has scheduled classes
     timetable_batches = db.query(models.Timetable.batch_id).filter(
@@ -242,7 +261,7 @@ def get_lecturer_filter_options(
     return {
         "degrees": [{"name": d[0]} for d in degrees],
         "semesters": [{"name": s[0]} for s in semesters],
-        "modules": [{"code": m.module_code, "name": m.module_name} for m in session_modules],
+        "modules": [{"code": code, "name": name} for code, name in module_map.items()],
         "batches": [{"name": b[0]} for b in timetable_batches]
     }
 

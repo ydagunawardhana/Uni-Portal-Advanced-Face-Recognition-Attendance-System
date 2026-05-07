@@ -412,7 +412,7 @@ export default function Appointments() {
                     {req.requestedSlot}
                   </div>
                   {req.declineReason && (
-                    <div className="mt-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-800/70 italic relative overflow-hidden">
+                    <div className="mt-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-600 italic relative overflow-hidden">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-200"></div>
                       "Reason: {req.declineReason}"
                     </div>

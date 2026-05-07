@@ -134,20 +134,23 @@ def get_attendance_history(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Base query joining Records with Metadata
+    # Base query: Records → Student, ClassSession → Timetable (for dates/batch) → Module (via code)
     query = db.query(
         models.AttendanceRecord,
         models.Student,
         models.ClassSession,
+        models.Timetable,
         models.Module
     ).join(
         models.Student, models.AttendanceRecord.student_id == models.Student.id
     ).join(
         models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
     ).outerjoin(
+        # Bridge: ClassSession.batch_id stores the timetable.id as a string
         models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
     ).outerjoin(
-        models.Module, models.ClassSession.subject_id == models.Module.module_name
+        # FIXED: join Module via module_code (not module_name)
+        models.Module, models.Timetable.module_code == models.Module.module_code
     )
 
     # Apply Filters
@@ -156,11 +159,13 @@ def get_attendance_history(
     if semester:
         query = query.filter(func.trim(models.Module.level) == semester.strip())
     if module:
-        query = query.filter(func.trim(models.Module.module_code) == module.strip())
+        # Match against Timetable.module_code directly (most reliable source)
+        query = query.filter(
+            func.trim(models.Timetable.module_code) == module.strip()
+        )
     if batch:
         query = query.filter(func.trim(models.Timetable.batch_id) == batch.strip())
     if date:
-        # Check date part of start_time
         query = query.filter(cast(models.ClassSession.start_time, String).like(f"{date}%"))
     if search:
         query = query.filter(
@@ -173,8 +178,7 @@ def get_attendance_history(
 
     records_out = []
     tz_lk = timezone(timedelta(hours=5, minutes=30))
-    for r, s, cs, m in results:
-        # Get Time In / Time Out from logs for this specific session
+    for r, s, cs, tt, m in results:
         first_in = db.query(models.AttendanceLog).filter(
             models.AttendanceLog.session_id == cs.id,
             models.AttendanceLog.student_id == s.id,
@@ -195,13 +199,18 @@ def get_attendance_history(
         if last_out:
             time_out_str = last_out.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk).strftime("%I:%M %p")
 
+        # Use Timetable date if available (more accurate than ClassSession.start_time date)
+        record_date = tt.date if tt else (cs.start_time.strftime("%Y-%m-%d") if cs.start_time else "--")
+        module_code = m.module_code if m else (tt.module_code if tt else cs.subject_id)
+        module_name = m.module_name if m else (tt.module_code if tt else cs.subject_id)
+
         records_out.append({
             "id": r.id,
-            "date": cs.start_time.strftime("%Y-%m-%d"),
+            "date": record_date,
             "studentName": s.name,
             "indexNumber": s.index_number,
-            "subject": m.module_name if m else cs.subject_id,
-            "module_code": m.module_code if m else None,
+            "subject": module_name,
+            "module_code": module_code,
             "timeIn": time_in_str,
             "timeOut": time_out_str,
             "status": r.status,
@@ -933,25 +942,47 @@ def get_attendance_sessions(
     batch_id: str,
     db: Session = Depends(get_db)
 ):
-    """Fetch all sessions for a specific module and batch."""
-    sessions = db.query(models.ClassSession).join(
-        models.Module, models.ClassSession.subject_id.ilike(func.concat('%', models.Module.module_name, '%'))
-    ).join(
-        models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
-    ).filter(
-        models.Module.module_code == module_code,
+    """Fetch all confirmed sessions for a specific module and student batch.
+    
+    Uses the correct schema mapping:
+      Timetable.batch_id (student intake, e.g. '23.2')  
+        → Timetable.id (e.g. 327)
+          → ClassSession.batch_id == str(327)  (confirmed sessions)
+    """
+    # 1. Get all timetable entries for this module + student batch
+    timetables = db.query(models.Timetable).filter(
+        models.Timetable.module_code == module_code,
         models.Timetable.batch_id == batch_id
-    ).order_by(models.ClassSession.start_time.asc()).all()
+    ).all()
+
+    if not timetables:
+        return {"sessions": []}
+
+    # 2. Build a map from timetable_id → timetable for quick lookup
+    tt_map = {str(tt.id): tt for tt in timetables}
+    tt_ids = list(tt_map.keys())
+
+    # 3. Find all ClassSessions whose batch_id matches one of these timetable IDs
+    class_sessions = db.query(models.ClassSession).filter(
+        models.ClassSession.batch_id.in_(tt_ids)
+    ).all()
 
     result = []
-    for idx, s in enumerate(sessions):
-        date_str = s.start_time.strftime("%Y-%m-%d") if s.start_time else ""
+    for idx, s in enumerate(class_sessions):
+        tt = tt_map.get(str(s.batch_id))
+        if not tt:
+            continue
         result.append({
             "session_id": s.id,
             "session_name": f"Session {idx + 1}",
-            "session_type": s.session_type,
-            "date": date_str
+            "session_type": s.session_type or "Lecture",
+            "date": tt.date,
+            "start_time": tt.start_time,
+            "end_time": tt.end_time,
         })
+
+    # Sort newest first
+    result.sort(key=lambda x: x["date"], reverse=True)
     return {"sessions": result}
 
 # Student Correction Requests 
@@ -965,7 +996,7 @@ import os
 # Create uploads directory if it doesn't exist
 os.makedirs("uploads/evidence", exist_ok=True)
 
-@router.post("/student/requests", response_model=schemas.CorrectionRequestResponse)
+@router.post("/student/requests")
 async def submit_correction_request(
     session_id: int = Form(...),
     reason_type: str = Form(...),
@@ -1006,7 +1037,10 @@ async def submit_correction_request(
     db.add(new_request)
     db.commit()
     db.refresh(new_request)
-    return new_request
+    return {
+        "message": "Correction request submitted successfully",
+        "request_id": new_request.id
+    }
 
 @router.get("/lecturer/requests", response_model=List[schemas.SubjectRequestsSummary])
 def get_correction_requests_grouped(
@@ -1064,104 +1098,683 @@ def get_correction_requests_grouped(
         if req.status == "Pending":
             grouped_data[group_key]["pending_count"] += 1
             
-        grouped_data[group_key]["requests"].append(req)
+        # Fetch student name
+        student = db.query(models.Student).filter(models.Student.index_number == req.student_id).first()
+        student_name = student.name if student else "Unknown Student"
+        
+        # Session Details
+        session_date = getattr(timetable, 'date', 'Unknown Date')
+        start_t = getattr(timetable, 'start_time', '??')
+        end_t = getattr(timetable, 'end_time', '??')
+        session_time = f"{start_t} - {end_t}"
+
+        # Create a dictionary version of the request to add extra fields
+        req_dict = {
+            "id": req.id,
+            "student_id": req.student_id,
+            "session_id": req.session_id,
+            "reason_type": req.reason_type,
+            "description": req.description,
+            "evidence_url": req.evidence_url,
+            "status": req.status,
+            "rejection_reason": req.rejection_reason,
+            "submitted_at": req.submitted_at,
+            "student_name": student_name,
+            "session_date": str(session_date),
+            "session_time": session_time,
+            "module_code": mod_code,
+            "module_name": mod_name
+        }
+            
+        grouped_data[group_key]["requests"].append(req_dict)
 
     return list(grouped_data.values())
 
-@router.put("/lecturer/requests/{request_id}/status")
-def update_request_status(
-    request_id: int, 
-    payload: schemas.CorrectionRequestUpdate, 
+@router.get("/admin/attendance-requests", response_model=List[schemas.AdminCorrectionRequestResponse])
+def get_all_attendance_requests(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Lecturer approves or rejects a request. If approved, the master AttendanceRecord is updated."""
-    if current_user.role != "Lecturer":
-        raise HTTPException(status_code=403, detail="Only lecturers can update request status")
+    """Fetch all correction requests across all modules for Admin review."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only admins can view all correction requests")
+        
+    requests = db.query(models.CorrectionRequest).order_by(models.CorrectionRequest.submitted_at.desc()).all()
+    
+    results = []
+    for req in requests:
+        student = db.query(models.Student).filter(models.Student.index_number == req.student_id).first()
+        
+        module_code = "Unknown"
+        degree = "Unknown"
+        department = "Unknown"
+        faculty = "Unknown"
+        batch = "Unknown"
+        
+        if student:
+            batch = student.intake if student.intake else "Unknown"
+            # Fallbacks if module info is missing
+            faculty = student.faculty if student.faculty else "Unknown"
+            department = student.department if student.department else "Unknown"
+            degree = student.degree_program if student.degree_program else "Unknown"
+
+        # req.session_id in correction_requests refers to the Timetable entry ID
+        tt = db.query(models.Timetable).filter(models.Timetable.id == req.session_id).first()
+        
+        session_date = "Unknown Date"
+        session_time = "Unknown Time"
+        lecturer_name = "Unknown Lecturer"
+        
+        if tt:
+             module_code = tt.module_code
+             session_date = str(tt.date)
+             session_time = f"{tt.start_time} - {tt.end_time}"
+             lecturer_name = tt.lecturer if tt.lecturer else "Unknown Lecturer"
+             
+             # Try to get more precise info from Module table
+             mod_info = db.query(models.Module).filter(models.Module.module_code == module_code).first()
+             if mod_info:
+                 degree = mod_info.degree if mod_info.degree else degree
+                 department = mod_info.department if mod_info.department else department
+                 faculty = mod_info.faculty if mod_info.faculty else faculty
+             elif tt.faculty or tt.department:
+                 # Fallback to timetable info
+                 faculty = tt.faculty if tt.faculty else faculty
+                 department = tt.department if tt.department else department
+
+        results.append({
+            "request_id": req.id,
+            "student_id": req.student_id,
+            "student_name": student.name if student else "Unknown",
+            "module_code": module_code,
+            "session_id": req.session_id,
+            "reason_type": req.reason_type,
+            "description": req.description,
+            "evidence_url": req.evidence_url,
+            "status": req.status,
+            "submitted_at": req.submitted_at,
+            "rejection_reason": req.rejection_reason,
+            "batch": batch,
+            "degree": degree,
+            "department": department,
+            "faculty": faculty,
+            "session_date": session_date,
+            "session_time": session_time,
+            "lecturer_name": lecturer_name
+        })
+    return results
+
+@router.put("/admin/attendance-requests/{request_id}/approve")
+def admin_approve_request(
+    request_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Admin approves a correction request and updates the AttendanceRecord."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only admins can approve requests")
         
     req = db.query(models.CorrectionRequest).filter(models.CorrectionRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if payload.status not in ["Approved", "Rejected"]:
-        raise HTTPException(status_code=400, detail="Invalid status")
+    req.status = "Approved"
+    req.rejection_reason = None
 
-    req.status = payload.status
-    
-    # Save the rejection reason if provided
-    if payload.status == "Rejected" and payload.rejection_reason:
-        req.rejection_reason = payload.rejection_reason
-    elif payload.status == "Approved":
-        req.rejection_reason = None # Clear if it was previously rejected and now approved
+    # Update the master attendance record
+    # req.session_id refers to Timetable ID. ClassSession.batch_id stores this as string.
+    actual_class_session = db.query(models.ClassSession).filter(
+        models.ClassSession.batch_id == str(req.session_id)
+    ).first()
 
-    # If approved, update the master attendance record
-    if payload.status == "Approved":
-        # 1. MAPPING FIX: Find the correct class_session.id
-        # req.session_id in correction_requests refers to the Timetable entry ID.
-        # Based on the system architecture, ClassSession.batch_id stores this Timetable ID as a string.
-        actual_class_session = db.query(models.ClassSession).filter(
-            models.ClassSession.batch_id == str(req.session_id)
+    # Determine status based on reason. Usually medical = Excused.
+    new_status = "Excused" if "Medical" in req.reason_type else "Present"
+    reason_str = f"Approved Correction: {req.reason_type}"
+
+    if actual_class_session:
+        student = db.query(models.Student).filter(
+            models.Student.index_number == req.student_id
         ).first()
 
-        if actual_class_session:
-            # 2. Find the student's internal integer ID
-            student = db.query(models.Student).filter(
-                models.Student.index_number == req.student_id
+        if student:
+            existing_att = db.query(models.AttendanceRecord).filter(
+                models.AttendanceRecord.student_id == student.id,
+                models.AttendanceRecord.session_id == actual_class_session.id
             ).first()
 
-            if student:
-                # 3. Check if an attendance record already exists for this exact class session
-                existing_att = db.query(models.AttendanceRecord).filter(
-                    models.AttendanceRecord.student_id == student.id,
-                    models.AttendanceRecord.session_id == actual_class_session.id
-                ).first()
-
-                if existing_att:
-                    # Update existing record (e.g. from Absent to Present)
-                    existing_att.status = "Present"
-                    existing_att.reason = f"Excused: {req.reason_type}"
-                    existing_att.calculated_at = datetime.now()
-                else:
-                    # Create new attendance record using the correctly mapped actual_class_session.id
-                    new_att = models.AttendanceRecord(
-                        student_id=student.id,
-                        session_id=actual_class_session.id, # <-- Correctly mapped ID
-                        total_duration_minutes=0,
-                        status="Present",
-                        reason=f"Excused: {req.reason_type}"
-                    )
-                    db.add(new_att)
+            if existing_att:
+                existing_att.status = new_status
+                existing_att.reason = reason_str
+                existing_att.calculated_at = datetime.now()
             else:
-                 raise HTTPException(status_code=404, detail="Student record not found for this request")
+                new_att = models.AttendanceRecord(
+                    student_id=student.id,
+                    session_id=actual_class_session.id,
+                    total_duration_minutes=0,
+                    status=new_status,
+                    reason=reason_str
+                )
+                db.add(new_att)
         else:
-            print(f"DEBUG: No class_session found matching timetable ID {req.session_id}")
-            # We don't raise 404 here yet as there might be orphan requests during testing, 
-            # but in production, this should ideally be handled.
+             print(f"DEBUG: Student with index {req.student_id} not found during approval.")
+    else:
+        # If no class_session exists yet, we can't create an AttendanceRecord (FK constraint)
+        # However, the status resolution in get_subject_sessions will now handle this 
+        # by checking CorrectionRequest table directly.
+        print(f"DEBUG: No class_session found for timetable ID {req.session_id}. AttendanceRecord will be resolved via CorrectionRequest status.")
 
     try:
         db.commit()
-        return {"message": f"Request {payload.status.lower()} successfully"}
+        return {"message": "Request approved successfully"}
     except Exception as e:
         db.rollback()
-        print(f"DATABASE ERROR during request approval: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update database records")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@router.put("/admin/attendance-requests/{request_id}/reject")
+def admin_reject_request(
+    request_id: int, 
+    payload: schemas.RejectionPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Admin rejects a correction request."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only admins can reject requests")
+        
+    req = db.query(models.CorrectionRequest).filter(models.CorrectionRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    req.status = "Rejected"
+    req.rejection_reason = payload.reason
+
+    try:
+        db.commit()
+        return {"message": "Request rejected successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @router.get("/student/requests", response_model=List[schemas.CorrectionRequestResponse])
+@router.get("/student/attendance-requests", response_model=List[schemas.CorrectionRequestResponse])
 def get_student_correction_requests(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Allows a student to view their own correction requests."""
+    """Allows a student to view their own correction requests. 
+       Uses index_number (CSxxxx) for filtering.
+    """
     if current_user.role != "Student":
         raise HTTPException(status_code=403, detail="Only students can view their requests here")
         
     student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student record not found")
+        raise HTTPException(status_code=404, detail="Student profile not found")
         
-    return db.query(models.CorrectionRequest).filter(
+    requests = db.query(models.CorrectionRequest).filter(
         models.CorrectionRequest.student_id == student.index_number
     ).order_by(models.CorrectionRequest.submitted_at.desc()).all()
+
+    res = []
+    for req in requests:
+        # Fetch student name
+        student_obj = db.query(models.Student).filter(models.Student.index_number == req.student_id).first()
+        student_name = student_obj.name if student_obj else "Unknown Student"
+        
+        # Session Details from Timetable
+        tt = db.query(models.Timetable).filter(models.Timetable.id == req.session_id).first()
+        session_date = getattr(tt, 'date', 'Unknown Date')
+        start_t = getattr(tt, 'start_time', '??')
+        end_t = getattr(tt, 'end_time', '??')
+        session_time = f"{start_t} - {end_t}"
+
+        res.append({
+            "id": req.id,
+            "student_id": req.student_id,
+            "session_id": req.session_id,
+            "reason_type": req.reason_type,
+            "description": req.description,
+            "evidence_url": req.evidence_url,
+            "status": req.status,
+            "rejection_reason": req.rejection_reason,
+            "submitted_at": req.submitted_at,
+            "student_name": student_name,
+            "session_date": str(session_date),
+            "session_time": session_time,
+            "module_code": tt.module_code if tt else "N/A",
+            "module_name": tt.module_name if tt else "Unknown Module"
+        })
+    return res
+
+
+@router.get("/student/dashboard", response_model=schemas.StudentDashboardResponse)
+def get_student_dashboard(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Provides data for the Student Dashboard Overview."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can view the dashboard")
+    
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found")
+
+    # 1. Profile
+    # Find student's enrollment to get the batch
+    enrollment = db.query(models.Enrollment).filter(models.Enrollment.student_id == student.id).first()
+    batch = enrollment.class_id if enrollment else "Unknown"
+
+    profile = schemas.StudentProfile(
+        name=student.name,
+        student_id=student.index_number,
+        batch=batch
+    )
+
+    # 2. Summary
+    # Total sessions the student was supposed to attend (where ClassSession exists for their batch)
+    enrollments = db.query(models.Enrollment).filter(models.Enrollment.student_id == student.id).all()
+    batch_ids = [e.class_id for e in enrollments]
+
+    total_sessions = db.query(models.ClassSession).filter(
+        models.ClassSession.batch_id.in_(batch_ids)
+    ).count()
+
+    present_count = db.query(models.AttendanceRecord).join(
+        models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
+    ).filter(
+        models.AttendanceRecord.student_id == student.id,
+        models.AttendanceRecord.status == "Present",
+        models.ClassSession.batch_id.in_(batch_ids)
+    ).count()
+
+    absent_count = total_sessions - present_count
+    overall_percentage = (present_count / total_sessions * 100) if total_sessions > 0 else 0
+
+    summary = schemas.DashboardSummary(
+        overall_percentage=round(overall_percentage, 1),
+        present_count=present_count,
+        absent_count=absent_count
+    )
+
+    # 3. Recent History (Last 5)
+    recent_records = db.query(
+        models.AttendanceRecord,
+        models.ClassSession,
+        models.Module
+    ).join(
+        models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
+    ).join(
+        models.Module, models.ClassSession.subject_id == models.Module.module_code
+    ).filter(
+        models.AttendanceRecord.student_id == student.id,
+        models.ClassSession.batch_id.in_(batch_ids)
+    ).order_by(models.ClassSession.start_time.desc()).limit(5).all()
+
+    recent_history = []
+    for att, sess, mod in recent_records:
+        status = att.status
+        if att.reason and "Excused" in att.reason:
+            status = "Excused"
+            
+        recent_history.append(schemas.RecentClass(
+            class_name=mod.module_name,
+            date=sess.start_time.strftime("%Y-%m-%d"),
+            status=status
+        ))
+
+    return schemas.StudentDashboardResponse(
+        profile=profile,
+        summary=summary,
+        recent_history=recent_history
+    )
+
+
+@router.get("/student/dashboard-summary", response_model=schemas.StudentDashboardSummaryResponse)
+def get_student_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetches a simplified summary for the student dashboard."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can view dashboard summary")
+
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+
+    # 1. Get Profile Info safely
+    student_profile = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    batch = student_profile.intake if student_profile and hasattr(student_profile, 'intake') else "Unknown"
+    
+    profile_pic = student_profile.profile_picture if student_profile else None
+    if profile_pic and profile_pic.startswith("/uploads"):
+        profile_pic = f"http://localhost:8000{profile_pic}"
+
+    # 2. Get ALL Attendance Records for this student (using integer ID!)
+    records = db.query(models.AttendanceRecord).filter(
+        models.AttendanceRecord.student_id == student.id
+    ).all()
+    
+    total_sessions = len(records)
+    present_count = sum(1 for r in records if r.status in ["Present", "Excused"])
+    absent_count = total_sessions - present_count
+    overall_percentage = round((present_count / total_sessions) * 100) if total_sessions > 0 else 0
+
+    # 3. Get Recent Class History (Last 5 records)
+    recent_records = db.query(models.AttendanceRecord).filter(
+        models.AttendanceRecord.student_id == student.id
+    ).order_by(models.AttendanceRecord.id.desc()).limit(5).all()
+
+    recent_classes = []
+    for rec in recent_records:
+        session = db.query(models.ClassSession).filter(models.ClassSession.id == rec.session_id).first()
+        if session:
+            try:
+                # Assuming batch_id in ClassSession stores the Timetable ID
+                tt = db.query(models.Timetable).filter(models.Timetable.id == int(session.batch_id)).first()
+                if tt:
+                    mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
+                    mod_name = mod_info.module_name if mod_info else tt.module_code
+                    
+                    recent_classes.append(schemas.RecentClassSummary(
+                        module_name=f"{tt.module_code} - {mod_name}",
+                        date=str(tt.date),
+                        time=f"{tt.start_time} - {tt.end_time}",
+                        status=rec.status
+                    ))
+                else:
+                    # Fallback for sessions not linked to a specific timetable entry
+                    recent_classes.append(schemas.RecentClassSummary(
+                        module_name=session.subject_id,
+                        date=session.start_time.strftime("%Y-%m-%d"),
+                        time=session.start_time.strftime("%H:%M"),
+                        status=rec.status
+                    ))
+            except (ValueError, TypeError):
+                # Fallback for non-integer batch_id
+                recent_classes.append(schemas.RecentClassSummary(
+                    module_name=session.subject_id,
+                    date=session.start_time.strftime("%Y-%m-%d"),
+                    time=session.start_time.strftime("%H:%M"),
+                    status=rec.status
+                ))
+
+    # 4. Fetch Recent Correction Requests
+    recent_requests_query = db.query(models.CorrectionRequest).filter(
+        models.CorrectionRequest.student_id == student.index_number
+    ).order_by(models.CorrectionRequest.submitted_at.desc()).limit(4).all()
+
+    recent_requests = []
+    for req in recent_requests_query:
+        mod_name = "Unknown Module"
+        # session_id in CorrectionRequest refers to Timetable ID
+        tt = db.query(models.Timetable).filter(models.Timetable.id == req.session_id).first()
+        if tt:
+             mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
+             mod_name = mod_info.module_name if mod_info else tt.module_code
+
+        recent_requests.append(schemas.RecentCorrectionRequest(
+            module_name=mod_name,
+            status=req.status,
+            submitted_at=req.submitted_at.strftime("%Y-%m-%d") if req.submitted_at else "N/A"
+        ))
+
+    # 5. Calculate Module-Wise Stats (Dictionary)
+    module_stats = {}
+    timetables = db.query(models.Timetable).filter(models.Timetable.batch_id == student.intake).all()
+    
+    # Initialize all modules from timetables
+    for tt in timetables:
+        if tt.module_code not in module_stats:
+            mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
+            mod_name = mod_info.module_name if mod_info else (tt.module_name or tt.module_code)
+            module_stats[tt.module_code] = {"name": mod_name, "present": 0, "absent": 0, "total": 0, "percentage": 0}
+
+    # Map Timetable ID to Module Code
+    tt_to_mod = {tt.id: tt.module_code for tt in timetables}
+    
+    # Calculate attendance per module based on AttendanceRecords
+    for rec in records:
+        # Find which timetable entry this attendance record belongs to via ClassSession
+        session = db.query(models.ClassSession).filter(models.ClassSession.id == rec.session_id).first()
+        if session and session.batch_id.isdigit():
+            tt_id = int(session.batch_id)
+            m_code = tt_to_mod.get(tt_id)
+            if m_code and m_code in module_stats:
+                module_stats[m_code]["total"] += 1
+                if rec.status in ["Present", "Excused"]:
+                    module_stats[m_code]["present"] += 1
+                else:
+                    module_stats[m_code]["absent"] += 1
+
+    # Calculate final percentages
+    for code, s in module_stats.items():
+        if s["total"] > 0:
+            s["percentage"] = round((s["present"] / s["total"]) * 100)
+
+    # 6. Fetch Today's Schedule
+    from datetime import date
+    today_str = str(date.today())
+    
+    todays_timetables = db.query(models.Timetable).filter(
+        models.Timetable.batch_id == student.intake,
+        models.Timetable.date == today_str
+    ).order_by(models.Timetable.start_time).all()
+
+    todays_schedule = []
+    for tt in todays_timetables:
+        mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
+        mod_name = mod_info.module_name if mod_info else (tt.module_name or tt.module_code)
+        
+        todays_schedule.append(schemas.TodaysScheduleSummary(
+            module_name=f"{tt.module_code} - {mod_name}",
+            start_time=tt.start_time,
+            end_time=tt.end_time,
+            location=getattr(tt, 'location', 'TBA') or 'TBA',
+            session_type=getattr(tt, 'session_type', 'Lecture') or 'Lecture'
+        ))
+
+    return schemas.StudentDashboardSummaryResponse(
+        profile=schemas.StudentProfile(
+            name=student.name,
+            student_id=student.index_number,
+            batch=batch,
+            profile_picture=profile_pic
+        ),
+        stats=schemas.StudentDashboardSummaryStats(
+            overall_percentage=overall_percentage,
+            present=present_count,
+            absent=absent_count
+        ),
+        recent_classes=recent_classes,
+        recent_requests=recent_requests,
+        module_stats=module_stats,
+        todays_schedule=todays_schedule
+    )
+
+
+@router.get("/student/my-subjects", response_model=List[schemas.StudentSubjectSummary])
+def get_student_subjects(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetches all modules the student is enrolled in with their attendance summary."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can view their attendance summary")
+
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found")
+
+    student_intake = student.intake  # e.g., '23.2'
+    if not student_intake:
+        return []
+
+    # 1. Get all timetable entries for this student's intake and group by module
+    timetables = db.query(models.Timetable).filter(
+        models.Timetable.batch_id == student_intake
+    ).all()
+
+    # Group timetable entries by module_code, capturing level + lecturer on first encounter
+    module_dict: dict = {}
+    for tt in timetables:
+        if tt.module_code not in module_dict:
+            mod_info = db.query(models.Module).filter(
+                models.Module.module_code == tt.module_code
+            ).first()
+            module_dict[tt.module_code] = {
+                "module_name": mod_info.module_name if mod_info else tt.module_name or tt.module_code,
+                "level": (mod_info.level or "Unknown Semester") if mod_info else "Unknown Semester",
+                "lecturer_name": getattr(tt, "lecturer", None) or "TBA",
+                "tt_ids": []
+            }
+        module_dict[tt.module_code]["tt_ids"].append(tt.id)
+
+    summaries = []
+    for mod_code, data in module_dict.items():
+        total_sessions = len(data["tt_ids"])
+        attended_sessions = 0
+
+        # 2. For each timetable entry, find the actual ClassSession (batch_id = str(tt.id))
+        #    and check the student's attendance record or approved requests.
+        for tt_id in data["tt_ids"]:
+            is_attended = False
+            cls_session = db.query(models.ClassSession).filter(
+                models.ClassSession.batch_id == str(tt_id)
+            ).first()
+            
+            if cls_session:
+                record = db.query(models.AttendanceRecord).filter(
+                    models.AttendanceRecord.session_id == cls_session.id,
+                    models.AttendanceRecord.student_id == student.id,
+                    models.AttendanceRecord.status.in_(["Present", "Excused"])
+                ).first()
+                if record:
+                    is_attended = True
+            
+            if not is_attended:
+                # Fallback: Check if there's an approved correction request for this timetable entry
+                approved_req = db.query(models.CorrectionRequest).filter(
+                    models.CorrectionRequest.student_id == student.index_number,
+                    models.CorrectionRequest.session_id == tt_id,
+                    models.CorrectionRequest.status == "Approved"
+                ).first()
+                if approved_req:
+                    is_attended = True
+            
+            if is_attended:
+                attended_sessions += 1
+
+        percentage = (attended_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
+
+        summaries.append(schemas.StudentSubjectSummary(
+            module_code=mod_code,
+            module_name=data["module_name"],
+            total_sessions=total_sessions,
+            attended_sessions=attended_sessions,
+            attendance_percentage=round(percentage, 1),
+            level=data["level"],
+            lecturer_name=data["lecturer_name"]
+        ))
+
+    return summaries
+
+
+@router.get("/student/my-subjects/{module_code}/sessions", response_model=List[schemas.StudentSessionDetail])
+def get_subject_sessions(
+    module_code: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetches detailed session history for a specific module using correct timetable→ClassSession mapping."""
+    if current_user.role != "Student":
+        raise HTTPException(status_code=403, detail="Only students can view their session details")
+
+    student = db.query(models.Student).filter(models.Student.email == current_user.email).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found")
+
+    student_intake = student.intake
+    if not student_intake:
+        return []
+
+    # 1. Get timetable entries for this module and student's intake, newest first
+    timetables = db.query(models.Timetable).filter(
+        models.Timetable.module_code == module_code,
+        models.Timetable.batch_id == student_intake
+    ).order_by(models.Timetable.date.desc()).all()
+
+    session_details = []
+    current_date = datetime.now().date()
+
+    for tt in timetables:
+        # Parse the timetable date string → date object for comparison
+        try:
+            session_date = datetime.strptime(str(tt.date), "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            session_date = current_date  # safe fallback
+
+        status = "Pending"  # Default: scheduled but not yet held
+        request_status = None
+
+        # Check for any correction requests for this timetable ID
+        req = db.query(models.CorrectionRequest).filter(
+            models.CorrectionRequest.session_id == tt.id,
+            models.CorrectionRequest.student_id == student.index_number
+        ).order_by(models.CorrectionRequest.submitted_at.desc()).first()
+        
+        if req:
+            request_status = req.status
+
+        # 2. Find the actual ClassSession where batch_id == str(timetable.id)
+        cls_session = db.query(models.ClassSession).filter(
+            models.ClassSession.batch_id == str(tt.id)
+        ).first()
+
+        if cls_session:
+            # 3. Look up the student's attendance record for this session
+            att_rec = db.query(models.AttendanceRecord).filter(
+                models.AttendanceRecord.session_id == cls_session.id,
+                models.AttendanceRecord.student_id == student.id
+            ).first()
+
+            if att_rec:
+                if att_rec.reason and "Excused" in str(att_rec.reason):
+                    status = "Excused"
+                else:
+                    status = att_rec.status  # 'Present', 'Absent', 'Flagged'
+            else:
+                # Session was confirmed/held but no record → Absent
+                status = "Absent"
+        else:
+            # No ClassSession created yet for this timetable entry
+            # Check for approved correction requests
+            approved_req = db.query(models.CorrectionRequest).filter(
+                models.CorrectionRequest.student_id == student.index_number,
+                models.CorrectionRequest.session_id == tt.id,
+                models.CorrectionRequest.status == "Approved"
+            ).first()
+
+            if approved_req:
+                status = "Excused" if "Medical" in approved_req.reason_type else "Present"
+            elif session_date < current_date:
+                status = "Absent"   # session date passed, no confirmation recorded
+            else:
+                status = "Pending"  # future / today — not yet held
+
+        session_details.append(schemas.StudentSessionDetail(
+            session_id=tt.id,
+            date=tt.date,
+            start_time=tt.start_time,
+            end_time=tt.end_time,
+            session_type=getattr(tt, "session_type", "Lecture") or "Lecture",
+            status=status,
+            request_status=request_status
+        ))
+
+    return session_details
+
 
 @router.delete("/student/requests/{request_id}")
 def delete_correction_request(

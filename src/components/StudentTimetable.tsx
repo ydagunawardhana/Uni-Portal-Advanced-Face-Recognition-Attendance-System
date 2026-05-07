@@ -89,14 +89,14 @@ export default function StudentTimetable() {
 
   const fetchTimetable = async () => {
     try {
-      const token = localStorage.getItem("studentToken");
-      if (!token) {
+      const studentToken = localStorage.getItem("studentToken");
+      if (!studentToken) {
         toast.error("Session expired. Please login again.");
         return;
       }
 
       const res = await fetch("http://localhost:8000/api/student/timetable", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${studentToken}` },
       });
 
       // 206 = profile fields missing — descriptive warning, not a crash

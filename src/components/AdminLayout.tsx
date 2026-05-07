@@ -42,6 +42,7 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
     if (path.includes("live-sessions")) return "live_attendance";
     if (path.includes("live-camera")) return "live_camera";
     if (path.includes("reports")) return "reports";
+    if (path.includes("attendance-requests")) return "attendance_requests";
     if (path.includes("audit")) return "audit";
     if (path.includes("settings")) return "settings";
     return "dashboard";
@@ -96,21 +97,23 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
       case "dashboard":
         return "Admin Dashboard";
       case "students":
-        return "Student Enrollment";
+        return "Manage Students";
       case "pre_registrations":
         return "Registration Queue";
       case "manage_students":
         return "Student Database";
       case "lecturers":
-        return "Lecturer Management";
+        return "Manage Lecturers";
       case "modules":
-        return "Academic Modules";
+        return "Manage Modules";
       case "settings":
         return "System Settings";
       case "timetable":
         return "Timetable Integration";
       case "reports":
-        return "Attendance Reports";
+        return "System Reports";
+      case "attendance_requests":
+        return "Attendance Requests";
       case "audit":
         return "System Audit Logs";
       case "live_attendance":
@@ -128,21 +131,23 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
       case "dashboard":
         return "Manage your university attendance system";
       case "students":
-        return "Register new students and capture face data";
+        return "View and edit student enrollment records";
       case "pre_registrations":
         return "Process and approve pending student registrations";
       case "manage_students":
         return "View all registered students and process re-training requests";
       case "lecturers":
-        return "View and manage academic staff";
+        return "Manage academic staff profiles and assignments";
       case "modules":
-        return "Configure and manage university subjects";
+        return "Configure university modules and courses";
       case "settings":
         return "Configure system preferences and parameters";
       case "timetable":
         return "Upload and manage batch timetables";
       case "reports":
-        return "Generate and export class attendance records";
+        return "Generate and export campus-wide attendance reports";
+      case "attendance_requests":
+        return "Review and manage attendance appeals from students";
       case "audit":
         return "View system audit logs";
       case "live_attendance":

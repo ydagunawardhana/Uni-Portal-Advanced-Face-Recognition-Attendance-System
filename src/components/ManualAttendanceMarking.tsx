@@ -511,7 +511,7 @@ export default function ManualAttendanceMarking() {
                                   N/A - No Override Needed
                                 </span>
                               ) : (
-                                <span className="inline-block bg-red-50 text-red-600 text-sm font-bold px-2.5 py-1 rounded-xl border border-red-100">
+                                <span className="inline-block bg-red-100 text-red-600 text-sm font-bold px-2.5 py-1 rounded-xl border border-red-100">
                                   {edits[record.id] &&
                                   record.status?.toLowerCase() === "present"
                                     ? "Manual Override (Absent)"

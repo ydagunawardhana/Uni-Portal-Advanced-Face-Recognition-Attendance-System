@@ -109,7 +109,7 @@ const getRoleBadgeColor = (role: "Admin" | "Lecturer" | "Student") => {
     case "Lecturer":
       return "bg-blue-100 text-blue-700 border-blue-200 border-2 rounded-full px-3";
     case "Student":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200 border-2 rounded-full px-3";
+      return "bg-yellow-100 text-yellow-700 border-yellow-200 border-2 rounded-full px-3";
   }
 };
 
@@ -238,15 +238,12 @@ export default function SystemAuditLogs() {
       const getLocalDateString = () => {
         const d = new Date();
         const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       };
 
-      link.setAttribute(
-        "download",
-        `audit_logs_${getLocalDateString()}.csv`,
-      );
+      link.setAttribute("download", `audit_logs_${getLocalDateString()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -261,7 +258,7 @@ export default function SystemAuditLogs() {
 
   // Render
   return (
-    <div className="pb-20">
+    <div className="pb-10">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -274,7 +271,7 @@ export default function SystemAuditLogs() {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center cursor-pointer space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
+          className="flex items-center cursor-pointer space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-md"
         >
           <Download className="w-5 h-5" />
           <span className="font-medium">Export to CSV</span>
@@ -376,24 +373,24 @@ export default function SystemAuditLogs() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-100 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700  tracking-wider">
                   Timestamp
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700  tracking-wider">
                   Action Type
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700  tracking-wider">
                   Description
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700  tracking-wider">
                   Performed By
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 tracking-wider">
                   Severity
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700  tracking-wider">
                   Status
                 </th>
               </tr>
@@ -436,7 +433,7 @@ export default function SystemAuditLogs() {
                         </div>
                         {role && (
                           <span
-                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${getRoleBadgeColor(role)}`}
+                            className={`inline-block px-2 py-0.5 text-sm font-medium rounded border ${getRoleBadgeColor(role)}`}
                           >
                             {role}
                           </span>
@@ -460,7 +457,7 @@ export default function SystemAuditLogs() {
                       {/* Severity */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${sevCfg.cls}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${sevCfg.cls}`}
                         >
                           {sevCfg.icon}
                           {severity}
@@ -470,7 +467,7 @@ export default function SystemAuditLogs() {
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {status === "Success" ? (
-                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                          <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                             <CheckCircle className="w-4 h-4" />
                             <span>Success</span>
                           </span>

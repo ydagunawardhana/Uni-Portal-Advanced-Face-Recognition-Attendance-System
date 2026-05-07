@@ -77,15 +77,15 @@ export default function StudentProfileSecurity({
 
   useEffect(() => {
     const fetchProfileAndSessions = async () => {
-      const token = localStorage.getItem("studentToken");
-      if (!token) return;
+      const studentToken = localStorage.getItem("studentToken");
+      if (!studentToken) return;
       try {
         const [profileRes, sessionsRes] = await Promise.all([
           fetch(`${API_BASE}/api/student/profile`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${studentToken}` },
           }),
           fetch(`${API_BASE}/api/student/sessions`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${studentToken}` },
           }),
         ]);
 
@@ -420,7 +420,7 @@ export default function StudentProfileSecurity({
             {/* Student Information */}
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   Full Name
                 </label>
                 <p className="text-lg font-bold text-gray-900">
@@ -429,7 +429,7 @@ export default function StudentProfileSecurity({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   Index Number
                 </label>
                 <p className="text-lg font-bold text-red-600">
@@ -438,90 +438,90 @@ export default function StudentProfileSecurity({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   University Email
                 </label>
-                <p className="text-base text-gray-700">
+                <p className="text-base font-semibold text-gray-700">
                   {studentData?.email || "..."}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   Personal Email
                 </label>
-                <p className="text-base text-gray-700">
+                <p className="text-base font-semibold text-gray-700">
                   {studentData?.personal_email || "..."}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   Faculty
                 </label>
-                <p className="text-base text-gray-700">
+                <p className="text-base font-semibold text-gray-700">
                   {studentData?.faculty || "N/A"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     Department
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.department || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     Batch
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.academic_year || "N/A"}
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                   Degree Program
                 </label>
-                <p className="text-base text-gray-700">
+                <p className="text-base font-semibold text-gray-700">
                   {studentData?.degree_program || "N/A"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     Mobile
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.mobile || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     NIC Number
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.nic_number || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     Gender
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.gender || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
                     Intake
                   </label>
-                  <p className="text-base text-gray-700">
+                  <p className="text-base font-semibold text-gray-700">
                     {studentData?.intake || "N/A"}
                   </p>
                 </div>

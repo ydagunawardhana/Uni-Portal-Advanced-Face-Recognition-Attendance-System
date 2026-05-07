@@ -7,7 +7,9 @@ import AttendanceCorrectionRequest from "./AttendanceCorrectionRequest";
 import StudentProfileSecurity from "./StudentProfileSecurity";
 import StudentHelpSupport from "./StudentHelpSupport";
 import BookAppointments from "./BookAppointments";
-import { Bell, LogOut, CheckCircle, AlertTriangle, Info } from "lucide-react";
+import StudentMyAttendance from "./StudentMyAttendance";
+import { Bell, LogOut, CheckCircle, AlertTriangle, Info, RefreshCw } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const API_BASE = "http://localhost:8000";
 
@@ -20,9 +22,42 @@ export default function StudentDashboard({
   onLogout,
   onNavigate,
 }: StudentDashboardProps) {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [studentFirstName, setStudentFirstName] = useState("Student");
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDashboardData = async () => {
+    setRefreshing(true);
+    try {
+      const token = localStorage.getItem("studentToken");
+      const response = await fetch(
+        `${API_BASE}/api/attendance/student/dashboard-summary`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched Dashboard Data:", data); // DEBUGGING: Check console
+        setDashboardData(data);
+      } else {
+        console.error("Failed to fetch data, status:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   // Notification States
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -49,11 +84,11 @@ export default function StudentDashboard({
   // Fetch Data
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem("studentToken");
-      if (!token) return;
+      const studentToken = localStorage.getItem("studentToken");
+      if (!studentToken) return;
 
       const response = await fetch(`${API_BASE}/api/student/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${studentToken}` },
       });
 
       if (response.ok) {
@@ -145,6 +180,30 @@ export default function StudentDashboard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Listen for navigation state changes (e.g., from 'My Attendance' to 'Fix / Appeal')
+  useEffect(() => {
+    if (location.state && location.state.prefilledSessionId) {
+      setActiveTab("request-correction");
+    }
+  }, [location.state]);
+
+  // Listen for hash changes to support Quick Actions
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      const validTabs = ["dashboard", "timetable", "attendance", "request-correction", "profile", "help", "book-appointments"];
+      if (hash && validTabs.includes(hash)) {
+        setActiveTab(hash);
+        window.scrollTo(0, 0);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    handleHashChange(); // Check on initial load
+    
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem("studentToken");
@@ -186,6 +245,19 @@ export default function StudentDashboard({
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
+        if (loading)
+          return (
+            <div className="p-8 text-center text-gray-500">
+              Loading dashboard...
+            </div>
+          );
+        if (!dashboardData)
+          return (
+            <div className="p-8 text-center text-red-500">
+              Failed to load data. Please check backend response.
+            </div>
+          );
+
         return (
           <div className="p-8 pb-10">
             {needsPasswordChange && (
@@ -216,11 +288,13 @@ export default function StudentDashboard({
                 </button>
               </div>
             )}
-            <DashboardOverview />
+            <DashboardOverview data={dashboardData} isLoading={loading} />
           </div>
         );
       case "timetable":
         return <StudentTimetable />;
+      case "attendance":
+        return <StudentMyAttendance />;
       case "request-correction":
         return (
           <AttendanceCorrectionRequest
@@ -262,6 +336,18 @@ export default function StudentDashboard({
           </div>
 
           <div className="flex items-center space-x-4">
+            {activeTab === "dashboard" && (
+              <button
+                onClick={fetchDashboardData}
+                disabled={refreshing}
+                className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 mr-4"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${refreshing ? "animate-spin text-blue-600" : ""}`}
+                />
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            )}
             {/* Notification Dropdown Container */}
             <div className="relative" ref={notificationRef}>
               <button
