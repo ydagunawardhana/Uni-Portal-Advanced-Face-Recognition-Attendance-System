@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Monitor } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function LecturerSettings() {
   const [dailySummary, setDailySummary] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
+  const [notifyAppeals, setNotifyAppeals] = useState(true);
+  const [notifyAtRisk, setNotifyAtRisk] = useState(true);
+  const [use24Hour, setUse24Hour] = useState(false);
 
   const handleSave = async () => {
     // Logic for saving notification preferences
@@ -14,12 +17,15 @@ export default function LecturerSettings() {
   const handleCancel = () => {
     setDailySummary(true);
     setSmsAlerts(false);
+    setNotifyAppeals(true);
+    setNotifyAtRisk(true);
+    setUse24Hour(false);
   };
 
   return (
     <div className="space-y-6">
       {/* Notification Preferences Card */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
         <div className="flex items-center space-x-3 mb-6">
           <div className="p-2 bg-green-100 rounded-lg">
             <Bell className="w-6 h-6 text-green-600" />
@@ -36,7 +42,7 @@ export default function LecturerSettings() {
 
         <div className="space-y-5">
           {/* Daily Attendance Summary Toggle */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between py-3">
             <div>
               <p className="font-medium text-gray-900">
                 Receive Daily Attendance Summary
@@ -80,6 +86,91 @@ export default function LecturerSettings() {
               <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
                   smsAlerts ? "translate-x-8" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* New: Attendance Appeals */}
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="font-medium text-gray-900">
+                Attendance Correction Requests
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Get notified via notifications when a student submits an attendance appeal
+              </p>
+            </div>
+            <button
+              aria-label="Toggle Attendance Appeals"
+              onClick={() => setNotifyAppeals(!notifyAppeals)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${
+                notifyAppeals ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  notifyAppeals ? "translate-x-8" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* New: At-Risk Alerts */}
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="font-medium text-gray-900">
+                At-Risk Student Alerts
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Receive warnings when a student's attendance drops below 70%
+              </p>
+            </div>
+            <button
+              aria-label="Toggle At-Risk Alerts"
+              onClick={() => setNotifyAtRisk(!notifyAtRisk)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${
+                notifyAtRisk ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  notifyAtRisk ? "translate-x-8" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* New Card: Display Preferences */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Monitor className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Display Preferences</h2>
+            <p className="text-sm text-gray-600">Customize how information is shown on your dashboard</p>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="font-medium text-gray-900">24-Hour Time Format</p>
+              <p className="text-sm text-gray-600 mt-1">Display times as 13:00 instead of 01:00 PM</p>
+            </div>
+            <button
+              aria-label="Toggle 24-Hour Time Format"
+              onClick={() => setUse24Hour(!use24Hour)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer ${
+                use24Hour ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  use24Hour ? "translate-x-8" : "translate-x-1"
                 }`}
               />
             </button>

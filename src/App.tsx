@@ -266,6 +266,16 @@ export default function App() {
           }
         />
         <Route
+          path="/lecturer/settings"
+          element={
+            userRole === "Lecturer" ? (
+              <LecturerDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
           path="/lecturer/manual-attendances"
           element={
             userRole === "Lecturer" ? (

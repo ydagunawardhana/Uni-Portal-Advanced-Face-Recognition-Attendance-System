@@ -49,15 +49,15 @@ export default function StudentSidebar({
   ];
 
   return (
-    <div className="w-64 bg-white border-r-2 shadow-lg border-gray-200 flex flex-col h-screen flex-shrink-0">
-      <div className="p-6 border-b border-gray-200">
+    <div className="w-64 bg-white dark:bg-gray-800 border-r-2 shadow-lg border-gray-200 dark:border-gray-700 flex flex-col h-screen flex-shrink-0">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">U</span>
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 text-xl">Student Portal</h2>
-            <p className="text-xs text-gray-500 font-medium">University System</p>
+            <h2 className="font-bold text-gray-900 dark:text-white text-xl">Student Portal</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">University System</p>
           </div>
         </div>
       </div>
@@ -72,13 +72,13 @@ export default function StudentSidebar({
               onClick={() => onTabChange(item.id)}
               className={`w-full flex cursor-pointer items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
                 isActive
-                  ? "bg-red-100 text-red-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:bg-gray-700"
               }`}
             >
               <Icon
                 className={`w-5 h-5 ${
-                  isActive ? "text-red-600" : "text-gray-500"
+                  isActive ? "text-red-600" : "text-gray-500 dark:text-gray-400"
                 }`}
               />
               <span>{item.label}</span>
@@ -87,10 +87,10 @@ export default function StudentSidebar({
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={onLogout}
-          className="w-full cursor-pointer flex items-center space-x-3 px-4 py-3 rounded-lg font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all"
+          className="w-full cursor-pointer flex items-center space-x-3 px-4 py-3 rounded-lg font-medium text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:bg-red-900/20 hover:text-red-600 transition-all"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>

@@ -45,6 +45,7 @@ export default function LecturerDashboard({
     if (location.pathname.includes("appointments")) return "appointments";
     if (location.pathname.includes("profile")) return "profile";
     if (location.pathname.includes("history")) return "history";
+    if (location.pathname.includes("settings")) return "settings";
     if (location.pathname.includes("manual-attendances"))
       return "mark-attendance";
     if (location.pathname.includes("session-review")) return "session-review";
@@ -69,6 +70,8 @@ export default function LecturerDashboard({
       setActiveTab("profile");
     } else if (location.pathname.includes("history")) {
       setActiveTab("history");
+    } else if (location.pathname.includes("settings")) {
+      setActiveTab("settings");
     } else if (location.pathname.includes("session-review")) {
       setActiveTab("session-review");
     } else if (location.pathname.includes("correction-requests")) {
@@ -269,6 +272,9 @@ export default function LecturerDashboard({
         break;
       case "history":
         navigate("/lecturer/history");
+        break;
+      case "settings":
+        navigate("/lecturer/settings");
         break;
       case "mark-attendance":
         navigate("/lecturer/manual-attendances");

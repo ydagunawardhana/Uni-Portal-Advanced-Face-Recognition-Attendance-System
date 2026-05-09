@@ -1521,37 +1521,80 @@ def get_student_dashboard_summary(
         ))
 
     # 5. Calculate Module-Wise Stats (Dictionary)
+    from datetime import date, datetime
+
+    current_date = date.today()
+    current_time = datetime.now().time()
+
+    def parse_time(time_str):
+        if not time_str: return datetime.max.time()
+        try: return datetime.strptime(time_str.strip(), "%I:%M %p").time()
+        except: 
+            try: return datetime.strptime(time_str.strip(), "%H:%M").time()
+            except: return datetime.max.time()
+
     module_stats = {}
+    total_sessions = 0
+    present_count = 0
+
     timetables = db.query(models.Timetable).filter(models.Timetable.batch_id == student.intake).all()
     
-    # Initialize all modules from timetables
+    # Initialize dictionary for all enrolled modules based on timetables
     for tt in timetables:
         if tt.module_code not in module_stats:
             mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
             mod_name = mod_info.module_name if mod_info else (tt.module_name or tt.module_code)
             module_stats[tt.module_code] = {"name": mod_name, "present": 0, "absent": 0, "total": 0, "percentage": 0}
 
-    # Map Timetable ID to Module Code
-    tt_to_mod = {tt.id: tt.module_code for tt in timetables}
-    
-    # Calculate attendance per module based on AttendanceRecords
-    for rec in records:
-        # Find which timetable entry this attendance record belongs to via ClassSession
-        session = db.query(models.ClassSession).filter(models.ClassSession.id == rec.session_id).first()
-        if session and session.batch_id.isdigit():
-            tt_id = int(session.batch_id)
-            m_code = tt_to_mod.get(tt_id)
-            if m_code and m_code in module_stats:
-                module_stats[m_code]["total"] += 1
-                if rec.status in ["Present", "Excused"]:
-                    module_stats[m_code]["present"] += 1
-                else:
-                    module_stats[m_code]["absent"] += 1
+        # Determine if the session is "Valid" (Completed OR Past Time)
+        try:
+            tt_date = datetime.strptime(tt.date, "%Y-%m-%d").date()
+        except:
+            tt_date = current_date
+            
+        tt_end_time = parse_time(tt.end_time)
+        is_past = tt_date < current_date or (tt_date == current_date and tt_end_time < current_time)
+        
+        session = db.query(models.ClassSession).filter(models.ClassSession.batch_id == str(tt.id)).first()
+        is_completed = session and session.status == "Completed"
 
-    # Calculate final percentages
-    for code, s in module_stats.items():
-        if s["total"] > 0:
-            s["percentage"] = round((s["present"] / s["total"]) * 100)
+        if is_past or is_completed:
+            module_stats[tt.module_code]["total"] += 1
+            total_sessions += 1
+            
+            # Find matching session_id if it exists
+            session_id = session.id if session else None
+            
+            record = None
+            if session_id:
+                record = db.query(models.AttendanceRecord).filter(
+                    models.AttendanceRecord.session_id == session_id,
+                    models.AttendanceRecord.student_id == student.id,
+                    models.AttendanceRecord.status.in_(["Present", "Excused"])
+                ).first()
+            else:
+                # Fallback: check if there's an approved correction request for this timetable ID
+                correction = db.query(models.CorrectionRequest).filter(
+                    models.CorrectionRequest.session_id == tt.id,
+                    models.CorrectionRequest.student_id == student.index_number,
+                    models.CorrectionRequest.status == "Approved"
+                ).first()
+                if correction:
+                    record = correction
+                
+            if record:
+                module_stats[tt.module_code]["present"] += 1
+                present_count += 1
+            else:
+                module_stats[tt.module_code]["absent"] += 1
+
+    # Calculate percentage for each module
+    for code, stats in module_stats.items():
+        if stats["total"] > 0:
+            stats["percentage"] = round((stats["present"] / stats["total"]) * 100)
+
+    absent_count = total_sessions - present_count
+    overall_percentage = round((present_count / total_sessions) * 100) if total_sessions > 0 else 0
 
     # 6. Fetch Today's Schedule
     from datetime import date
@@ -1567,20 +1610,31 @@ def get_student_dashboard_summary(
         mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
         mod_name = mod_info.module_name if mod_info else (tt.module_name or tt.module_code)
         
+        # --- FIXED LECTURER FETCHING LOGIC ---
+        # The database schema shows the name is directly in the timetable table
+        lecturer_name = getattr(tt, 'lecturer', 'TBA')
+        if not lecturer_name: # Handle empty string or null cases safely
+             lecturer_name = "TBA"
+        # -------------------------------------
+        
         todays_schedule.append(schemas.TodaysScheduleSummary(
             module_name=f"{tt.module_code} - {mod_name}",
             start_time=tt.start_time,
             end_time=tt.end_time,
             location=getattr(tt, 'location', 'TBA') or 'TBA',
-            session_type=getattr(tt, 'session_type', 'Lecture') or 'Lecture'
+            session_type=getattr(tt, 'session_type', 'Lecture') or 'Lecture',
+            lecturer=lecturer_name
         ))
+
+    is_biometric_active = bool(student.profile_picture)
 
     return schemas.StudentDashboardSummaryResponse(
         profile=schemas.StudentProfile(
             name=student.name,
             student_id=student.index_number,
             batch=batch,
-            profile_picture=profile_pic
+            profile_picture=profile_pic,
+            biometric_registered=is_biometric_active
         ),
         stats=schemas.StudentDashboardSummaryStats(
             overall_percentage=overall_percentage,
@@ -1627,51 +1681,73 @@ def get_student_subjects(
                 "module_name": mod_info.module_name if mod_info else tt.module_name or tt.module_code,
                 "level": (mod_info.level or "Unknown Semester") if mod_info else "Unknown Semester",
                 "lecturer_name": getattr(tt, "lecturer", None) or "TBA",
-                "tt_ids": []
+                "timetables": []
             }
-        module_dict[tt.module_code]["tt_ids"].append(tt.id)
+        module_dict[tt.module_code]["timetables"].append(tt)
+
+    from datetime import date, datetime
+    current_date = date.today()
+    current_time = datetime.now().time()
+
+    def parse_time(time_str):
+        if not time_str: return datetime.max.time()
+        try: return datetime.strptime(time_str.strip(), "%I:%M %p").time()
+        except: 
+            try: return datetime.strptime(time_str.strip(), "%H:%M").time()
+            except: return datetime.max.time()
 
     summaries = []
     for mod_code, data in module_dict.items():
-        total_sessions = len(data["tt_ids"])
+        total_valid_sessions = 0
         attended_sessions = 0
 
-        # 2. For each timetable entry, find the actual ClassSession (batch_id = str(tt.id))
-        #    and check the student's attendance record or approved requests.
-        for tt_id in data["tt_ids"]:
-            is_attended = False
+        # 2. For each timetable entry, find the actual ClassSession
+        for tt in data["timetables"]:
+            try:
+                tt_date = datetime.strptime(tt.date, "%Y-%m-%d").date()
+            except:
+                tt_date = current_date
+            
+            tt_end_time = parse_time(tt.end_time)
+            is_past = tt_date < current_date or (tt_date == current_date and tt_end_time < current_time)
+            
             cls_session = db.query(models.ClassSession).filter(
-                models.ClassSession.batch_id == str(tt_id)
+                models.ClassSession.batch_id == str(tt.id)
             ).first()
-            
-            if cls_session:
-                record = db.query(models.AttendanceRecord).filter(
-                    models.AttendanceRecord.session_id == cls_session.id,
-                    models.AttendanceRecord.student_id == student.id,
-                    models.AttendanceRecord.status.in_(["Present", "Excused"])
-                ).first()
-                if record:
-                    is_attended = True
-            
-            if not is_attended:
-                # Fallback: Check if there's an approved correction request for this timetable entry
-                approved_req = db.query(models.CorrectionRequest).filter(
-                    models.CorrectionRequest.student_id == student.index_number,
-                    models.CorrectionRequest.session_id == tt_id,
-                    models.CorrectionRequest.status == "Approved"
-                ).first()
-                if approved_req:
-                    is_attended = True
-            
-            if is_attended:
-                attended_sessions += 1
+            is_completed = cls_session and cls_session.status == "Completed"
 
-        percentage = (attended_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
+            if is_past or is_completed:
+                total_valid_sessions += 1
+                is_attended = False
+                
+                if cls_session:
+                    record = db.query(models.AttendanceRecord).filter(
+                        models.AttendanceRecord.session_id == cls_session.id,
+                        models.AttendanceRecord.student_id == student.id,
+                        models.AttendanceRecord.status.in_(["Present", "Excused"])
+                    ).first()
+                    if record:
+                        is_attended = True
+                
+                if not is_attended:
+                    # Fallback: Check if there's an approved correction request
+                    approved_req = db.query(models.CorrectionRequest).filter(
+                        models.CorrectionRequest.student_id == student.index_number,
+                        models.CorrectionRequest.session_id == tt.id,
+                        models.CorrectionRequest.status == "Approved"
+                    ).first()
+                    if approved_req:
+                        is_attended = True
+                
+                if is_attended:
+                    attended_sessions += 1
+
+        percentage = (attended_sessions / total_valid_sessions * 100) if total_valid_sessions > 0 else 0.0
 
         summaries.append(schemas.StudentSubjectSummary(
             module_code=mod_code,
             module_name=data["module_name"],
-            total_sessions=total_sessions,
+            total_sessions=total_valid_sessions,
             attended_sessions=attended_sessions,
             attendance_percentage=round(percentage, 1),
             level=data["level"],

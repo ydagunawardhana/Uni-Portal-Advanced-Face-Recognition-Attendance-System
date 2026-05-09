@@ -245,8 +245,8 @@ export default function BookAppointments() {
       <div className="flex flex-col mx-4 pb-12">
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Lecturer Directory */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-md lg:col-span-1 flex flex-col h-[600px]">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-md lg:col-span-1 flex flex-col h-[600px]">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Lecturer Directory
             </h2>
 
@@ -274,10 +274,10 @@ export default function BookAppointments() {
                     }}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
                       lecturer.is_visiting
-                        ? "opacity-60 bg-gray-50 cursor-not-allowed border-gray-100"
+                        ? "opacity-60 bg-gray-50 dark:bg-gray-700 cursor-not-allowed border-gray-100 dark:border-gray-700"
                         : selectedLecturer?.id === lecturer.id
-                          ? "bg-red-50 border-red-300 ring-1 ring-red-300 shadow-sm cursor-pointer"
-                          : "border-gray-100 hover:bg-gray-50 hover:border-gray-200 cursor-pointer"
+                          ? "bg-red-50 dark:bg-red-900/20 border-red-300 ring-1 ring-red-300 shadow-sm cursor-pointer"
+                          : "border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-700 hover:border-gray-200 dark:border-gray-700 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -287,16 +287,16 @@ export default function BookAppointments() {
                             selectedLecturer?.id === lecturer.id &&
                             !lecturer.is_visiting
                               ? "bg-red-600 text-white"
-                              : "bg-gray-100 text-gray-500"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                           }`}
                         >
                           <User className="w-6 h-6" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900 leading-tight">
+                          <p className="font-semibold text-gray-900 dark:text-white leading-tight">
                             {lecturer.name}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {lecturer.department}
                           </p>
                         </div>
@@ -313,30 +313,30 @@ export default function BookAppointments() {
                 ))
               ) : (
                 <div className="text-center py-10">
-                  <p className="text-sm text-gray-500">No lecturers found.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No lecturers found.</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Column - Booking Form */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-md lg:col-span-2 h-[670px] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-md lg:col-span-2 h-[670px] flex flex-col">
             {!selectedLecturer ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-red-600 mb-4 animate-pulse">
+                <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center text-red-600 mb-4 animate-pulse">
                   <HelpCircle className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   Select a Lecturer
                 </h3>
-                <p className="text-gray-600 mt-2 text-sm font-medium mb-1.5">
+                <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm font-medium mb-1.5">
                   Please select a lecturer from the directory on the left to
                   view their availability and book a session.
                 </p>
 
                 {/* NEW: Visiting Lecturer Explanation Box */}
 
-                <p className="text-sm text-gray-600 font-medium">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                   <span className="font-bold">Note:</span> Visiting lecturers do
                   not hold regular office hours and are therefore not available
                   for direct appointment bookings through the portal.
@@ -345,12 +345,12 @@ export default function BookAppointments() {
             ) : (
               <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-300">
                 {/* Lecturer Info Header */}
-                <div className="flex justify-between items-start border-b border-gray-100 pb-6 mb-6">
+                <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-700 pb-6 mb-6">
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
                       {selectedLecturer.name}
                     </h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <span>{selectedLecturer.department}</span>
                       <span>•</span>
                       <span className="text-red-600 font-medium">
@@ -362,15 +362,15 @@ export default function BookAppointments() {
 
                 {/* Office Hours Selection */}
                 <div className="mb-8 overflow-y-auto max-h-[300px] pr-2 scrollbar-thin scrollbar-thumb-gray-100">
-                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-red-600" />
                     Select Available Time Slot
                   </h4>
 
                   {!selectedLecturer.office_hours ||
                   selectedLecturer.office_hours.length === 0 ? (
-                    <div className="p-8 bg-gray-50 border-2 border-gray-300 border-dashed rounded-xl">
-                      <p className="text-sm text-gray-500 italic text-center">
+                    <div className="p-8 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 border-dashed rounded-xl">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center">
                         No consultation hours have been set by this lecturer
                         yet.
                       </p>
@@ -383,20 +383,20 @@ export default function BookAppointments() {
                           onClick={() => setSelectedSlot(slot)}
                           className={`flex flex-col p-4 rounded-xl cursor-pointer border-2 transition-all text-left ${
                             selectedSlot === slot
-                              ? "bg-red-50 border-red-500 ring-1 ring-red-500/10 shadow-sm"
-                              : "bg-white border-gray-200 hover:border-red-200"
+                              ? "bg-red-50 dark:bg-red-900/20 border-red-500 ring-1 ring-red-500/10 shadow-sm"
+                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-200"
                           }`}
                         >
                           <span
                             className={`text-sm font-bold ${
                               selectedSlot === slot
-                                ? "text-red-700"
-                                : "text-gray-900"
+                                ? "text-red-700 dark:text-red-400"
+                                : "text-gray-900 dark:text-white"
                             }`}
                           >
                             {slot.day}
                           </span>
-                          <span className="text-sm text-gray-600 mt-0.5">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                             {slot.startTime} - {slot.endTime}
                           </span>
                           <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-400">
@@ -411,7 +411,7 @@ export default function BookAppointments() {
 
                 {/* Reason Form */}
                 <div className="flex-1 flex flex-col">
-                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
                     Reason for Consultation
                   </h4>
                   <textarea
@@ -425,7 +425,7 @@ export default function BookAppointments() {
 
                 {/* Footer Actions */}
                 <div className="mt-8 flex items-center justify-between">
-                  <p className="text-xs text-gray-500 max-w-sm italic">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm italic">
                     Note: Appointment requests are subject to lecturer approval.
                   </p>
                   <button
@@ -464,24 +464,24 @@ export default function BookAppointments() {
         </div>
 
         {/* My Consultation Requests Section */}
-        <div className="mt-8 bg-white border border-gray-200 rounded-xl p-6 shadow-md mb-8">
+        <div className="mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-md mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <Calendar className="w-8 h-8 text-red-600" />
               My Consultation Requests
             </h2>
             <button
               onClick={() => fetchAppointments()}
-              className="text-sm font-semibold cursor-pointer border-2 border-red-200 px-3 text-red-600 hover:text-red-600 hover:bg-red-50 rounded-full p-1.5 transition-colors"
+              className="text-sm font-semibold cursor-pointer border-2 border-red-200 px-3 text-red-600 hover:text-red-600 hover:bg-red-50 dark:bg-red-900/20 rounded-full p-1.5 transition-colors"
             >
               Refresh List
             </button>
           </div>
 
           {myAppointments.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 border-dashed rounded-xl p-12 text-center">
+            <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 border-dashed rounded-xl p-12 text-center">
               <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">
+              <p className="text-gray-500 dark:text-gray-400">
                 You have no consultation requests yet.
               </p>
             </div>
@@ -490,22 +490,22 @@ export default function BookAppointments() {
               {myAppointments.map((req) => (
                 <div
                   key={req.id}
-                  className="flex flex-col p-4 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-white hover:shadow-md transition-all duration-200 group mb-3"
+                  className="flex flex-col p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200 group mb-3"
                 >
                   <div className="flex flex-row items-center justify-between">
                     {/* Left Side: Avatar & Details */}
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-red-600 border border-gray-100 flex items-center justify-center text-gray-400 group-hover:text-red-600 transition-colors shadow-sm">
+                      <div className="w-10 h-10 rounded-full bg-red-600 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 group-hover:text-red-600 transition-colors shadow-sm">
                         <User className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-lg">
+                        <p className="font-bold text-gray-900 dark:text-white text-lg">
                           {req.lecturer_name || "Lecturer Name"}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {req.lecturer_department || "Department Name"}
                         </p>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-3">
+                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-3">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             {req.appointment_date}
@@ -516,7 +516,7 @@ export default function BookAppointments() {
                           </div>
                         </div>
                         {req.reason && (
-                          <p className="text-sm text-gray-600 mt-2 italic border-l-2 border-gray-200 pl-2 line-clamp-1 max-w-md">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic border-l-2 border-gray-200 dark:border-gray-700 pl-2 line-clamp-1 max-w-md">
                             "{req.reason}"
                           </p>
                         )}
@@ -530,8 +530,8 @@ export default function BookAppointments() {
                           req.status === "Pending"
                             ? "bg-yellow-100 text-yellow-800 border-yellow-200"
                             : req.status === "Approved"
-                              ? "bg-green-100 text-green-800 border-green-200"
-                              : "bg-red-100 text-red-800 border-red-200"
+                              ? "bg-green-100 dark:bg-green-900/30 text-green-800 border-green-200"
+                              : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200"
                         }`}
                       >
                         {req.status}
@@ -540,7 +540,7 @@ export default function BookAppointments() {
                       {req.status === "Pending" && (
                         <button
                           onClick={() => openCancelModal(req.id)}
-                          className="p-2 text-red-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          className="p-2 text-red-600 hover:text-red-600 hover:bg-red-50 dark:bg-red-900/20 rounded-lg transition-all duration-200"
                           title="Cancel Request"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -551,11 +551,11 @@ export default function BookAppointments() {
 
                   {/* Decline Reason Display */}
                   {req.status === "Rejected" && req.decline_reason && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg w-full">
-                      <p className="text-xs font-bold text-red-800 mb-1">
+                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-lg w-full">
+                      <p className="text-xs font-bold text-red-800 dark:text-red-300 mb-1">
                         Reason for Decline:
                       </p>
-                      <p className="text-sm text-red-700 italic border-l-2 border-red-200 pl-2">
+                      <p className="text-sm text-red-700 dark:text-red-400 italic border-l-2 border-red-200 pl-2">
                         "{req.decline_reason}"
                       </p>
                     </div>
@@ -574,15 +574,15 @@ export default function BookAppointments() {
             style={{ zIndex: 2147483640 }}
             className="fixed inset-0 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm w-screen h-screen"
           >
-            <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-[400px] p-6 flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[90%] max-w-[400px] p-6 flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
 
-              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">
+              <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white mb-2">
                 Cancel Request?
               </h3>
-              <p className="text-sm text-center text-gray-500 mb-6">
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
                 Are you sure you want to cancel this consultation request? This
                 action cannot be undone.
               </p>
@@ -594,7 +594,7 @@ export default function BookAppointments() {
                     setIsCancelModalOpen(false);
                     setRequestToCancel(null);
                   }}
-                  className="flex-1 px-4 py-2.5 bg-white cursor-pointer border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-100 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-gray-800 cursor-pointer border-2 border-gray-300 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:bg-gray-700 transition-colors"
                 >
                   No, Keep it
                 </button>

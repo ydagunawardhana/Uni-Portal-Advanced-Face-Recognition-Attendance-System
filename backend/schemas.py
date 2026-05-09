@@ -311,6 +311,7 @@ class StudentProfile(BaseModel):
     student_id: str
     batch: str
     profile_picture: Optional[str] = None
+    biometric_registered: Optional[bool] = False
 
     model_config = {"from_attributes": True}
 
@@ -349,6 +350,7 @@ class TodaysScheduleSummary(BaseModel):
     end_time: str
     location: str
     session_type: str
+    lecturer: str
 
 class StudentDashboardSummaryResponse(BaseModel):
     profile: StudentProfile

@@ -151,7 +151,7 @@ export default function StudentTimetable() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] gap-4">
         <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-        <p className="text-gray-500 font-medium animate-pulse">
+        <p className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">
           Syncing your weekly schedule...
         </p>
       </div>
@@ -159,7 +159,7 @@ export default function StudentTimetable() {
   }
 
   return (
-    <div className="p-8 bg-white">
+    <div className="p-8 bg-white dark:bg-gray-800">
       {/* Page Header with Refresh Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div className="flex items-center gap-3">
@@ -167,19 +167,19 @@ export default function StudentTimetable() {
           <div>
             {/* Title and Badges in one row */}
             <div className="flex items-center gap-4 mb-1">
-              <h2 className="text-2xl font-bold text-gray-900">Weekly Class Schedule</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Weekly Class Schedule</h2>
               {schedule.length > 0 && (
                 <div className="flex items-center gap-3 mt-1 mb-1">
-                  <span className="px-2.5 py-0.1 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
+                  <span className="px-2.5 py-0.1 bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
                     {schedule[0]?.academic_year || 'Year 1'}
                   </span>
-                  <span className="px-2.5 py-0.1 bg-red-50 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
+                  <span className="px-2.5 py-0.1 bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
                     {schedule[0]?.semester || 'Semester 1'}
                   </span>
                 </div>
               )}
             </div>
-            <p className="text-gray-500 text-sm mt-2">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
               View your weekly class schedule for{" "}
               <span className="font-bold text-red-600">
                 {displayDates["Monday"]} - {displayDates["Sunday"]}
@@ -190,10 +190,10 @@ export default function StudentTimetable() {
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 text-gray-700 font-bold transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold transition-all cursor-pointer disabled:opacity-50 active:scale-95"
         >
           <RefreshCw
-            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"}`}
+            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500 dark:text-gray-400"}`}
           />
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
@@ -230,14 +230,14 @@ export default function StudentTimetable() {
 
       {/* Conditional Rendering based on Schedule Data */}
       {schedule.length === 0 && !isLoading ? (
-        <div className="w-full flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-100 shadow-md min-h-[500px]">
-          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 border-8 border-white shadow-sm">
+        <div className="w-full flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-md min-h-[500px]">
+          <div className="w-24 h-24 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6 border-8 border-white shadow-sm">
             <Calendar className="w-12 h-12 text-gray-400" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
             No Classes Scheduled
           </h3>
-          <p className="text-gray-500 text-center max-w-md leading-relaxed">
+          <p className="text-gray-500 dark:text-gray-400 text-center max-w-md leading-relaxed">
             You don't have any classes assigned for this week. Enjoy your free
             time! If you think this is a mistake, please check back later or
             contact your academic coordinator.
@@ -248,10 +248,10 @@ export default function StudentTimetable() {
               await fetchTimetable();
               setTimeout(() => setIsLoading(false), 800);
             }}
-            className="mt-8 px-6 py-3 bg-white  cursor-pointer border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 shadow-sm"
+            className="mt-8 px-6 py-3 bg-white dark:bg-gray-800  cursor-pointer border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-100 dark:bg-gray-700 transition-all flex items-center gap-2 shadow-sm"
           >
             <RefreshCw
-              className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : "text-gray-500"}`}
+              className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : "text-gray-500 dark:text-gray-400"}`}
             />
             Refresh Schedule
           </button>
@@ -266,22 +266,22 @@ export default function StudentTimetable() {
               return (
                 <div
                   key={dayName}
-                  className={`flex-none w-[280px] lg:w-[320px] flex flex-col rounded-2xl overflow-hidden snap-start transition-all ${isToday ? "border-2 border-red-500 bg-white shadow-md transform -translate-y-1" : "border-2 border-gray-200 bg-white shadow-md"}`}
+                  className={`flex-none w-[280px] lg:w-[320px] flex flex-col rounded-2xl overflow-hidden snap-start transition-all ${isToday ? "border-2 border-red-500 bg-white dark:bg-gray-800 shadow-md transform -translate-y-1" : "border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md"}`}
                 >
                   {/* Day Header */}
                   <div
-                    className={`py-4 flex flex-col items-center justify-center border-b ${isToday ? "bg-red-600 text-white border-red-600" : "bg-gray-200 text-gray-800 border-gray-100"}`}
+                    className={`py-4 flex flex-col items-center justify-center border-b ${isToday ? "bg-red-600 text-white border-red-600" : "bg-gray-200 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-gray-700"}`}
                   >
                     <h3 className="font-bold text-lg tracking-wide">
                       {dayName}
                     </h3>
                     <p
-                      className={`text-sm mt-0.5 font-bold ${isToday ? "text-red-100" : "text-gray-500"}`}
+                      className={`text-sm mt-0.5 font-bold ${isToday ? "text-red-100" : "text-gray-500 dark:text-gray-400"}`}
                     >
                       {displayDates[dayName]}
                     </p>
                     {isToday && (
-                      <span className="mt-2 bg-white text-red-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                      <span className="mt-2 bg-white dark:bg-gray-800 text-red-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
                         Today
                       </span>
                     )}
@@ -289,7 +289,7 @@ export default function StudentTimetable() {
 
                   {/* Cards Container */}
                   <div
-                    className={`p-3 flex-1 flex flex-col gap-3 ${isToday ? "bg-white" : "bg-gray-50/30"}`}
+                    className={`p-3 flex-1 flex flex-col gap-3 ${isToday ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700/30"}`}
                   >
                     {groupedSchedule[dayName].length > 0 ? (
                       groupedSchedule[dayName].map((cls, idx) => (
@@ -326,7 +326,7 @@ export default function StudentTimetable() {
                       ))
                     ) : (
                       <div className="flex-1 flex p-1">
-                        <div className="flex-1 w-full min-h-[120px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50">
+                        <div className="flex-1 w-full min-h-[120px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                           <p className="text-gray-400 text-[11px] font-bold tracking-widest uppercase">
                             No Classes
                           </p>
@@ -341,8 +341,8 @@ export default function StudentTimetable() {
 
           {/* Subject Color Code Legend */}
           {uniqueSubjects.length > 0 && (
-            <div className="mt-8 bg-white rounded-2xl border border-gray-200 p-6 shadow-md w-full">
-              <h4 className="font-bold text-gray-900 mb-5 flex items-center gap-2 text-lg">
+            <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-md w-full">
+              <h4 className="font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2 text-lg">
                 <span className="w-1.5 h-5 bg-blue-600 rounded-full"></span>
                 Subject Color Guide
               </h4>
@@ -350,9 +350,9 @@ export default function StudentTimetable() {
                 {uniqueSubjects.map((subj, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <span
-                      className={`w-4 h-4 rounded-full shadow-sm ${getCardColor(subj)} border border-gray-200/50`}
+                      className={`w-4 h-4 rounded-full shadow-sm ${getCardColor(subj)} border border-gray-200 dark:border-gray-700/50`}
                     ></span>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {subj}
                     </span>
                   </div>

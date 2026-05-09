@@ -359,13 +359,13 @@ export default function StudentProfileSecurity({
       display: none;
     }
     `}</style>
-      <div className="p-8 bg-white">
+      <div className="p-8 bg-white dark:bg-gray-800">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Profile & Security
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage your profile information and security settings
           </p>
         </div>
@@ -373,10 +373,10 @@ export default function StudentProfileSecurity({
         {/* Main Content - Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Side - Profile Card */}
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-8">
             <div className="flex items-center gap-2 mb-6">
-              <User className="w-5 h-5 text-red-600" />
-              <h2 className="text-xl font-bold text-gray-900">
+              <User className="w-6 h-6 text-red-600 bg-red" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Student Profile
               </h2>
             </div>
@@ -410,7 +410,7 @@ export default function StudentProfileSecurity({
               </div>
 
               <p
-                className="text-sm text-gray-500 mt-4 hover:text-red-600 transition-colors cursor-pointer font-medium"
+                className="text-sm text-gray-500 dark:text-gray-400 mt-4 hover:text-red-600 transition-colors cursor-pointer font-medium"
                 onClick={() => fileInputRef.current?.click()}
               >
                 Change Avatar
@@ -420,16 +420,16 @@ export default function StudentProfileSecurity({
             {/* Student Information */}
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   Full Name
                 </label>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
                   {studentData?.name || "..."}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   Index Number
                 </label>
                 <p className="text-lg font-bold text-red-600">
@@ -438,90 +438,90 @@ export default function StudentProfileSecurity({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   University Email
                 </label>
-                <p className="text-base font-semibold text-gray-700">
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                   {studentData?.email || "..."}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   Personal Email
                 </label>
-                <p className="text-base font-semibold text-gray-700">
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                   {studentData?.personal_email || "..."}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   Faculty
                 </label>
-                <p className="text-base font-semibold text-gray-700">
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                   {studentData?.faculty || "N/A"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     Department
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.department || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     Batch
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.academic_year || "N/A"}
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                   Degree Program
                 </label>
-                <p className="text-base font-semibold text-gray-700">
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                   {studentData?.degree_program || "N/A"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     Mobile
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.mobile || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     NIC Number
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.nic_number || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     Gender
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.gender || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
                     Intake
                   </label>
-                  <p className="text-base font-semibold text-gray-700">
+                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300">
                     {studentData?.intake || "N/A"}
                   </p>
                 </div>
@@ -532,23 +532,23 @@ export default function StudentProfileSecurity({
           {/* Right Side - Stacked Cards */}
           <div className="space-y-6">
             {/* Face Recognition Status Card */}
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-8">
               <div className="flex items-center gap-2 mb-6">
-                <Shield className="w-5 h-5 text-red-600" />
-                <h2 className="text-xl font-bold text-gray-900">
+                <Shield className="w-6 h-6 text-red-600" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   Face Recognition Status
                 </h2>
               </div>
 
               {/* Status Section */}
               <div className="mb-8">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Current Status
                 </label>
-                <div className="inline-flex items-center gap-3 px-6 py-4 bg-green-100 border-2 border-green-500 rounded-lg">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="inline-flex items-center gap-3 px-6 py-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-lg">
+                  <CheckCircle className="w-8 h-8 text-green-600 animate-pulse" />
                   <div>
-                    <p className="text-2xl font-bold text-green-700">
+                    <p className="text-2xl font-bold text-green-700 dark:text-green-400">
                       Face Model Active
                     </p>
                     <p className="text-sm text-green-600">
@@ -560,10 +560,10 @@ export default function StudentProfileSecurity({
 
               {/* Last Trained */}
               <div className="mb-8">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Calendar className="w-5 h-5 text-gray-500" />
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Calendar className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <span className="text-sm font-medium">Last updated:</span>
-                  <span className="text-sm font-bold text-gray-900">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
                     {lastTrained}
                   </span>
                 </div>
@@ -577,7 +577,7 @@ export default function StudentProfileSecurity({
                   className={`w-full cursor-pointer px-6 py-3 border-2 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
                     studentData?.retrain_requested
                       ? "bg-yellow-50 border-yellow-500 text-yellow-600"
-                      : "bg-white border-red-600 text-red-600 hover:bg-red-50"
+                      : "bg-white dark:bg-gray-800 border-red-600 text-red-600 hover:bg-red-50 dark:bg-red-900/20"
                   }`}
                 >
                   {isRetraining ? (
@@ -597,12 +597,12 @@ export default function StudentProfileSecurity({
                 {studentData?.retrain_requested && (
                   <button
                     onClick={handleCancelRequest}
-                    className="mt-3 text-sm cursor-pointer text-red-600 hover:text-red-700 font-medium underline-offset-2 hover:underline w-full text-center"
+                    className="mt-3 text-sm cursor-pointer text-red-600 hover:text-red-700 dark:text-red-400 font-medium underline-offset-2 hover:underline w-full text-center"
                   >
                     Cancel Request
                   </button>
                 )}
-                <p className="text-xs text-gray-500 mt-2 text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
                   Use this if your appearance has changed significantly
                 </p>
               </div>
@@ -618,10 +618,10 @@ export default function StudentProfileSecurity({
             </div>
 
             {/* Active Sessions & Devices Card */}
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-              <div className="flex items-center gap-2 mb-6">
-                <Activity className="w-5 h-5 text-blue-600" />
-                <h2 className="text-xl font-bold text-gray-900">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+              <div className="flex items-center gap-2 mb-6 ">
+                <Activity className="w-6 h-6 text-blue-600" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   Active Sessions & Devices
                 </h2>
               </div>
@@ -629,10 +629,10 @@ export default function StudentProfileSecurity({
                 {sessions.map((session) => (
                   <div
                     key={session.id}
-                    className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50 hover:bg-white transition-colors"
+                    className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-white dark:bg-gray-800 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="p-2 bg-gray-100 rounded-full text-gray-600">
+                      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400">
                         {session.device_name.toLowerCase().includes("pc") ||
                         session.device_name.toLowerCase().includes("mac") ? (
                           <Laptop className="w-5 h-5" />
@@ -641,26 +641,26 @@ export default function StudentProfileSecurity({
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">
                           {session.device_name}{" "}
                           <span className="text-gray-400 font-normal ml-1">
                             • {session.browser}
                           </span>
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {session.ip_address} • {session.last_active}
                         </p>
                       </div>
                     </div>
                     <div>
                       {session.is_current_session ? (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                        <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-bold rounded-full">
                           Active Now
                         </span>
                       ) : (
                         <button
                           onClick={() => handleRevokeSession(session.id)}
-                          className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold transition-colors"
+                          className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 dark:bg-red-900/20 rounded-lg text-sm font-bold transition-colors"
                         >
                           Revoke Access
                         </button>
@@ -675,14 +675,14 @@ export default function StudentProfileSecurity({
           {/* 3rd Column Wrapper */}
           <div className="relative h-[500px] lg:h-auto">
             {/* The Card - absolutely positioned to exactly match the 1st column's height */}
-            <div className="absolute inset-0 bg-white rounded-2xl shadow-lg border border-gray-200 p-8 flex flex-col">
+            <div className="absolute inset-0 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 flex flex-col">
               {/* Header - flex-shrink-0 prevents it from squishing */}
               <div className="flex items-center justify-between mb-6 flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
-                    <Bell className="w-5 h-5" />
+                  <div className="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                    <Bell className="w-6 h-6" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                     Recent Notifications
                   </h3>
                 </div>
@@ -696,14 +696,14 @@ export default function StudentProfileSecurity({
                     {notifications.map((notif, index) => (
                       <div
                         key={notif.id || index}
-                        className="flex gap-3 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
+                        className="flex gap-3 p-4 rounded-xl hover:bg-gray-50 dark:bg-gray-700 transition-colors border border-transparent hover:border-gray-100 dark:border-gray-700"
                       >
                         {renderNotificationIcon(notif.title)}
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">
                             {notif.title}
                           </h4>
-                          <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed line-clamp-3">
                             {notif.message}
                           </p>
                           <span className="text-[10px] font-bold text-gray-400 mt-2 block uppercase tracking-wider">
@@ -718,13 +718,13 @@ export default function StudentProfileSecurity({
                 ) : (
                   /* Beautiful Empty State */
                   <div className="flex flex-col items-center justify-center h-full text-center opacity-80 pt-10">
-                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
                       <BellOff className="w-8 h-8 text-gray-300" />
                     </div>
-                    <h4 className="text-[15px] font-bold text-gray-700">
+                    <h4 className="text-[15px] font-bold text-gray-700 dark:text-gray-300">
                       You're all caught up!
                     </h4>
-                    <p className="text-xs text-gray-500 mt-1.5 max-w-[200px] mx-auto leading-relaxed">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 max-w-[200px] mx-auto leading-relaxed">
                       There are no new notifications or alerts to display right
                       now.
                     </p>
@@ -740,10 +740,10 @@ export default function StudentProfileSecurity({
           id="password-settings"
           className="mt-6 transition-all duration-500"
         >
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-8">
             <div className="flex items-center gap-2 mb-6">
               <Lock className="w-5 h-5 text-red-600" />
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Change Password
               </h2>
             </div>
@@ -752,7 +752,7 @@ export default function StudentProfileSecurity({
               <div className="space-y-5">
                 {/* Current Password */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Current Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
@@ -761,7 +761,7 @@ export default function StudentProfileSecurity({
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
-                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                       required
                     />
                     <button
@@ -769,7 +769,7 @@ export default function StudentProfileSecurity({
                       onClick={() =>
                         setShowCurrentPassword(!showCurrentPassword)
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
                     >
                       {showCurrentPassword ? (
                         <EyeOff className="w-5 h-5" />
@@ -782,7 +782,7 @@ export default function StudentProfileSecurity({
 
                 {/* New Password */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     New Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
@@ -791,13 +791,13 @@ export default function StudentProfileSecurity({
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
                     >
                       {showNewPassword ? (
                         <EyeOff className="w-5 h-5" />
@@ -810,7 +810,7 @@ export default function StudentProfileSecurity({
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Confirm New Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
@@ -819,7 +819,7 @@ export default function StudentProfileSecurity({
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter new password"
-                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl text-sm font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                       required
                     />
                     <button
@@ -827,7 +827,7 @@ export default function StudentProfileSecurity({
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="w-5 h-5" />
