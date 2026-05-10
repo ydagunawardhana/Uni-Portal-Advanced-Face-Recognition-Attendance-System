@@ -13,7 +13,9 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FileText,
+  LogOut,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface LecturerSidebarProps {
   activeTab: string;
@@ -30,6 +32,16 @@ export default function LecturerSidebar({
   onToggleCollapse,
   pendingCount = 0,
 }: LecturerSidebarProps) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear any auth tokens or user data from localStorage
+    localStorage.clear();
+    
+    // Redirect to the login page
+    navigate('/'); 
+  };
+
   const menuItems = [
     {
       id: "dashboard",
@@ -88,22 +100,22 @@ export default function LecturerSidebar({
     >
       {/* Header Section */}
       <div
-        className={`${isCollapsed ? "p-4" : "p-6"} border-b border-gray-700 transition-all duration-300`}
+        className={`${isCollapsed ? "p-4" : "p-6"} border-b border-gray-500 transition-all duration-300`}
       >
         <div
-          className={`flex ${isCollapsed ? "justify-center" : "items-center space-x-3"} mb-2`}
+          className={`flex ${isCollapsed ? "justify-center" : "items-center space-x-3"} mb-1`}
         >
           <div
-            className={`${isCollapsed ? "w-10 h-10" : "w-12 h-12"} bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0`}
+            className={`${isCollapsed ? "w-12 h-12" : "w-12 h-12"} bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0`}
           >
             <GraduationCap
-              className={`${isCollapsed ? "w-6 h-6" : "w-7 h-7"} text-white`}
+              className={`${isCollapsed ? "w-7 h-7" : "w-8 h-8"} text-white`}
             />
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-bold text-white">Lecturer Portal</h2>
-              <p className="text-xs text-gray-400 ml-0.5">Attendance System</p>
+              <h2 className="text-xl font-bold text-white tracking-wider">Lecturer Portal</h2>
+              <p className="text-sm text-gray-400 ml-0.5 font-semibold mt-0.5">Attendance System</p>
             </div>
           )}
         </div>
@@ -111,7 +123,7 @@ export default function LecturerSidebar({
 
       {/* Navigation Menu */}
       <nav
-        className={`flex-1 ${isCollapsed ? "px-2" : "px-4"} py-6 space-y-2 transition-all duration-300`}
+        className={`flex-1 ${isCollapsed ? "px-2" : "px-4"} py-6 space-y-2 overflow-y-auto transition-all duration-300 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}
       >
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -119,7 +131,7 @@ export default function LecturerSidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-4"} py-3 cursor-pointer rounded-lg transition-all duration-200 ${
+              className={`w-full flex items-center ${isCollapsed ? "justify-center px-0 py-3" : "justify-between px-4 py-3"} cursor-pointer rounded-lg transition-all duration-200 ${
                 activeTab === item.id
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -127,7 +139,7 @@ export default function LecturerSidebar({
               title={isCollapsed ? item.label : undefined}
             >
               <div className="flex items-center space-x-3">
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <Icon className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`} />
                 {!isCollapsed && (
                   <span className="text-sm font-medium">{item.label}</span>
                 )}
@@ -143,6 +155,18 @@ export default function LecturerSidebar({
             </button>
           );
         })}
+
+        {/* Divider and Logout */}
+        <div className={`mt-6 pt-2 border-t border-gray-700`}>
+          <button
+            onClick={handleLogout}
+            title={isCollapsed ? "Logout" : undefined}
+            className={`w-full flex items-center ${isCollapsed ? "justify-center px-0" : "px-4 gap-3"} py-3 rounded-lg text-gray-200 hover:text-white hover:bg-gray-800 transition-all cursor-pointer font-medium text-sm group`}
+          >
+            <LogOut className={`min-w-[20px] shrink-0 transition-transform group-hover:-translate-x-1 ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`} />
+            {!isCollapsed && <span className="truncate">Logout</span>}
+          </button>
+        </div>
       </nav>
 
       {/* Collapse Sidebar Footer */}

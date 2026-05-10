@@ -391,7 +391,7 @@ export default function ManageLecturers() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Control Bar */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between gap-4">
@@ -719,12 +719,12 @@ export default function ManageLecturers() {
       {isDeleteModalOpen &&
         selectedLecturer &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
               onClick={() => setIsDeleteModalOpen(false)}
             ></div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
               <div className="p-8 flex flex-col items-center text-center">
                 {/* Warning Icon Cluster */}
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">

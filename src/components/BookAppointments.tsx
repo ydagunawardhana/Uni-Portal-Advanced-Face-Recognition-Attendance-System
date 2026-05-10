@@ -242,7 +242,7 @@ export default function BookAppointments() {
 
   return (
     <>
-      <div className="flex flex-col mx-4 pb-12">
+      <div className="flex flex-col mx-4 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Lecturer Directory */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-md lg:col-span-1 flex flex-col h-[600px]">
@@ -572,9 +572,16 @@ export default function BookAppointments() {
         createPortal(
           <div
             style={{ zIndex: 2147483640 }}
-            className="fixed inset-0 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm w-screen h-screen"
+            className="fixed inset-0 flex items-center justify-center p-4"
           >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[90%] max-w-[400px] p-6 flex flex-col transform transition-all animate-in fade-in zoom-in duration-200">
+            <div
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+              onClick={() => {
+                setIsCancelModalOpen(false);
+                setRequestToCancel(null);
+              }}
+            ></div>
+            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-[90%] max-w-[400px] p-6 flex flex-col transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
               <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>

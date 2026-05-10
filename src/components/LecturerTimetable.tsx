@@ -162,7 +162,7 @@ export default function LecturerTimetable() {
   }
 
   return (
-    <div className="p-3 bg-white">
+    <div className="p-3 bg-white animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Page Header with Refresh Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div className="flex items-center gap-3">

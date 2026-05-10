@@ -42,6 +42,7 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
     if (path.includes("live-sessions")) return "live_attendance";
     if (path.includes("live-camera")) return "live_camera";
     if (path.includes("reports")) return "reports";
+    if (path.includes("manual-attendances")) return "manual_attendances";
     if (path.includes("attendance-requests")) return "attendance_requests";
     if (path.includes("audit")) return "audit";
     if (path.includes("settings")) return "settings";
@@ -80,6 +81,9 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
       case "reports":
         navigate("/admin/reports");
         break;
+      case "manual_attendances":
+        navigate("/admin/manual-attendances");
+        break;
       case "audit":
         navigate("/admin/audit-logs");
         break;
@@ -112,6 +116,8 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
         return "Timetable Integration";
       case "reports":
         return "System Reports";
+      case "manual_attendances":
+        return "Manual Attendance Management";
       case "attendance_requests":
         return "Attendance Requests";
       case "audit":
@@ -146,6 +152,8 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
         return "Upload and manage batch timetables";
       case "reports":
         return "Generate and export campus-wide attendance reports";
+      case "manual_attendances":
+        return "Locate completed sessions to perform manual attendance corrections";
       case "attendance_requests":
         return "Review and manage attendance appeals from students";
       case "audit":

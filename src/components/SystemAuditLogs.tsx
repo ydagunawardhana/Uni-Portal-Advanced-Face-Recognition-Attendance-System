@@ -14,6 +14,8 @@ import {
   Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const API_BASE = "http://localhost:8000";
 
@@ -201,7 +203,7 @@ export default function SystemAuditLogs() {
   const totalRecords = logs.length;
 
   // CSV Export
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     if (!logs || logs.length === 0) {
       toast.error("No logs available to export.");
       return;
@@ -209,8 +211,66 @@ export default function SystemAuditLogs() {
     setShowExportModal(true);
   };
 
-  const executeCSVExport = () => {
+  const executeExcelExport = async () => {
     try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Audit Logs");
+
+      // Set standard font for the whole sheet
+      worksheet.properties.defaultRowHeight = 20;
+
+      // 1. Main Title
+      worksheet.mergeCells("A1:F1");
+      const titleCell = worksheet.getCell("A1");
+      titleCell.value = "System Audit Logs Report";
+      titleCell.font = {
+        name: "Calibri",
+        size: 16,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1F4E78" }, // Dark Blue
+      };
+      titleCell.alignment = { horizontal: "center", vertical: "middle" };
+      worksheet.getRow(1).height = 35;
+
+      // 2. Subtitle (Generated On)
+      worksheet.mergeCells("A2:F2");
+      const subtitleCell = worksheet.getCell("A2");
+      subtitleCell.value = `Generated On: ${new Date().toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })}`;
+      subtitleCell.font = { name: "Calibri", size: 11, italic: true, color: { argb: "FF666666" } };
+      subtitleCell.alignment = { horizontal: "center", vertical: "middle" };
+      worksheet.getRow(2).height = 25;
+
+      worksheet.addRow([]); // Blank Row
+
+      // 3. Applied Filters Section
+      const filterMetadata = [
+        ["Search Query:", searchQuery || "None"],
+        ["Date Range:", startDate && endDate ? `${startDate} to ${endDate}` : "All Time"],
+        ["Filter by Role:", roleFilter === "All" ? "All Roles" : roleFilter],
+        ["Action Type:", actionTypeFilter === "All" ? "All Actions" : actionTypeFilter],
+      ];
+
+      filterMetadata.forEach((meta) => {
+        const row = worksheet.addRow(meta);
+        row.getCell(1).font = { bold: true, name: "Calibri" };
+        row.getCell(2).font = { name: "Calibri" };
+      });
+
+      worksheet.addRow([]); // Blank Row 5
+
+      // 4. Main Data Table Headers
       const headers = [
         "Timestamp",
         "Action Type",
@@ -219,46 +279,90 @@ export default function SystemAuditLogs() {
         "Severity",
         "Status",
       ];
-      const csvRows = logs.map((l) =>
-        [
-          `"${l.timestamp ?? ""}"`,
-          `"${l.action_type}"`,
-          `"${l.description.replace(/"/g, '""')}"`,
-          `"${extractPerformedBy(l.description)}"`,
-          `"${deriveSeverity(l)}"`,
-          `"${deriveStatus(l.description)}"`,
-        ].join(","),
-      );
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 25;
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Calibri" };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF334155" }, // Slate Gray
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
 
-      const csvContent = [headers.join(","), ...csvRows].join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      const getLocalDateString = () => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-      };
+      // 5. Render Data Rows
+      logs.forEach((log, index) => {
+        const { date, time } = formatTimestamp(log.timestamp);
+        const timestampFormatted = `${date}, ${time}`;
+        const performedBy = extractPerformedBy(log.description);
+        const severity = deriveSeverity(log);
+        const status = deriveStatus(log.description);
 
-      link.setAttribute("download", `audit_logs_${getLocalDateString()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+        const row = worksheet.addRow([
+          timestampFormatted,
+          log.action_type,
+          log.description,
+          performedBy,
+          severity,
+          status,
+        ]);
 
-      toast.success("Audit logs exported successfully!");
+        // Zebra striping
+        if (index % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFF8FAFC" },
+            };
+          });
+        }
+
+        row.eachCell((cell, colNumber) => {
+          cell.font = { name: "Calibri", size: 10 };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFE2E8F0" } },
+            left: { style: "thin", color: { argb: "FFE2E8F0" } },
+            bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+            right: { style: "thin", color: { argb: "FFE2E8F0" } },
+          };
+          cell.alignment = {
+            vertical: "middle",
+            wrapText: colNumber === 3, // Wrap only description
+            horizontal: colNumber === 3 ? "left" : "center",
+          };
+        });
+      });
+
+      // 6. Adjust Column Widths
+      const colWidths = [25, 20, 80, 35, 15, 15];
+      colWidths.forEach((width, i) => {
+        worksheet.getColumn(i + 1).width = width;
+      });
+
+      // 7. Save File
+      const buffer = await workbook.xlsx.writeBuffer();
+      const dateStr = new Date().toISOString().split("T")[0];
+      saveAs(new Blob([buffer]), `System_Audit_Logs_${dateStr}.xlsx`);
+
+      toast.success("Excel Report generated successfully!");
       setShowExportModal(false);
     } catch (error) {
-      toast.error("Failed to export logs.");
+      console.error("Export Error:", error);
+      toast.error("Failed to generate Excel report.");
     }
   };
 
   // Render
   return (
-    <div className="pb-10">
+    <div className="pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -270,11 +374,11 @@ export default function SystemAuditLogs() {
           </p>
         </div>
         <button
-          onClick={handleExportCSV}
+          onClick={handleExportExcel}
           className="flex items-center cursor-pointer space-x-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-md"
         >
           <Download className="w-5 h-5" />
-          <span className="font-medium">Export to CSV</span>
+          <span className="font-medium">Export to Excel</span>
         </button>
       </div>
 
@@ -566,13 +670,17 @@ export default function SystemAuditLogs() {
 
       {/* Export Confirmation Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+            onClick={() => setShowExportModal(false)}
+          ></div>
+          <div className="relative bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-100 animate-in fade-in zoom-in-95 duration-200 ease-out">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                <Download size={24} />
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                <Download size={26} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-2xl font-bold text-gray-900">
                 Export Audit Logs
               </h3>
             </div>
@@ -580,7 +688,7 @@ export default function SystemAuditLogs() {
             <p className="text-gray-600 mb-6 leading-relaxed">
               You are about to export{" "}
               <span className="font-bold text-gray-900">{logs.length}</span>{" "}
-              audit log records as a CSV file. This file contains sensitive
+              audit log records as an Excel file. This file contains sensitive
               system activity data. Are you sure you want to proceed?
             </p>
 
@@ -592,7 +700,7 @@ export default function SystemAuditLogs() {
                 Cancel
               </button>
               <button
-                onClick={executeCSVExport}
+                onClick={executeExcelExport}
                 className="px-4 py-2 text-sm cursor-pointer font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
               >
                 <Download size={16} /> Yes, Export Data

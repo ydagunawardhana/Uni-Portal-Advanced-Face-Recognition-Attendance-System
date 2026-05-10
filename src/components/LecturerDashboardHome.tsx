@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
   Users,
@@ -78,14 +79,37 @@ interface DashboardData {
     location: string;
     status: string;
   }[];
+  weekly_goal?: {
+    completed: number;
+    total: number;
+  };
 }
 
 export default function LecturerDashboardHome() {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [weeklyGoal, setWeeklyGoal] = useState({ completed: 0, total: 5 });
+
+  useEffect(() => {
+    // Simulate fetching weekly progress
+    const fetchWeeklyProgress = async () => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setWeeklyGoal({ completed: 3, total: 5 }); 
+      } catch (error) {
+        console.error("Error fetching weekly goal:", error);
+      }
+    };
+    fetchWeeklyProgress();
+  }, []);
+
+  const progressPercentage = weeklyGoal.total > 0 
+    ? Math.round((weeklyGoal.completed / weeklyGoal.total) * 100) 
+    : 0;
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -159,11 +183,11 @@ export default function LecturerDashboardHome() {
   } = dashboardData;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Top Stats Row */}
       <div className="grid grid-cols-3 gap-6">
         {/* Total Classes Conducted */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <BookOpen className="w-8 h-8 text-blue-600" />
@@ -175,11 +199,11 @@ export default function LecturerDashboardHome() {
           <h3 className="text-sm font-medium text-gray-600">
             Total Classes Conducted
           </h3>
-          <p className="text-xs text-gray-500 mt-1">This semester</p>
+          <p className="text-sm text-gray-500 mt-1">This semester</p>
         </div>
 
         {/* Average Attendance */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-100 rounded-lg">
               <TrendingUp className="w-8 h-8 text-green-600" />
@@ -191,11 +215,11 @@ export default function LecturerDashboardHome() {
           <h3 className="text-sm font-medium text-gray-600">
             Average Attendance
           </h3>
-          <p className="text-xs text-gray-500 mt-1">Across all classes</p>
+          <p className="text-sm text-gray-500 mt-1">Across all classes</p>
         </div>
 
         {/* Total Students Assigned */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-100 rounded-lg">
               <Users className="w-8 h-8 text-purple-600" />
@@ -207,7 +231,7 @@ export default function LecturerDashboardHome() {
           <h3 className="text-sm font-medium text-gray-600">
             Total Students Assigned
           </h3>
-          <p className="text-xs text-gray-500 mt-1">Active enrollment</p>
+          <p className="text-sm text-gray-500 mt-1">Active enrollment</p>
         </div>
       </div>
 
@@ -225,7 +249,7 @@ export default function LecturerDashboardHome() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-yellow-100 rounded-lg">
-                  <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                  <AlertTriangle className="w-6 h-6 text-yellow-500 animate-pulse" />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm">
@@ -288,7 +312,7 @@ export default function LecturerDashboardHome() {
           <div className="px-5 py-4 bg-gradient-to-r from-red-50 to-pink-50 border-b border-red-100 rounded-xl">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 rounded-lg">
-                <ShieldAlert className="w-6 h-6 text-red-600" />
+                <ShieldAlert className="w-6 h-6 text-red-600 animate-pulse" />
               </div>
               <div>
                 <h3 className="font-bold text-gray-900 text-sm">
@@ -450,7 +474,7 @@ export default function LecturerDashboardHome() {
       </div>
 
       {/* Main Action Section - Welcome Banner */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-lg p-8 text-white">
+      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg p-8 text-white">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="inline-flex items-center space-x-2 bg-blue-500 bg-opacity-50 px-3 py-1 rounded-full mb-4">
@@ -460,29 +484,63 @@ export default function LecturerDashboardHome() {
             <h2 className="text-3xl font-bold mb-2">
               Welcome, {dashboardData.lecturer_name}
             </h2>
-            <p className="text-blue-100 mb-4">
-              {dashboardData.department} · {dashboardData.employee_id}
+            <p className="text-blue-100 mb-4 font-semibold">
+              {dashboardData.department} - {dashboardData.employee_id}
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="flex items-center space-x-2">
-                <Clock className="w-5 h-5 text-blue-200" />
+                <Clock className="w-6 h-6 text-blue-200" />
                 <span className="text-sm text-blue-100">
                   {stats.total_classes} sessions conducted
                 </span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-blue-200" />
-                <span className="text-sm text-blue-100">
-                  {stats.total_students} students enrolled
-                </span>
-              </div>
             </div>
 
-            <button className="inline-flex items-center space-x-3 bg-white text-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-50 transition-all transform hover:scale-105 shadow-xl cursor-pointer">
-              <PlayCircle className="w-6 h-6" />
-              <span>Start Live Class</span>
-            </button>
+            {/* Action Row */}
+            <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-8">
+              {/* Main Action Button */}
+              <button
+                onClick={() => navigate("/lecturer/mark-attendances")}
+                className="flex items-center gap-2 bg-white text-blue-600 px-8 py-3 rounded-xl font-bold hover:bg-blue-50 transition-all shadow-[0_4px_14px_0_rgba(255,255,255,0.39)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)] hover:-translate-y-0.5 z-10 shrink-0 cursor-pointer"
+              >
+                <PlayCircle className="w-6 h-6" />
+                <span className="text-lg font-bold">Start Live Class</span>
+              </button>
+
+              {/* Separator (Visible only on larger screens) */}
+              <div className="hidden sm:block h-12 w-px bg-blue-400/40 rounded-full shrink-0"></div>
+
+              {/* Status & Progress Container (Now Horizontal) */}
+              <div className="flex flex-row items-center gap-6 sm:gap-6 ml-2 sm:ml-4 shrink-0 overflow-x-auto">
+                {/* Face Recognition Status */}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="relative flex h-4 w-4 animate-pulse">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                  </span>
+                  <span className="text-md font-medium text-white">
+                    Face Recognition System : <span className="font-bold">Online</span>
+                  </span>
+                </div>
+
+                {/* Subtle Vertical Divider */}
+                <div className=" w-0.5 h-12 bg-white rounded-full"></div>
+
+                {/* Progress Bar Component (Dynamic) */}
+                <div className="flex flex-col justify-center gap-2 shrink-0 mt-2">
+                  <span className="text-sm text-white font-medium">
+                    Weekly Goal Progress:{" "}
+                    <span className="text-white font-bold">{weeklyGoal.completed}/{weeklyGoal.total} Classes</span>
+                  </span>
+                  <div className="w-30 sm:w-40 h-2 bg-blue-500 rounded-full overflow-hidden block">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all duration-2000 ease-out"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="hidden lg:block ml-8">
@@ -500,7 +558,7 @@ export default function LecturerDashboardHome() {
       {/* Two-Column Grid: Recent Classes + Appointments */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Class History — takes 2 columns */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">
               Recent Class History
@@ -512,7 +570,7 @@ export default function LecturerDashboardHome() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Date
@@ -620,11 +678,11 @@ export default function LecturerDashboardHome() {
         </div>
 
         {/* Upcoming Appointments — takes 1 column */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-yellow-100">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <CalendarClock className="w-6 h-6 text-indigo-600" />
+              <div className="p-2 bg-yellow-100 rounded-xl">
+                <CalendarClock className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
@@ -656,8 +714,8 @@ export default function LecturerDashboardHome() {
                     className="px-5 py-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 p-2 bg-indigo-50 rounded-full shrink-0">
-                        <UserCircle className="w-5 h-5 text-indigo-500" />
+                      <div className="mt-0.5 p-2 bg-blue-100 rounded-full shrink-0">
+                        <UserCircle className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
@@ -665,7 +723,7 @@ export default function LecturerDashboardHome() {
                             {appt.student_name}
                           </p>
                           <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                            className={`text-sm font-bold px-2 py-0.5 rounded-full shrink-0 ${
                               appt.status === "Approved"
                                 ? "bg-green-100 text-green-700"
                                 : "bg-yellow-100 text-yellow-700"

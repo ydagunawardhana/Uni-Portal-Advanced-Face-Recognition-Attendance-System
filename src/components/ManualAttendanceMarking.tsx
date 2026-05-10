@@ -270,7 +270,7 @@ export default function ManualAttendanceMarking() {
     <div className="flex-1 px-8 py-8 space-y-8 pb-20">
       {selectedSessionId ? (
         /* Detail View (Student List) */
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-5000">
           <button
             onClick={() => {
               setSelectedSessionId(null);

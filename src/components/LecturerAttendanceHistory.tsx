@@ -337,7 +337,7 @@ export default function LecturerAttendanceHistory() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Filter Section */}
       <div className="bg-white rounded-lg shadow-md p-6 border-2 border-gray-100">
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4">

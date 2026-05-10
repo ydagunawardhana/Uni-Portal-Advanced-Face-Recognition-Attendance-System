@@ -23,7 +23,7 @@ export default function LecturerSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Notification Preferences Card */}
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
         <div className="flex items-center space-x-3 mb-6">

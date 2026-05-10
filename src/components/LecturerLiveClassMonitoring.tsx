@@ -1218,12 +1218,18 @@ export default function LecturerLiveClassMonitoring({
       if (targetSessionId) {
         localStorage.setItem("pendingReviewSessionId", String(targetSessionId));
       }
-      navigate(
-        isAdminRoute ? "/admin/live-sessions" : "/lecturer/session-review",
-        {
-          state: { sessionId: targetSessionId },
-        },
-      );
+
+      // Delay navigation slightly so they see the success state
+      setTimeout(() => {
+        navigate(
+          isAdminRoute
+            ? `/admin/live-monitoring/review/${targetSessionId}`
+            : "/lecturer/session-review",
+          {
+            state: { sessionId: targetSessionId },
+          },
+        );
+      }, 1000);
     } catch (err) {
       console.error("End session error:", err);
       toast.error("An error occurred while ending the session.", {
@@ -1303,7 +1309,7 @@ export default function LecturerLiveClassMonitoring({
 
   // RENDER
   return (
-    <div className="flex-1 flex flex-col h-screen bg-gray-50">
+    <div className="flex-1 flex flex-col h-screen bg-gray-50 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Admin Back Button */}
       {isAdminRoute && (
         <div className="bg-white border-b border-gray-100 px-4 py-2">
@@ -2074,14 +2080,16 @@ export default function LecturerLiveClassMonitoring({
 
       {/* End Session Confirmation Modal */}
       {showEndSessionModal && (
-        <div
-          className="fixed inset-0 bg- backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          style={{
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 animate-in fade-in duration-200 ease-out"
+            style={{
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(6px)",
+            }}
+            onClick={() => setShowEndSessionModal(false)}
+          ></div>
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-out">
             {/* Header & Warning Context */}
             <div className="p-6 pb-4 flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4 ring-4 ring-red-50/50">

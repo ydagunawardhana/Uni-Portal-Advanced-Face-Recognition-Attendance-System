@@ -359,7 +359,7 @@ export default function LecturerDailySessions() {
   };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* 2. Content Wrapper with Padding removed as parent handles it */}
       <div>
         {/* Stats Grid */}
@@ -845,8 +845,12 @@ export default function LecturerDailySessions() {
 
       {/* Cover Request Modal */}
       {showCoverModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+            onClick={() => setShowCoverModal(false)}
+          ></div>
+          <div className="relative bg-white rounded-2xl border border-gray-200 w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 ease-out">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-red-100 rounded-2xl text-red-600">

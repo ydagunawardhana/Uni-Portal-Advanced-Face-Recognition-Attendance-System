@@ -279,7 +279,7 @@ export default function AttendanceCorrectionRequest({
   };
 
   return (
-    <div className="p-8 bg-white dark:bg-gray-800">
+    <div className="p-8 bg-white dark:bg-gray-800 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
@@ -628,8 +628,15 @@ export default function AttendanceCorrectionRequest({
         </div>
       </div>
       {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+            onClick={() => {
+              setDeleteModalOpen(false);
+              setRequestToDelete(null);
+            }}
+          ></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-out">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">

@@ -559,7 +559,7 @@ export default function AttendanceReports({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       <div className="flex items-center gap-4">
         {onBack && (
           <button
@@ -717,7 +717,7 @@ export default function AttendanceReports({
               </option>
               {sessions.map((session, idx) => (
                 <option key={idx} value={session.session_id}>
-                  {session.session_type} — {session.date}
+                  {session.session_type} - {session.date}
                   {session.start_time
                     ? ` (${session.start_time} - ${session.end_time || "?"})`
                     : ""}

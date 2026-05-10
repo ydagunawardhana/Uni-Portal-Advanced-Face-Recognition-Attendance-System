@@ -52,12 +52,12 @@ export default function StudentSidebar({
     <div className="w-64 bg-white dark:bg-gray-800 border-r-2 shadow-lg border-gray-200 dark:border-gray-700 flex flex-col h-screen flex-shrink-0">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">U</span>
+          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center">
+            <span className="text-white font-bold text-2xl">U</span>
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white text-xl">Student Portal</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">University System</p>
+            <h2 className="font-bold text-gray-900 dark:text-white text-xl tracking-wider">Student Portal</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold">University System</p>
           </div>
         </div>
       </div>

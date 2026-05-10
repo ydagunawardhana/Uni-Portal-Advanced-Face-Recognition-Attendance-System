@@ -130,7 +130,7 @@ const StudentMyAttendance = () => {
   };
 
   return (
-    <div className="p-6 mx-auto animate-in fade-in duration-300">
+    <div className="p-6 mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {!selectedSubject ? (
         /* 
            VIEW 1: SUBJECT GRID  */

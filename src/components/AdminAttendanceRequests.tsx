@@ -229,7 +229,7 @@ const AdminAttendanceRequests = () => {
   }, [requests]);
 
   return (
-    <div className="mx-auto animate-in fade-in duration-300">
+    <div className="mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
@@ -516,8 +516,12 @@ const AdminAttendanceRequests = () => {
 
       {/* --- MODALS --- */}
       {modalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+            onClick={() => setModalType(null)}
+          ></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-out border border-gray-200">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div

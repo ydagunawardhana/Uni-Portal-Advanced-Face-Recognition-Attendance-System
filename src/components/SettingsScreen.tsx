@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 import { Camera, Bell, Clock, Info, Shield } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 export default function SettingsScreen() {
   const [faceThreshold, setFaceThreshold] = useState(75);
@@ -8,6 +10,31 @@ export default function SettingsScreen() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(false);
   const [lateArrivalTime, setLateArrivalTime] = useState("08:30");
+
+  const handlePurgeData = async () => {
+    if (!window.confirm("Are you sure you want to purge biometric data for all inactive students? This action cannot be undone.")) {
+      return;
+    }
+
+    const purgePromise = async () => {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(`${API_BASE}/api/admin/purge-data`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to purge data");
+      }
+      return await res.json();
+    };
+
+    toast.promise(purgePromise(), {
+      loading: "Purging inactive biometric data...",
+      success: (data: any) => data.message,
+      error: (err: any) => err.message,
+    });
+  };
 
   const handleSaveChanges = () => {
     // Simulate an API network request
@@ -44,7 +71,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Recognition Parameters Card */}
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
         <div className="flex items-center space-x-3 mb-6">
@@ -284,7 +311,10 @@ export default function SettingsScreen() {
               <h4 className="font-medium text-red-600">Purge Unused Biometric Data</h4>
               <p className="text-sm text-gray-600 mt-1">Delete face encodings of students who have graduated or unenrolled</p>
             </div>
-            <button className="px-6 py-2.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg text-md font-bold transition-colors shadow-sm cursor-pointer">
+            <button 
+              onClick={handlePurgeData}
+              className="px-6 py-2.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg text-md font-bold transition-colors shadow-sm cursor-pointer"
+            >
               Purge Data
             </button>
           </div>

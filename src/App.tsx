@@ -31,6 +31,9 @@ import LiveSessionsDashboard from "./components/LiveSessionsDashboard";
 import SystemAuditLogs from "./components/SystemAuditLogs";
 import StudentRegistration from "./components/StudentRegistration";
 import AdminAttendanceRequests from "./components/AdminAttendanceRequests";
+import AdminSessionReview from "./components/AdminSessionReview";
+import AdminReports from "./components/AdminReports";
+import AdminManualAttendances from "./components/AdminManualAttendances";
 
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
@@ -185,7 +188,19 @@ export default function App() {
               />
             }
           />
-          <Route path="reports" element={<AttendanceReporting />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route
+            path="manual-attendances"
+            element={<AdminManualAttendances />}
+          />
+          <Route
+            path="live-monitoring/review/:sessionId"
+            element={<AdminSessionReview />}
+          />
+          <Route
+            path="session-review/:sessionId"
+            element={<AdminSessionReview />}
+          />
           <Route
             path="attendance-requests"
             element={<AdminAttendanceRequests />}

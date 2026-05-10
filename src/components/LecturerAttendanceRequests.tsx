@@ -116,7 +116,7 @@ const LecturerAttendanceRequests = () => {
   }, [subjectGroups, subjectSearch, batchFilter, degreeFilter]);
 
   return (
-    <div className="p- mx-auto animate-in fade-in duration-300">
+    <div className="p- mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {!selectedGroup ? (
         /* 
            VIEW 1: SUBJECT CARDS (With New Filters)

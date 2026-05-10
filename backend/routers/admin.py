@@ -178,6 +178,29 @@ def update_timetable_entry(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database update error: {str(e)}")
 
+@router.get("/batches", response_model=List[dict])
+def get_all_batches(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Fetch distinct batch IDs and their associated degrees from the Timetable."""
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    # Join Timetable with Module to get degrees associated with each batch
+    results = db.query(
+        models.Timetable.batch_id,
+        models.Module.degree
+    ).join(
+        models.Module, 
+        models.Timetable.module_code == models.Module.module_code
+    ).filter(
+        models.Timetable.batch_id.isnot(None)
+    ).distinct().all()
+    
+    return [{"name": r[0], "degree": r[1]} for r in results if r[0]]
+
+
+
 DATASET_DIR = Path(__file__).resolve().parent.parent / "dataset"
 admin_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
@@ -1401,6 +1424,41 @@ def delete_lecturer(
 
     return {"success": True, "message": "Lecturer profile and user account deleted successfully."}
 
+
+@router.post("/purge-data")
+def purge_inactive_biometric_data(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Deletes face data (images in dataset folder) for students marked as inactive.
+    This helps maintain privacy compliance and saves storage.
+    """
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    inactive_students = db.query(models.Student).filter(models.Student.is_active == False).all()
+    
+    purged_count = 0
+    for student in inactive_students:
+        student_dir = DATASET_DIR / student.index_number
+        if student_dir.exists() and student_dir.is_dir():
+            try:
+                shutil.rmtree(student_dir)
+                purged_count += 1
+            except Exception as e:
+                print(f"Error purging directory for {student.index_number}: {e}")
+
+    log_audit_action(
+        db=db,
+        action_type="System Maintenance",
+        description=f"Purged biometric data for {purged_count} inactive students.",
+    )
+
+    return {
+        "success": True, 
+        "message": f"Successfully purged biometric records for {purged_count} inactive students."
+    }
 
 # Audit Logs
 

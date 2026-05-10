@@ -193,7 +193,7 @@ export default function Appointments() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Pending Requests Section */}
       <section>
         <div className="flex items-center justify-between mb-8">
@@ -339,8 +339,8 @@ export default function Appointments() {
                       </div>
                     </div>
                   </div>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                    <CheckCircle className="w-4 h-4 mr-1" />
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
+                    <CheckCircle className="w-5 h-5 mr-1" />
                     Confirmed
                   </span>
                 </div>
@@ -400,12 +400,12 @@ export default function Appointments() {
                       <span>{req.studentDegree}</span>
                     </div>
                   </div>
-                  <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-600 border border-red-300">
-                    <XCircle className="w-4 h-4" /> Declined
+                  <span className="flex items-center gap-1.5 px-2 py-1 text-sm font-bold rounded-full bg-red-100 text-red-600 border border-red-300">
+                    <XCircle className="w-5 h-5" /> Declined
                   </span>
                 </div>
 
-                <div className="text-xs text-gray-600 space-y-1.5 pt-2 border-t border-gray-200">
+                <div className="text-xs text-gray-600 space-y-1.5 pt-2 font-semibold">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                     <span className="font-semibold">Slot:</span>{" "}
@@ -429,9 +429,16 @@ export default function Appointments() {
         createPortal(
           <div
             style={{ zIndex: 2147483640 }}
-            className="fixed inset-0 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm w-screen h-screen"
+            className="fixed inset-0 flex items-center justify-center p-4"
           >
-            <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 transform transition-all animate-in fade-in zoom-in duration-200">
+            <div
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
+              onClick={() => {
+                setIsDeclineModalOpen(false);
+                setDeclineReason("");
+              }}
+            ></div>
+            <div className="relative bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 Decline Request
               </h3>

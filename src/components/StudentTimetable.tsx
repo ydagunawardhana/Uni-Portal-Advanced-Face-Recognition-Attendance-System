@@ -159,7 +159,7 @@ export default function StudentTimetable() {
   }
 
   return (
-    <div className="p-8 bg-white dark:bg-gray-800">
+    <div className="p-8 bg-white dark:bg-gray-800 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Page Header with Refresh Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div className="flex items-center gap-3">

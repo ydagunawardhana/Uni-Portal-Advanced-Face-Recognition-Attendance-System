@@ -72,7 +72,7 @@ export default function StudentHelpSupport() {
   };
 
   return (
-    <div className="p-8 bg-white dark:bg-gray-800 min-h-full">
+    <div className="p-8 bg-white dark:bg-gray-800 min-h-full animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-10 mb-8 border border-red-100">
         <div className="max-w-3xl mx-auto text-center">

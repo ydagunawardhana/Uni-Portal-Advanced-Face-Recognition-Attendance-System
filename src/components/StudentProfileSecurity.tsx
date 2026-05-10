@@ -359,7 +359,7 @@ export default function StudentProfileSecurity({
       display: none;
     }
     `}</style>
-      <div className="p-8 bg-white dark:bg-gray-800">
+      <div className="p-8 bg-white dark:bg-gray-800 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

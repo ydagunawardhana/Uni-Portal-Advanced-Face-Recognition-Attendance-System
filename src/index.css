@@ -3581,4 +3581,5 @@ html {
  . c u s t o m - s c r o l l b a r : : - w e b k i t - s c r o l l b a r - t h u m b : h o v e r   { 
      b a c k g r o u n d - c o l o r :   # 9 4 a 3 b 8 ;   / *   T a i l w i n d   g r a y - 4 0 0   * / 
  }  
+ @ k e y f r a m e s   s l i d e U p F a d e   {   0 %   {   o p a c i t y :   0 ;   t r a n s f o r m :   t r a n s l a t e Y ( 2 0 p x ) ;   }   1 0 0 %   {   o p a c i t y :   1 ;   t r a n s f o r m :   t r a n s l a t e Y ( 0 ) ;   }   }   . a n i m a t e - s l i d e - u p - f a d e   {   a n i m a t i o n :   s l i d e U p F a d e   0 . 4 s   e a s e - o u t   f o r w a r d s ;   }  
  

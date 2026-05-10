@@ -457,6 +457,35 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
             "cover_reason": getattr(s, 'cover_reason', None)
         })
 
+    # 7.5. Weekly Goal
+    from datetime import timedelta
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    weekly_sessions = db.query(models.Timetable).filter(
+        models.Timetable.lecturer == lecturer.name,
+        models.Timetable.date >= start_of_week.strftime("%Y-%m-%d"),
+        models.Timetable.date <= end_of_week.strftime("%Y-%m-%d"),
+    ).all()
+    
+    total_weekly_sessions = len(weekly_sessions)
+    weekly_completed = 0
+    
+    if total_weekly_sessions > 0:
+        week_start_dt = datetime(start_of_week.year, start_of_week.month, start_of_week.day)
+        week_end_dt = datetime(end_of_week.year, end_of_week.month, end_of_week.day, 23, 59, 59)
+        weekly_completed = db.query(models.ClassSession).filter(
+            models.ClassSession.lecturer_id == lecturer_id,
+            models.ClassSession.start_time >= week_start_dt,
+            models.ClassSession.start_time <= week_end_dt,
+            models.ClassSession.status == "Closed"
+        ).count()
+
+    weekly_goal = {
+        "completed": weekly_completed,
+        "total": total_weekly_sessions
+    }
+
     # 8. Assemble response
     return {
         "lecturer_name": lecturer.name,
@@ -472,6 +501,7 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         "pending_actions": pending_actions,
         "at_risk_students": at_risk_students,
         "todays_schedule": todays_schedule,
+        "weekly_goal": weekly_goal,
     }
 
 @router.get("/subjects")
@@ -548,7 +578,7 @@ def get_subject_attendance(
     Calculates overall attendance percentage for each student in the subject
     and returns their status for a specific date.
     """
-    if current_user.role != "Lecturer":
+    if current_user.role not in ["Lecturer", "Admin"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     # 1. Subject Details: Total sessions held (sessions that are 'Closed')

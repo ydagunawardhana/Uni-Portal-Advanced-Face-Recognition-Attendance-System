@@ -200,7 +200,7 @@ export default function DashboardOverview({
   const COLORS = ["#10b981a9", "#ef4444"];
 
   return (
-    <div className="p-2 space-y-8 animate-in fade-in duration-500">
+    <div className="p-2 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Profile Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center">

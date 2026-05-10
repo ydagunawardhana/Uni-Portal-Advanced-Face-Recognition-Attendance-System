@@ -592,7 +592,7 @@ export default function ManageStudents({
   }
 
   return (
-    <div className="relative">
+    <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Control Bar */}
@@ -617,7 +617,7 @@ export default function ManageStudents({
                 setSelectedFacultyFilter(e.target.value);
                 setSelectedDepartment("all"); // Reset department when faculty changes
               }}
-              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl cursor-pointer text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
               <option value="all">All Faculties</option>
               {Object.keys(universityData).map((faculty) => (
@@ -631,7 +631,7 @@ export default function ManageStudents({
               aria-label="Filter by Department"
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl cursor-pointer text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
               <option value="all">All Departments</option>
               {selectedFacultyFilter === "all"
@@ -656,7 +656,7 @@ export default function ManageStudents({
               aria-label="Filter by Batch"
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[140px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl cursor-pointer text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[140px]"
             >
               <option value="all">All Batches</option>
               <option value="Year 1">Year 1</option>
@@ -689,10 +689,10 @@ export default function ManageStudents({
         <div className="bg-yellow-50 border-b border-yellow-100 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-yellow-800 flex items-center gap-2">
-              <Clock className="w-6 h-6 text-yellow-600" />
+              <Clock className="w-6 h-6 text-yellow-600 animate-pulse" />
               Pending Face Re-training Requests
             </h2>
-            <p className="text-yellow-700 mt-1">
+            <p className="text-yellow-600 font-semibold mt-1">
               Students requiring immediate face model updates
             </p>
           </div>
@@ -858,12 +858,12 @@ export default function ManageStudents({
       {/* Edit Modal */}
       {isEditModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
               onClick={() => setIsEditModalOpen(false)}
             ></div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-3xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 ease-out">
             {/* Modal Header */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -1184,9 +1184,12 @@ export default function ManageStudents({
       {/* Recapture Modal - PORTED STRICT LOGIC */}
       {studentToCapture &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="absolute inset-0" onClick={closeCaptureModal}></div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl relative overflow-hidden transform transition-all">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+              onClick={closeCaptureModal}
+            />
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
             {/* Modal Header */}
             <div className="bg-blue-100 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1406,12 +1409,12 @@ export default function ManageStudents({
       {/* Custom Delete Confirmation Modal */}
       {studentToDelete &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
               onClick={() => setStudentToDelete(null)}
             ></div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl relative overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
             <div className="p-8 flex flex-col items-center text-center">
               {/* Warning Icon Cluster */}
               <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">

@@ -662,12 +662,16 @@ export default function TimetableUpload() {
   };
 
   return (
-    <div className="w-full max-w-none p-0 space-y-6">
+    <div className="w-full max-w-none p-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* 1. Validation Error Modal */}
       {isErrorModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+              onClick={() => setIsErrorModalOpen(false)}
+            />
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-out">
               <div className="p-6 text-center">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-10 h-10 text-red-600" />
@@ -997,11 +1001,11 @@ export default function TimetableUpload() {
             ) : (
               <div className="absolute inset-0 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-200">
                 <table className="w-full text-left border-collapse">
-                  <thead className="text-xs text-gray-800 bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
+                  <thead className="text-sm text-gray-700 bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
                     <tr>
                       <th className="px-4 py-3 font-bold">File Name</th>
                       <th className="px-4 py-3 font-bold">Status</th>
-                      <th className="px-8 py-3 font-bold text-right">
+                      <th className="px-5 py-3 font-bold text-right">
                         Actions
                       </th>
                     </tr>
@@ -1025,14 +1029,14 @@ export default function TimetableUpload() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-4">
+                        <td className="px-1 py-4">
                           {record.status === "Success" ? (
-                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border-2 border-green-200 text-xs font-bold uppercase">
+                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border-2 border-green-200 text-sm font-bold uppercase">
                               <CheckCircle className="w-4 h-4" />
                               {record.status}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-1 rounded-full border-2 border-red-200 text-xs font-bold uppercase">
+                            <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-1 rounded-full border-2 border-red-200 text-sm font-bold uppercase">
                               <AlertCircle className="w-4 h-4" />
                               {record.status}
                             </span>
@@ -1304,7 +1308,7 @@ export default function TimetableUpload() {
                     {isExporting ? (
                       <Loader2 className="w-6 h-6 animate-spin" />
                     ) : (
-                      <Download className="w-6 h-6" />
+                      <Download className="w-8 h-8" />
                     )}
                     {isExporting ? "Generating..." : "Export Excel"}
                   </button>

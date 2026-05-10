@@ -81,15 +81,17 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
   const canSubmit = reason.trim().length >= 5 && !isSubmitting;
 
   return createPortal(
-    // Backdrop
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget && !isSubmitting) onClose(); }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 animate-in fade-in duration-200 ease-out"
+        style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+        onClick={() => { if (!isSubmitting) onClose(); }}
+      ></div>
+
       {/* Modal Box */}
       <div
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+        className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ease-out"
         role="dialog"
         aria-modal="true"
         aria-labelledby="reject-modal-title"
@@ -314,7 +316,7 @@ export default function PendingRegistrations({
     });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Rejection Modal (portal) */}
       <RejectModal
         student={rejectTarget}

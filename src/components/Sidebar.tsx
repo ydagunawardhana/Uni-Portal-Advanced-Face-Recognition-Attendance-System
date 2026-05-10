@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   BookOpen,
   Video,
+  Edit,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -153,6 +154,12 @@ export default function Sidebar({
       path: "/admin/live-sessions",
     },
     {
+      id: "manual_attendances",
+      label: "Manual Attendances",
+      icon: Edit,
+      path: "/admin/manual-attendances",
+    },
+    {
       id: "attendance_requests",
       label: "Attendance Requests",
       icon: History,
@@ -161,6 +168,7 @@ export default function Sidebar({
       badgeTheme: "red" as const,
     },
     { id: "reports", label: "Reports", icon: FileText, path: "/admin/reports" },
+
     {
       id: "audit",
       label: "Audit Logs",
@@ -177,32 +185,34 @@ export default function Sidebar({
 
   return (
     <div
-      className={`fixed left-0 top-0 h-screen bg-[#0f172a] text-white flex flex-col transition-all duration-300 z-50 ${
+      className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-[#1e293b] to-[#0f172a] text-white flex flex-col transition-all duration-300 z-50 ${
         isCollapsed ? "w-[80px]" : "w-[280px]"
       }`}
     >
       {/* Header Section */}
-      <div className="p-6 border-b border-gray-700">
+      <div className="p-6 border-b border-gray-500">
         <div className="flex items-center space-x-3">
           {/* University Logo Icon */}
-          <div className="bg-blue-600 p-2.5 rounded-lg flex-shrink-0">
-            <GraduationCap className="w-7 h-7 text-white" />
+          <div className="bg-blue-600 p-2 rounded-xl flex-shrink-0">
+            <GraduationCap className="w-8 h-8 text-white" />
           </div>
 
           {/* Text Content */}
           {!isCollapsed && (
             <div>
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-white tracking-wider">
                 University Portal
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">Admin Panel</p>
+              <p className="text-sm text-gray-400 mt-0.5 font-semibold">
+                Admin Panel
+              </p>
             </div>
           )}
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -222,7 +232,7 @@ export default function Sidebar({
               key={item.id}
               to={item.path}
               className={({ isActive }) =>
-                `w-full flex items-center cursor-pointer px-4 py-3.5 rounded-lg transition-all duration-200 group ${
+                `w-full flex items-center cursor-pointer ${isCollapsed ? "justify-center px-0 py-3" : "px-4 py-2.5"} rounded-lg transition-all duration-200 group ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                     : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -231,7 +241,7 @@ export default function Sidebar({
               title={isCollapsed ? item.label : ""}
             >
               <Icon
-                className={`flex-shrink-0 ${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`}
+                className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-5 h-5 mx-auto" : "w-6 h-6"}`}
               />
 
               {!isCollapsed && (
@@ -262,7 +272,7 @@ export default function Sidebar({
       </nav>
 
       {/* Footer / Collapse Trigger */}
-      <div className="p-4 border-t border-gray-700 space-y-2">
+      <div className="p-4 mt-1 pt-2 border-t border-gray-700 space-y-4">
         {/* Logout */}
         {onLogout && (
           <button
@@ -271,7 +281,9 @@ export default function Sidebar({
               isCollapsed ? "justify-center" : "gap-3"
             }`}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut
+              className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`}
+            />
             {!isCollapsed && (
               <span className="text-sm font-medium">Logout</span>
             )}

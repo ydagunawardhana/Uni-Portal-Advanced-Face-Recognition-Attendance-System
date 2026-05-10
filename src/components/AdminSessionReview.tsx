@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   CheckCircle,
   XCircle,
@@ -49,22 +49,17 @@ const calculateSessionDuration = (timeString: string) => {
       return h * 60 + m;
     };
     const diff = parseTime(end) - parseTime(start);
-    return diff > 0 ? diff : 1; // Minimum 1 minute to prevent division by zero
+    return diff > 0 ? diff : 1; 
   } catch (e) {
     return 120;
   }
 };
 
 const evaluateStudentStatus = (record: any, totalMinutes: number) => {
-  // 1. If there's no valid OUT time (e.g., missing, null, or "--"), flag for manual review
   if (!record.timeOut || record.timeOut === "--") {
     return "Flagged";
   }
-
-  // 2. If they have an OUT time, check duration percentage
   const presencePercentage = (record.duration / totalMinutes) * 100;
-
-  // Using 70% as requested for auto-marking
   if (presencePercentage >= 70) {
     return "Auto-Present";
   } else {
@@ -74,7 +69,6 @@ const evaluateStudentStatus = (record: any, totalMinutes: number) => {
 
 const formatTime = (isoString: string | null) => {
   if (!isoString) return "—";
-  // The 'Z' ensures JS treats it as UTC and converts to local browser time
   const date = new Date(isoString.endsWith("Z") ? isoString : isoString + "Z");
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -93,13 +87,12 @@ interface AttendanceRecord {
   status: string;
 }
 
-export default function PostSessionReview() {
+export default function AdminSessionReview() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { sessionId: paramSessionId } = useParams();
 
-  // Persistence Logic: Prefer state (direct navigation), fallback to localStorage (recovery)
-  const sessionId =
-    location.state?.sessionId || localStorage.getItem("pendingReviewSessionId");
+  const sessionId = paramSessionId || location.state?.sessionId || localStorage.getItem("pendingReviewSessionId");
 
   const [loading, setLoading] = useState(!!sessionId);
   const [isSaving, setIsSaving] = useState(false);
@@ -120,12 +113,7 @@ export default function PostSessionReview() {
     Record<string, "Present" | "Absent">
   >({});
 
-  type FilterType =
-    | "ALL"
-    | "PRESENT"
-    | "ABSENT"
-    | "TIME_INSUFFICIENT"
-    | "FLAGGED";
+  type FilterType = "ALL" | "PRESENT" | "ABSENT" | "TIME_INSUFFICIENT" | "FLAGGED";
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
 
   const handleFilterClick = (filter: FilterType) => {
@@ -140,7 +128,6 @@ export default function PostSessionReview() {
     let presentCount = 0;
     let absentCount = 0;
 
-    // Calculate raw system evaluations
     if (records) {
       records.forEach((record) => {
         const status = evaluateStudentStatus(record, dynamicTotalMinutes);
@@ -149,7 +136,6 @@ export default function PostSessionReview() {
       });
     }
 
-    // Calculate final decisions (including manual overrides)
     Object.values(attendanceDecisions).forEach((decision) => {
       if (decision === "Present") presentCount++;
       if (decision === "Absent") absentCount++;
@@ -222,7 +208,7 @@ export default function PostSessionReview() {
         module_code: data.module_code,
         date: data.date,
         location: data.location,
-        time: data.scheduled_time, // Bind to scheduled_time from backend
+        time: data.scheduled_time, 
         total_session_minutes: data.total_session_minutes,
         session_type: data.session_type,
         batch: data.batch,
@@ -282,18 +268,15 @@ export default function PostSessionReview() {
 
       if (!res.ok) throw new Error("Finalize failed");
 
-      // Success: Clear the persistence token
       localStorage.removeItem("pendingReviewSessionId");
 
-      // Add a slight artificial delay (1.5 seconds) so the loading state is visible to the user
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       toast.success("Attendance confirmed and saved successfully!", {
         id: loadingToast,
       });
 
-      // Redirect to the My Subjects page instead of History
-      navigate("/lecturer/my-subjects");
+      navigate("/admin/live-sessions");
     } catch (error) {
       console.error("Finalize error:", error);
       toast.error("Failed to finalize attendance", { id: loadingToast });
@@ -315,6 +298,15 @@ export default function PostSessionReview() {
 
   return (
     <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/admin/live-sessions")}
+        className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 font-bold cursor-pointer rounded-lg transition-all group mb-2"
+      >
+        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+        Back to Live Monitoring
+      </button>
+
       {/* Session Metadata Header */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -409,7 +401,6 @@ export default function PostSessionReview() {
 
       {/* Main Content Area */}
       {!sessionId && !loading ? (
-        /* Empty State */
         <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 flex flex-col items-center justify-center bg-gray-100 transition-all">
           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 mt-12">
             <ClipboardX className="w-14 h-14 animate-pulse text-blue-400" />
@@ -422,7 +413,7 @@ export default function PostSessionReview() {
             final attendance list.
           </p>
           <button
-            onClick={() => navigate("/lecturer/mark-attendances")}
+            onClick={() => navigate("/admin/live-sessions")}
             className="mt-8 px-6 py-3 mb-10 bg-white border border-gray-300 cursor-pointer text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-all flex items-center space-x-2 shadow-sm"
           >
             <span>Go to Live Monitoring</span>
@@ -641,7 +632,7 @@ export default function PostSessionReview() {
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3">
                             {/* Avatar Container */}
-                            <div className="h-10 w-10 shrink-0 rounded-full bg-blue-100 overflow-hidden border border-gray-200 flex items-center justify-center">
+                            <div className="h-10 w-10 shrink-0 rounded-full bg-blue-500 font-bold overflow-hidden border border-gray-200 flex items-center justify-center">
                               <img
                                 src={
                                   record.avatar ||

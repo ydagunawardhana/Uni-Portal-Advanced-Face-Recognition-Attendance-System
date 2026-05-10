@@ -15,7 +15,7 @@ from openpyxl.styles import (
 from openpyxl.utils import get_column_letter
 from database import get_db
 import models
-from models import Timetable, Module, Lecturer
+from models import Timetable, Module, Lecturer, Student
 from utils.audit_logger import log_audit_action
 
 router = APIRouter(prefix="/api/timetable", tags=["Timetable"])
@@ -174,23 +174,133 @@ async def export_timetable_excel(batch_id: str, db: Session = Depends(get_db)):
     }
     _DEFAULT_MODULE_FILL_HEX = "F0F0F0"  # neutral light grey fallback
 
-    #  Metadata block (rows 1-4) 
-    meta_rows = [
+    # 1. Metadata & Summary Data Preparation
+    first_rec = records[0]
+    faculty = first_rec.faculty or "N/A"
+    department = first_rec.department or "N/A"
+    semester = first_rec.semester or "N/A"
+    
+    # Extract unique degrees
+    module_codes = {r.module_code for r in records if r.module_code}
+    degrees_query = db.query(Module.degree).filter(Module.module_code.in_(list(module_codes))).distinct().all()
+    degree_str = ", ".join([d[0] for d in degrees_query if d[0]]) or "N/A"
+    
+    # Start date
+    start_date_raw = min([r.date for r in records if r.date]) or "N/A"
+    start_date_str = _fmt_date(start_date_raw)
+
+    # Student count for the batch
+    student_count = db.query(Student).filter(Student.intake == batch_id).count()
+
+    # Build unique module summary list early
+    summary_data = []
+    seen_summary = set()
+    for r in rows:
+        key = (r["module_code"], r["module_name"], r["lecturer"])
+        if key not in seen_summary:
+            summary_data.append({
+                "code": r["module_code"],
+                "name": r["module_name"],
+                "lecturer": r["lecturer"],
+                "group": batch_id,
+                "count": student_count
+            })
+            seen_summary.add(key)
+
+    # 2. Section 1: Title Section
+    title_rows = [
         (f"Official Academic Timetable — Batch {batch_id}", _TITLE_FONT),
         (f"Generated On: {datetime.now().strftime('%d %B %Y, %I:%M %p')}", _META_FONT),
-        ("System Generated Document — University Academic Portal",           _META_FONT),
-        ("",                                                                  None),
+        ("System Generated Document — University Academic Portal", _META_FONT),
     ]
+    for text, font in title_rows:
+        ws.append([text] + [""] * (num_cols - 1))
+        r_idx = ws.max_row
+        ws.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=num_cols)
+        cell = ws.cell(row=r_idx, column=1)
+        cell.alignment = _CENTER
+        if font: cell.font = font
+    
+    ws.append([]) # Blank Row
+
+    # 3. Section 2: Metadata Section
+    # Specific font for metadata: Calibri, Italic, Size 12, Dark Color
+    SECTION_META_FONT = Font(name="Calibri", italic=True, size=12, color="010101")
+
+    meta_rows = [
+        (f"Faculty: {faculty}", SECTION_META_FONT),
+        (f"Department: {department}", SECTION_META_FONT),
+        (f"Degrees: {degree_str}", SECTION_META_FONT),
+        (f"Semester: {semester}", SECTION_META_FONT),
+        (f"Semester Start Date: {start_date_str}", SECTION_META_FONT),
+        ]
     for text, font in meta_rows:
         ws.append([text] + [""] * (num_cols - 1))
-        row_idx = ws.max_row
-        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=num_cols)
-        cell = ws.cell(row=row_idx, column=1)
-        cell.alignment = _CENTER
-        if font:
-            cell.font = font
+        r_idx = ws.max_row
+        ws.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=num_cols)
+        cell = ws.cell(row=r_idx, column=1)
+        cell.alignment = _LEFT
+        if font: cell.font = font
 
-    #  Column header row 
+    ws.append([]) # Blank Row
+
+    # 4. Section 3: Module Summary Table (Aligned Width)
+    ws.append([""] + [""] * (num_cols - 1))
+    ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=num_cols)
+    ws.cell(ws.max_row, 1).font = _TITLE_FONT
+    ws.cell(ws.max_row, 1).alignment = _LEFT
+
+    SUMMARY_HEADERS = ["Module Code", "Module Name", "Lecturer Name", "Group", "Student Count"]
+    ws.append([""] * num_cols)
+    sum_h_row = ws.max_row
+    # Width alignment merges: A(1), B-D(2-4), E-F(5-6), G-H(7-8), I(9)
+    ws.merge_cells(start_row=sum_h_row, start_column=2, end_row=sum_h_row, end_column=4)
+    ws.merge_cells(start_row=sum_h_row, start_column=5, end_row=sum_h_row, end_column=6)
+    ws.merge_cells(start_row=sum_h_row, start_column=7, end_row=sum_h_row, end_column=8)
+    
+    h_cols = [1, 2, 5, 7, 9]
+    for i, col_idx in enumerate(h_cols):
+        cell = ws.cell(row=sum_h_row, column=col_idx)
+        cell.value = SUMMARY_HEADERS[i]
+        cell.font = _HEADER_FONT
+        cell.fill = _HEADER_FILL
+        cell.alignment = _CENTER
+        cell.border = _HEAD_BORDER
+    
+    # Fill borders for the rest of the cells in the header row
+    for c in range(1, 10):
+        ws.cell(sum_h_row, c).border = _HEAD_BORDER
+        if c not in h_cols:
+            ws.cell(sum_h_row, c).fill = _HEADER_FILL
+
+    # Summary Data Rows with Module Colors
+    for i, s in enumerate(summary_data):
+        ws.append([""] * num_cols)
+        r_idx = ws.max_row
+        ws.merge_cells(start_row=r_idx, start_column=2, end_row=r_idx, end_column=4)
+        ws.merge_cells(start_row=r_idx, start_column=5, end_row=r_idx, end_column=6)
+        ws.merge_cells(start_row=r_idx, start_column=7, end_row=r_idx, end_column=8)
+        
+        ws.cell(r_idx, 1).value = s["code"]
+        ws.cell(r_idx, 2).value = s["name"]
+        ws.cell(r_idx, 5).value = s["lecturer"]
+        ws.cell(r_idx, 7).value = s["group"]
+        ws.cell(r_idx, 9).value = s["count"]
+        
+        mod_hex = MODULE_COLORS.get(s["code"].strip().upper(), _DEFAULT_MODULE_FILL_HEX)
+        mod_fill = PatternFill("solid", fgColor=mod_hex)
+        
+        for c in range(1, 10):
+            cell = ws.cell(r_idx, c)
+            cell.fill = mod_fill
+            cell.border = _CELL_BORDER
+            cell.alignment = _CENTER if c in (1, 7, 8, 9) else _LEFT
+            if c == 2: # Bold Module Name
+                cell.font = Font(name="Calibri", bold=True, size=10)
+
+    ws.append([]) # Blank Row
+
+    # 5. Section 4: Main Timetable (Original Logic)
     ws.append(HEADERS)
     header_row = ws.max_row
     for col_idx, _ in enumerate(HEADERS, start=1):
@@ -554,7 +664,7 @@ async def download_timetable_template():
             if i % 2 == 0:
                 ws2.cell(r, col_idx).fill = PatternFill("solid", fgColor="EBF5FB")
 
-    # ── Stream buffer ─────────────────────────────────────────────────────────
+    # Stream buffer 
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)

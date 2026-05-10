@@ -273,7 +273,7 @@ export default function LecturerProfile() {
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(lecturerData?.name || "Lecturer")}&background=random&size=200`;
 
   return (
-    <div className="w-full mx-auto flex flex-col gap-6">
+    <div className="w-full mx-auto flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Save Reminder Note */}
       <div className="bg-gray-100 border border-yellow-500 p-4 mb-2 rounded-xl shadow-md">
         <div className="flex items-start">

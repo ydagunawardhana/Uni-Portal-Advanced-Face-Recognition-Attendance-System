@@ -571,7 +571,7 @@ export default function StudentRegistration() {
   return (
     <>
       <canvas ref={canvasRef} className="hidden" />
-      <div className="grid grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Student Details Form

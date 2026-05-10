@@ -226,7 +226,7 @@ export default function LiveSessionsDashboard() {
   });
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-700 pb-12">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out pb-12">
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6">
         <div className="bg-blue-50 p-6 rounded-2xl shadow-sm border-2 border-blue-200 flex items-center gap-5 translate-y-0 hover:-translate-y-1 transition-all">
