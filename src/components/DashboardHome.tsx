@@ -50,6 +50,8 @@ interface DashboardStats {
   pendingRetrains: number;
   lowAttendanceAlerts: number;
   activeModulesToday: number;
+  weeklyTrend: any[];
+  departmentStats: any[];
 }
 
 interface ActivityItem {
@@ -193,6 +195,8 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
       icon: Users,
       bgColor: "bg-blue-100",
       iconColor: "text-blue-600",
+      cardBg: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
     {
       title: "Total Lecturers",
@@ -200,6 +204,8 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
       icon: GraduationCap,
       bgColor: "bg-purple-100",
       iconColor: "text-purple-600",
+      cardBg: "bg-purple-50",
+      borderColor: "border-purple-200",
     },
     {
       title: "Today's Attendance",
@@ -207,6 +213,8 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
       icon: CheckCircle,
       bgColor: "bg-green-100",
       iconColor: "text-green-600",
+      cardBg: "bg-green-50",
+      borderColor: "border-green-200",
     },
   ];
 
@@ -272,7 +280,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
         <p className="text-gray-600 mt-1">
           Welcome back! Here's what's happening today.
@@ -286,14 +294,14 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
           return (
             <div
               key={stat.title}
-              className="bg-white border border-gray-200 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+              className={`${stat.cardBg} border ${stat.borderColor} rounded-xl shadow-md p-6 transition-shadow`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`${stat.bgColor} p-4 rounded-lg`}>
                   <Icon className={`w-8 h-8 ${stat.iconColor}`} />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm font-medium mb-2">
+              <h3 className="text-gray-700 text-sm font-bold mb-2">
                 {stat.title}
               </h3>
               {loadingStats ? (
@@ -301,7 +309,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
               ) : statsError ? (
                 <p className="text-2xl font-bold text-red-400">Error</p>
               ) : (
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className={`text-3xl font-bold`}>
+                  {stat.value}
+                </p>
               )}
             </div>
           );
@@ -311,46 +321,125 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
       {/* System Alerts & Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 mb-6">
         {/* Card 1: Pending Face Re-trains */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
+        <div
+          className="bg-red-50 p-6 rounded-xl border border-red-200 cursor-pointer shadow-sm flex flex-col hover:shadow-md transition-shadow shadow-md"
+          onClick={() => onTabChange && onTabChange("manage-students")}
+        >
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-xl flex items-center justify-center mb-4">
-            <Camera size={30} />
+            <Camera size={30} className="animate-pulse" />
           </div>
-          <p className="text-sm font-medium text-gray-500">
+          <p className="text-sm font-bold text-red-900">
             Face Re-train Requests
           </p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+          <h3 className="text-3xl font-bold text-red-900 mt-1">
             {stats ? stats.pendingRetrains : "—"} Pending
           </h3>
         </div>
 
         {/* Card 2: Low Attendance Alerts */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md">
+        <div className="bg-amber-50 p-6 rounded-xl border border-yellow-200 shadow-sm flex flex-col transition-shadow shadow-md">
           <div className="w-16 h-16 bg-yellow-100 text-amber-600 rounded-xl flex items-center justify-center mb-4">
             <AlertTriangle size={30} />
           </div>
-          <p className="text-sm font-medium text-gray-500">
+          <p className="text-sm font-bold text-amber-900">
             Low Attendance Alerts
           </p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+          <h3 className="text-3xl font-bold text-amber-900 mt-1">
             {stats ? stats.lowAttendanceAlerts : "—"} Students
           </h3>
         </div>
 
         {/* Card 3: Pending Pre-Registrations */}
         <div
-          className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col hover:shadow-lg transition-shadow shadow-md cursor-pointer"
-          onClick={() => onTabChange && onTabChange("pre_registrations")}
+          className="bg-orange-50 p-6 rounded-xl border border-orange-100 shadow-sm flex flex-col hover:shadow-md transition-shadow shadow-md cursor-pointer"
+          onClick={() => onTabChange && onTabChange("pre-registrations")}
         >
-          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4">
-            <ClipboardList size={30} />
+          <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-4">
+            <ClipboardList size={34} />
           </div>
-          <p className="text-sm font-medium text-gray-500">
+          <p className="text-sm font-bold text-orange-900">
             Pending Pre-Registrations
           </p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-1">
+          <h3 className="text-3xl font-bold text-orange-900 mt-1">
             {preRegCount !== null ? preRegCount : "—"} Pending
           </h3>
         </div>
+      </div>
+
+      {/* Pending Requests Alert Card */}
+      <div className="mt-6">
+        {loadingStats ? (
+          <Skeleton className="h-16 w-full rounded-xl" />
+        ) : statsError ? null : (
+          <div
+            className={`flex items-center justify-between px-5 py-4 rounded-xl border-2 shadow-sm transition-all ${
+              stats && stats.pending_manual_requests > 0
+                ? "bg-red-100 border-red-200"
+                : "bg-green-50 border-green-200"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 rounded-lg ${
+                  stats && stats.pending_manual_requests > 0
+                    ? "bg-red-100"
+                    : "bg-green-200"
+                }`}
+              >
+                <AlertCircle
+                  className={`w-7 h-7 ${
+                    stats && stats.pending_manual_requests > 0
+                      ? "text-red-600"
+                      : "text-green-600"
+                  }`}
+                />
+              </div>
+              <div>
+                <p
+                  className={`text-sm font-bold ${
+                    stats && stats.pending_manual_requests > 0
+                      ? "text-amber-900"
+                      : "text-emerald-900"
+                  }`}
+                >
+                  Pending Manual Attendance Requests
+                </p>
+                <p
+                  className={`text-sm mt-0.5 font-bold ${
+                    stats && stats.pending_manual_requests > 0
+                      ? "text-red-700"
+                      : "text-green-700"
+                  }`}
+                >
+                  {stats && stats.pending_manual_requests > 0
+                    ? "Students have submitted correction requests that need review."
+                    : "No pending requests - all corrections are up to date."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`text-3xl font-bold ${
+                  stats && stats.pending_manual_requests > 0
+                    ? "text-red-600"
+                    : "text-green-600"
+                }`}
+              >
+                {stats?.pending_manual_requests ?? 0}
+              </span>
+              {stats && stats.pending_manual_requests > 0 && (
+                <button
+                  onClick={() =>
+                    onTabChange && onTabChange("attendance-requests")
+                  }
+                  className="text-sm bg-red-600 cursor-pointer text-white px-3 py-1.5 rounded-xl hover:bg-red-700 transition-colors font-medium whitespace-nowrap"
+                >
+                  Review Now
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Visual Analytics Charts */}
@@ -363,7 +452,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
           <div className="flex-1 w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={weeklyTrendData}
+                data={stats?.weeklyTrend || []}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -400,8 +489,8 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
           <div className="flex-1 w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={departmentData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                data={stats?.departmentStats || []}
+                margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -409,6 +498,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
+                  padding={{ left: 30, right: 30 }}
                 />
                 <YAxis
                   tick={{ fontSize: 12 }}
@@ -420,7 +510,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                   dataKey="attendance"
                   fill="#8b5cf6"
                   radius={[4, 4, 0, 0]}
-                  barSize={40}
+                  barSize={30}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -428,98 +518,24 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
         </div>
       </div>
 
-      {/* Pending Requests Alert Card */}
-      <div className="mt-6">
-        {loadingStats ? (
-          <Skeleton className="h-16 w-full rounded-lg" />
-        ) : statsError ? null : (
-          <div
-            className={`flex items-center justify-between px-5 py-4 rounded-xl border shadow-sm transition-all ${
-              stats && stats.pending_manual_requests > 0
-                ? "bg-amber-50 border-amber-200"
-                : "bg-emerald-50 border-emerald-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 rounded-lg ${
-                  stats && stats.pending_manual_requests > 0
-                    ? "bg-amber-100"
-                    : "bg-emerald-100"
-                }`}
-              >
-                <AlertCircle
-                  className={`w-5 h-5 ${
-                    stats && stats.pending_manual_requests > 0
-                      ? "text-amber-600"
-                      : "text-emerald-600"
-                  }`}
-                />
-              </div>
-              <div>
-                <p
-                  className={`text-sm font-semibold ${
-                    stats && stats.pending_manual_requests > 0
-                      ? "text-amber-900"
-                      : "text-emerald-900"
-                  }`}
-                >
-                  Pending Manual Attendance Requests
-                </p>
-                <p
-                  className={`text-xs mt-0.5 ${
-                    stats && stats.pending_manual_requests > 0
-                      ? "text-amber-700"
-                      : "text-emerald-700"
-                  }`}
-                >
-                  {stats && stats.pending_manual_requests > 0
-                    ? "Students have submitted correction requests that need review."
-                    : "No pending requests — all corrections are up to date."}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-3xl font-extrabold ${
-                  stats && stats.pending_manual_requests > 0
-                    ? "text-amber-600"
-                    : "text-emerald-600"
-                }`}
-              >
-                {stats?.pending_manual_requests ?? 0}
-              </span>
-              {stats && stats.pending_manual_requests > 0 && (
-                <button
-                  onClick={() => onTabChange && onTabChange("audit")}
-                  className="text-xs bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors font-medium whitespace-nowrap"
-                >
-                  Review Now
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
       {/*Bottom Grid: Recent Activity + Quick Actions */}
       <div className="grid grid-cols-2 gap-6 mt-6 mb-8">
         {/* Recent Activity Card */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
           <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
             <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleManualRefresh}
                 disabled={isRefreshing || loadingActivity}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-blue-600 disabled:opacity-50"
+                className="p-1.5 hover:bg-gray-100 cursor-pointer rounded-full transition-colors text-gray-400 hover:text-blue-600 disabled:opacity-50"
                 title="Refresh Activity"
               >
                 <RefreshCw
                   className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
                 />
               </button>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full shadow-sm">
+              <span className="px-3 py-1 bg-blue-100 animate-pulse text-blue-700 text-sm font-semibold rounded-full shadow-sm">
                 Live
               </span>
             </div>
@@ -580,7 +596,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
 
           <div className="px-6 pb-6">
             <button
-              onClick={() => onTabChange && onTabChange("audit")}
+              onClick={() => onTabChange && onTabChange("audit-logs")}
               className="w-full flex items-center cursor-pointer justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               <span>View All Activity</span>
@@ -590,7 +606,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
         </div>
 
         {/* Quick Actions (unchanged) */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">
             Quick Actions
           </h3>
@@ -618,7 +634,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
               </p>
             </button>
             <button
-              onClick={() => onTabChange && onTabChange("lecturers")}
+              onClick={() => onTabChange && onTabChange("manage-lecturers")}
               className="w-full text-left px-4 py-3  cursor-pointer bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
             >
               <p className="font-medium text-purple-900 flex items-center gap-2">
@@ -631,7 +647,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
 
             {/* Action 4: Manage Students */}
             <button
-              onClick={() => onTabChange && onTabChange("manage_students")}
+              onClick={() => onTabChange && onTabChange("manage-students")}
               className="w-full text-left px-4 py-3 cursor-pointer bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border-gray-100"
             >
               <p className="font-medium text-gray-900 flex items-center gap-2">

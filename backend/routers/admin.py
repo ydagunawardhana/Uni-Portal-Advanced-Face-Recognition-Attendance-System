@@ -357,6 +357,8 @@ class DashboardStats(BaseModel):
     pending_retrains:         int
     low_attendance_alerts:    int
     active_modules_today:     int
+    weeklyTrend:              List[dict]
+    departmentStats:          List[dict]
 
 
 class ActivityItem(BaseModel):
@@ -418,11 +420,7 @@ def _check_face_model() -> bool:
 )
 def get_dashboard_stats(db: Session = Depends(get_db)):
     """
-    Returns:
-    - **total_students**: count of rows in `students` table
-    - **total_lecturers**: count of `users` where role = 'Lecturer'
-    - **todays_attendance_pct**: unique students who entered today / total students × 100
-    - **pending_manual_requests**: placeholder (always 0 until a requests table exists)
+    Returns live counts, today's attendance percentage, and trend/dept data.
     """
     total_students  = db.query(models.Student).count()
     total_lecturers = db.query(models.User).filter(
@@ -446,16 +444,63 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         if total_students > 0 else 0.0
     )
 
-    # Calculate real pending re-train requests from student records
+    # 1. Real pending re-train requests from student records
     pending_retrains = db.query(models.Student).filter(models.Student.retrain_requested == True).count()
     
-    # TODO: Once ClassSession models are implemented, calculate students with < 80% attendance
+    # 2. Students with < 80% attendance (Placeholder for now)
     low_attendance = 0 
     
-    # TODO: Once Module/Schedule models are implemented, calculate active sessions today
+    # 3. Active sessions today (Placeholder for now)
     active_modules = 0
 
-    pending_manual = 0
+    # 4. Pending Manual Attendance Requests
+    pending_manual = db.query(models.CorrectionRequest).filter(models.CorrectionRequest.status == "Pending").count()
+
+    # 5. Weekly Trend (Last 7 Days)
+    weekly_trend = []
+    from datetime import timedelta
+    from sqlalchemy import func
+    for i in range(6, -1, -1):
+        target_date = (datetime.now() - timedelta(days=i)).date()
+        day_records = db.query(models.AttendanceRecord).join(
+            models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
+        ).filter(
+            func.date(models.ClassSession.start_time) == target_date
+        ).all()
+        
+        if not day_records:
+            val = 0
+        else:
+            present_count = len([r for r in day_records if r.status == "Present"])
+            val = round((present_count / len(day_records)) * 100, 1)
+        
+        weekly_trend.append({
+            "name": target_date.strftime("%a"),
+            "attendance": val
+        })
+
+    # 6. Department Stats
+    dept_stats = []
+    departments = db.query(models.Student.department).distinct().all()
+    for (dept_name,) in departments:
+        if not dept_name: continue
+        
+        records = db.query(models.AttendanceRecord).join(
+            models.Student, models.AttendanceRecord.student_id == models.Student.id
+        ).filter(
+            models.Student.department == dept_name
+        ).all()
+        
+        if not records:
+            avg_pct = 0
+        else:
+            present = len([r for r in records if r.status == "Present"])
+            avg_pct = round((present / len(records)) * 100, 1)
+            
+        dept_stats.append({
+            "name": dept_name,
+            "attendance": avg_pct
+        })
 
     return DashboardStats(
         total_students=total_students,
@@ -465,6 +510,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         pending_retrains=pending_retrains,
         low_attendance_alerts=low_attendance,
         active_modules_today=active_modules,
+        weeklyTrend=weekly_trend,
+        departmentStats=dept_stats
     )
 
 

@@ -26,9 +26,13 @@ interface DashboardData {
   department: string;
   employee_id: string;
   stats: {
-    total_classes: number;
-    average_attendance: number;
-    total_students: number;
+    totalClassesConducted?: number;
+    total_classes?: number;
+    averageAttendance?: number;
+    average_attendance?: number;
+    totalStudentsAssigned?: number;
+    total_students?: number;
+    atRiskStudents?: number;
   };
   recent_classes: {
     id: number;
@@ -98,8 +102,8 @@ export default function LecturerDashboardHome() {
     // Simulate fetching weekly progress
     const fetchWeeklyProgress = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setWeeklyGoal({ completed: 3, total: 5 }); 
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        setWeeklyGoal({ completed: 3, total: 5 });
       } catch (error) {
         console.error("Error fetching weekly goal:", error);
       }
@@ -107,9 +111,10 @@ export default function LecturerDashboardHome() {
     fetchWeeklyProgress();
   }, []);
 
-  const progressPercentage = weeklyGoal.total > 0 
-    ? Math.round((weeklyGoal.completed / weeklyGoal.total) * 100) 
-    : 0;
+  const progressPercentage =
+    weeklyGoal.total > 0
+      ? Math.round((weeklyGoal.completed / weeklyGoal.total) * 100)
+      : 0;
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -187,51 +192,51 @@ export default function LecturerDashboardHome() {
       {/* Top Stats Row */}
       <div className="grid grid-cols-3 gap-6">
         {/* Total Classes Conducted */}
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div className="bg-blue-50 rounded-xl shadow-md p-6 border border-blue-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <BookOpen className="w-8 h-8 text-blue-600" />
             </div>
             <span className="text-3xl font-bold text-gray-900">
-              {stats.total_classes}
+              {stats.totalClassesConducted ?? stats.total_classes ?? 0}
             </span>
           </div>
-          <h3 className="text-sm font-medium text-gray-600">
+          <h3 className="text-sm font-bold text-gray-600">
             Total Classes Conducted
           </h3>
-          <p className="text-sm text-gray-500 mt-1">This semester</p>
+          <p className="text-sm text-gray-700 mt-1">This semester</p>
         </div>
 
         {/* Average Attendance */}
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div className="bg-green-50 rounded-xl shadow-md p-6 border border-green-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-100 rounded-lg">
               <TrendingUp className="w-8 h-8 text-green-600" />
             </div>
             <span className="text-3xl font-bold text-gray-900">
-              {stats.average_attendance}%
+              {stats.averageAttendance ?? stats.average_attendance ?? 0}%
             </span>
           </div>
-          <h3 className="text-sm font-medium text-gray-600">
+          <h3 className="text-sm font-bold text-gray-600">
             Average Attendance
           </h3>
-          <p className="text-sm text-gray-500 mt-1">Across all classes</p>
+          <p className="text-sm text-gray-700 mt-1">Across all classes</p>
         </div>
 
         {/* Total Students Assigned */}
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div className="bg-purple-50 rounded-xl shadow-md p-6 border border-purple-200">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-100 rounded-lg">
               <Users className="w-8 h-8 text-purple-600" />
             </div>
             <span className="text-3xl font-bold text-gray-900">
-              {stats.total_students}
+              {stats.totalStudentsAssigned ?? stats.total_students ?? 0}
             </span>
           </div>
-          <h3 className="text-sm font-medium text-gray-600">
+          <h3 className="text-sm font-bold text-gray-600">
             Total Students Assigned
           </h3>
-          <p className="text-sm text-gray-500 mt-1">Active enrollment</p>
+          <p className="text-sm text-gray-700 mt-1">Active enrollment</p>
         </div>
       </div>
 
@@ -245,7 +250,7 @@ export default function LecturerDashboardHome() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 1. Pending Actions (Amber/Warning Theme) */}
         <div className="bg-white rounded-xl shadow-md border-2 border-yellow-600 w-full">
-          <div className="px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 rounded-xl">
+          <div className="px-5 py-4 bg-gray-100 border-b border-yellow-800 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-yellow-100 rounded-lg">
@@ -255,13 +260,13 @@ export default function LecturerDashboardHome() {
                   <h3 className="font-bold text-gray-900 text-sm">
                     Pending Actions
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-700">
                     Requires your attention
                   </p>
                 </div>
               </div>
               {pending_actions.count > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-black px-2.5 py-1 rounded-full min-w-[28px] text-center shadow-sm">
+                <span className="text-yellow-600 text-2xl font-bold text-center">
                   {pending_actions.count}
                 </span>
               )}
@@ -286,17 +291,17 @@ export default function LecturerDashboardHome() {
                     key={item.id}
                     className="px-5 py-3 hover:bg-amber-50/50 transition-colors"
                   >
-                    <p className="text-sm font-semibold text-gray-800 mb-1 leading-snug">
+                    <p className="text-sm font-bold text-gray-800 mb-1 leading-snug">
                       {item.title}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                    <div className="flex items-center gap-3 text-xs text-gray-700">
+                      <span className="inline-flex items-center gap-1 bg-yellow-100 text-amber-700 px-2 py-1 rounded-xl font-bold">
                         {item.type}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 font-semibold">
                         <Calendar className="w-3 h-3" /> {item.date}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 font-semibold">
                         <Clock className="w-3 h-3" /> {item.time_slot}
                       </span>
                     </div>
@@ -310,16 +315,23 @@ export default function LecturerDashboardHome() {
         {/* 2. At-Risk Students (Red/Danger Theme) */}
         <div className="bg-white rounded-xl shadow-md border-2 border-red-200 w-full">
           <div className="px-5 py-4 bg-gradient-to-r from-red-50 to-pink-50 border-b border-red-100 rounded-xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <ShieldAlert className="w-6 h-6 text-red-600 animate-pulse" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <ShieldAlert className="w-6 h-6 text-red-600 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">
+                    At-Risk Students
+                  </h3>
+                  <p className="text-xs text-gray-700">Attendance below 70%</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">
-                  At-Risk Students
-                </h3>
-                <p className="text-xs text-gray-500">Attendance below 80%</p>
-              </div>
+              {stats.atRiskStudents && stats.atRiskStudents > 0 && (
+                <span className="text-2xl font-bold text-red-600 mr-2">
+                  {stats.atRiskStudents}
+                </span>
+              )}
             </div>
           </div>
           {/* SCROLLABLE LIST */}
@@ -331,7 +343,7 @@ export default function LecturerDashboardHome() {
                   No at-risk students
                 </p>
                 <p className="text-gray-400 text-xs mt-0.5">
-                  Everyone is above 80%
+                  Everyone is above 70%
                 </p>
               </div>
             ) : (
@@ -343,18 +355,18 @@ export default function LecturerDashboardHome() {
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-bold text-gray-900">
                           {stu.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-700">
                           {stu.index_number}
                         </p>
                       </div>
                       <span
-                        className={`text-lg font-black ${
+                        className={`text-lg font-bold  ${
                           stu.attendance_percentage < 50
                             ? "text-red-600"
-                            : "text-orange-500"
+                            : "text-red-600"
                         }`}
                       >
                         {stu.attendance_percentage}%
@@ -365,15 +377,11 @@ export default function LecturerDashboardHome() {
                         className={`h-1.5 rounded-full transition-all duration-500 ${
                           stu.attendance_percentage < 50
                             ? "bg-red-500"
-                            : "bg-orange-400"
+                            : "bg-red-500"
                         }`}
                         style={{ width: `${stu.attendance_percentage}%` }}
                       ></div>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      {stu.sessions_attended} of {stu.total_sessions} sessions
-                      attended
-                    </p>
                   </div>
                 ))}
               </div>
@@ -392,7 +400,7 @@ export default function LecturerDashboardHome() {
                 <h3 className="font-bold text-gray-900 text-sm">
                   Today&apos;s Schedule
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-700">
                   {new Date().toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "short",
@@ -408,7 +416,7 @@ export default function LecturerDashboardHome() {
               <div className="flex flex-col items-center justify-center py-12 px-4">
                 <Calendar className="w-10 h-10 text-gray-300 mb-2" />
                 <p className="text-gray-400 font-medium text-sm">
-                  No classes today
+                  No Active Classes today
                 </p>
                 <p className="text-gray-400 text-xs mt-0.5">
                   Enjoy your free day!
@@ -519,7 +527,8 @@ export default function LecturerDashboardHome() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
                   </span>
                   <span className="text-md font-medium text-white">
-                    Face Recognition System : <span className="font-bold">Online</span>
+                    Face Recognition System :{" "}
+                    <span className="font-bold">Online</span>
                   </span>
                 </div>
 
@@ -530,7 +539,9 @@ export default function LecturerDashboardHome() {
                 <div className="flex flex-col justify-center gap-2 shrink-0 mt-2">
                   <span className="text-sm text-white font-medium">
                     Weekly Goal Progress:{" "}
-                    <span className="text-white font-bold">{weeklyGoal.completed}/{weeklyGoal.total} Classes</span>
+                    <span className="text-white font-bold">
+                      {weeklyGoal.completed}/{weeklyGoal.total} Classes
+                    </span>
                   </span>
                   <div className="w-30 sm:w-40 h-2 bg-blue-500 rounded-full overflow-hidden block">
                     <div

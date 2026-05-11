@@ -34,6 +34,7 @@ import AdminAttendanceRequests from "./components/AdminAttendanceRequests";
 import AdminSessionReview from "./components/AdminSessionReview";
 import AdminReports from "./components/AdminReports";
 import AdminManualAttendances from "./components/AdminManualAttendances";
+import AdminManualOverride from "./components/AdminManualOverride";
 
 type UserRole = "Admin" | "Lecturer" | "Student" | null;
 
@@ -192,6 +193,10 @@ export default function App() {
           <Route
             path="manual-attendances"
             element={<AdminManualAttendances />}
+          />
+          <Route
+            path="manual-attendances/:sessionId"
+            element={<AdminManualOverride />}
           />
           <Route
             path="live-monitoring/review/:sessionId"

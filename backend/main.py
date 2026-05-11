@@ -21,6 +21,7 @@ from routers import lecturer as lecturer_router
 from routers import appointments as appointments_router
 from routers import timetable as timetable_router
 from routers import modules as modules_router
+from routers import chatbot as chatbot_router
 
 
 # Admin seeder
@@ -105,6 +106,7 @@ app.include_router(appointments_router.router)
 app.include_router(timetable_router.router)
 app.include_router(modules_router.router)
 app.include_router(modules_router.public_router)
+app.include_router(chatbot_router.router)
 
 
 # Routes

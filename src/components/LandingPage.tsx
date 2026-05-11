@@ -21,13 +21,13 @@ export default function LandingPage({
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
+      <nav className="fixed top-0 left-0 right-0 bg-white/95 shadow-md backdrop-blur-sm border-b border-gray-200 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                <GraduationCap className="w-8 h-8 text-white" />
               </div>
               <span className="text-2xl font-bold text-gray-900">
                 UniPortal
@@ -298,14 +298,14 @@ export default function LandingPage({
           {/* Feature Cards Grid */}
           <div className="grid md:grid-cols-3 gap-8">
             {/* Card 1: Face Recognition */}
-            <div className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
+            <div className="group bg-white cursor-pointer rounded-2xl p-8 shadow-sm border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
               <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:scale-110 transition-all">
-                <ScanFace className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors" />
+                <ScanFace className="w-10 h-10 text-blue-600 group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Face Recognition
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-700 leading-relaxed">
                 99% accurate AI-based identification. Instant student
                 verification using advanced facial recognition algorithms.
               </p>
@@ -318,14 +318,14 @@ export default function LandingPage({
             </div>
 
             {/* Card 2: Real-Time Analytics */}
-            <div className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
+            <div className="group bg-white cursor-pointer shadow-sm rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
               <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-green-600 group-hover:scale-110 transition-all">
-                <TrendingUp className="w-8 h-8 text-green-600 group-hover:text-white transition-colors" />
+                <TrendingUp className="w-10 h-10 text-green-600 group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Real-Time Analytics
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-700 leading-relaxed">
                 Live insights on student participation. Track attendance trends
                 and generate actionable insights instantly.
               </p>
@@ -338,14 +338,14 @@ export default function LandingPage({
             </div>
 
             {/* Card 3: Paperless Reports */}
-            <div className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
+            <div className="group bg-white cursor-pointer shadow-sm rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-2xl transition-all duration-300">
               <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-600 group-hover:scale-110 transition-all">
-                <FileText className="w-8 h-8 text-purple-600 group-hover:text-white transition-colors" />
+                <FileText className="w-10 h-10 text-purple-600 group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
                 Paperless Reports
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-700 leading-relaxed">
                 Generate monthly reports instantly. Export to CSV, PDF, or
                 integrate with existing student information systems.
               </p>

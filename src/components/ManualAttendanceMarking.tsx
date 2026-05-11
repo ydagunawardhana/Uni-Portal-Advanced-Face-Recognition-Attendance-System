@@ -36,11 +36,39 @@ interface CompletedSession {
   batch: string;
   date: string;
   time: string;
+  start_time?: string;
+  end_time?: string;
   status: string;
   degree: string;
   semester: string;
   level?: string;
 }
+
+const formatTime = (timeString: string | undefined) => {
+  if (!timeString) return "";
+  // If already formatted like "01:00 PM", return as is
+  if (timeString.includes("AM") || timeString.includes("PM")) return timeString;
+
+  try {
+    // Try parsing as full date string first
+    const dateObj = new Date(timeString);
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+    // Fallback for strict "HH:MM:SS" strings
+    const [hour, minute] = timeString.split(":");
+    const h = parseInt(hour, 10);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const formattedHour = h % 12 || 12;
+    return `${formattedHour.toString().padStart(2, "0")}:${minute} ${ampm}`;
+  } catch (e) {
+    return timeString; // Fallback to raw string
+  }
+};
 
 export default function ManualAttendanceMarking() {
   const [completedSessions, setCompletedSessions] = useState<
@@ -587,13 +615,25 @@ export default function ManualAttendanceMarking() {
                     <span className="px-3 py-0.5 bg-green-100 text-green-600 text-sm font-bold rounded-lg uppercase ">
                       {session.status}
                     </span>
-                    <div className="flex flex-col items-end">
-                      <span className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">
-                        {session.date}
-                      </span>
-                      <span className="text-gray-600 text-xs font-semibold mt-1">
-                        {session.time}
-                      </span>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {/* Render standardized date */}
+                        {session.date && session.date !== "N/A"
+                          ? new Date(session.date)
+                              .toLocaleDateString("en-GB", {
+                                year: "numeric",
+                                month: "short",
+                                day: "2-digit",
+                              })
+                              .replace(/ /g, "-")
+                          : "Date N/A"}
+                      </div>
+                      <div className="text-xs font-semibold text-gray-500 mt-1">
+                        {/* Strictly render start_time and end_time sent from the backend */}
+                        {session.start_time && session.end_time
+                          ? `${session.start_time} - ${session.end_time}`
+                          : session.start_time || "Time N/A"}
+                      </div>
                     </div>
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4">

@@ -289,35 +289,45 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         models.ClassSession.lecturer_id == lecturer_id
     ).scalar() or 0
 
-    # 2b. Total unique students enrolled in this lecturer's subjects
-    #     Parse assigned_subjects (comma-separated string → list)
     assigned_subjects_raw = lecturer.assigned_subjects or ""
     subject_list = [s.strip() for s in assigned_subjects_raw.split(",") if s.strip()]
 
+    # 2b. Total unique students assigned to this lecturer's modules/batches
+    # We find all distinct batches this lecturer teaches from the timetable
+    lecturer_batches = db.query(models.Timetable.batch_id).filter(
+        models.Timetable.lecturer == lecturer.name
+    ).distinct().all()
+    batch_ids = [b[0] for b in lecturer_batches]
+
     total_students = 0
-    if subject_list:
+    if batch_ids:
+        # We assume students are mapped to batches via the 'intake' field
+        total_students = db.query(func.count(distinct(models.Student.id))).filter(
+            models.Student.intake.in_(batch_ids)
+        ).scalar() or 0
+        print(f"DEBUG: Lecturer {lecturer.name} has batches {batch_ids}. Total students found: {total_students}")
+    else:
+        # Fallback to Enrollment table if timetable is empty (unlikely but safe)
         total_students = db.query(func.count(distinct(models.Enrollment.student_id))).filter(
             models.Enrollment.class_id.in_(subject_list)
         ).scalar() or 0
+        print(f"DEBUG: No batches found in timetable. Fallback total students: {total_students}")
 
-    # 2c. Average attendance percentage across all sessions
-    #     Formula per session: (unique entered students / total enrolled students) * 100
+    # 2c. Average attendance percentage across all lecturer's records
+    # Formula: (Count of 'Present' records) / (Total attendance records) * 100
     avg_attendance = 0.0
-    if total_classes > 0 and total_students > 0:
-        sessions = db.query(models.ClassSession).filter(
-            models.ClassSession.lecturer_id == lecturer_id
-        ).all()
-
-        percentages = []
-        for s in sessions:
-            entered = db.query(func.count(distinct(models.AttendanceLog.student_id))).filter(
-                models.AttendanceLog.session_id == s.id,
-                models.AttendanceLog.status == "entered"
-            ).scalar() or 0
-            pct = (entered / total_students) * 100 if total_students > 0 else 0
-            percentages.append(min(pct, 100.0))
-
-        avg_attendance = round(sum(percentages) / len(percentages), 1) if percentages else 0.0
+    
+    # Query all attendance records for this lecturer's sessions
+    attendance_query = db.query(models.AttendanceRecord).join(
+        models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
+    ).filter(
+        models.ClassSession.lecturer_id == lecturer_id
+    )
+    
+    total_records = attendance_query.count()
+    if total_records > 0:
+        present_count = attendance_query.filter(models.AttendanceRecord.status == "Present").count()
+        avg_attendance = round((present_count / total_records) * 100, 1)
 
     # 3. Recent classes (last 5 closed sessions) 
     recent_sessions = db.query(models.ClassSession).filter(
@@ -389,33 +399,34 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         "items": pending_items,
     }
 
-    # 6. At-Risk Students (attendance < 80% across this lecturer's sessions)
+    # 6. At-Risk Students (attendance < 70% across this lecturer's sessions)
     at_risk_students = []
-    all_sessions = db.query(models.ClassSession).filter(
-        models.ClassSession.lecturer_id == lecturer_id
-    ).all()
-    total_session_count = len(all_sessions)
-
-    if total_session_count > 0 and subject_list:
-        # Get all enrolled student IDs for this lecturer's subjects
-        enrolled_rows = db.query(models.Enrollment.student_id).filter(
-            models.Enrollment.class_id.in_(subject_list)
-        ).distinct().all()
-        enrolled_ids = [r[0] for r in enrolled_rows]
-
-        session_ids = [s.id for s in all_sessions]
-
-        for sid in enrolled_ids:
-            sessions_attended = db.query(
-                func.count(distinct(models.AttendanceLog.session_id))
-            ).filter(
-                models.AttendanceLog.student_id == sid,
-                models.AttendanceLog.session_id.in_(session_ids),
-                models.AttendanceLog.status == "entered"
-            ).scalar() or 0
-
-            pct = round((sessions_attended / total_session_count) * 100, 1)
-            if pct < 80:
+    at_risk_count = 0
+    
+    # Get all students in batches taught by this lecturer
+    target_student_ids = []
+    if batch_ids:
+        rows = db.query(models.Student.id).filter(models.Student.intake.in_(batch_ids)).all()
+        target_student_ids = [r[0] for r in rows]
+    
+    if target_student_ids and total_classes > 0:
+        session_ids = [s.id for s in db.query(models.ClassSession.id).filter(models.ClassSession.lecturer_id == lecturer_id).all()]
+        
+        for sid in target_student_ids:
+            # Count records for this student in this lecturer's sessions
+            stu_records = db.query(models.AttendanceRecord).filter(
+                models.AttendanceRecord.student_id == sid,
+                models.AttendanceRecord.session_id.in_(session_ids)
+            ).all()
+            
+            if not stu_records:
+                pct = 0.0
+            else:
+                present = len([r for r in stu_records if r.status == "Present"])
+                pct = round((present / len(stu_records)) * 100, 1)
+            
+            if pct < 70:
+                at_risk_count += 1
                 stu = db.query(models.Student).filter(models.Student.id == sid).first()
                 if stu:
                     at_risk_students.append({
@@ -423,8 +434,8 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
                         "name": stu.name,
                         "index_number": stu.index_number,
                         "attendance_percentage": pct,
-                        "sessions_attended": sessions_attended,
-                        "total_sessions": total_session_count,
+                        "sessions_attended": len([r for r in stu_records if r.status == "Present"]),
+                        "total_sessions": len(stu_records),
                     })
 
         # Sort by lowest attendance first, cap at 5
@@ -492,9 +503,10 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         "department": lecturer.department,
         "employee_id": lecturer.employee_id,
         "stats": {
-            "total_classes": total_classes,
-            "average_attendance": avg_attendance,
-            "total_students": total_students,
+            "totalClassesConducted": total_classes,
+            "averageAttendance": avg_attendance,
+            "totalStudentsAssigned": total_students,
+            "atRiskStudents": at_risk_count,
         },
         "recent_classes": recent_classes,
         "upcoming_appointments": upcoming_appointments,
@@ -966,47 +978,57 @@ def get_recent_completed_sessions(
     current_user: models.User = Depends(get_current_user)
 ):
     """Fetch the last 12 completed sessions for the manual override dashboard."""
-    if current_user.role != "Lecturer":
+    if current_user.role not in ["Lecturer", "Admin"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == current_user.email).first()
-    if not lecturer:
-        raise HTTPException(status_code=404, detail="Lecturer not found")
-
-    sessions = db.query(
+    # Base query
+    query = db.query(
         models.ClassSession,
         models.Timetable,
-        models.Module
+        models.Module,
+        models.Lecturer
     ).outerjoin(
         models.Timetable, models.ClassSession.batch_id == cast(models.Timetable.id, String)
     ).outerjoin(
         models.Module, models.Timetable.module_code == models.Module.module_code
+    ).outerjoin(
+        models.Lecturer, models.ClassSession.lecturer_id == models.Lecturer.id
     ).filter(
-        models.ClassSession.lecturer_id == lecturer.id,
         models.ClassSession.status.in_(["Completed", "Closed"])
-    ).order_by(models.ClassSession.start_time.desc()).limit(12).all()
+    )
+
+    # Filter by lecturer if not Admin
+    if current_user.role == "Lecturer":
+        lecturer_obj = db.query(models.Lecturer).filter(models.Lecturer.email == current_user.email).first()
+        if not lecturer_obj:
+            raise HTTPException(status_code=404, detail="Lecturer not found")
+        query = query.filter(models.ClassSession.lecturer_id == lecturer_obj.id)
+
+    sessions = query.order_by(models.ClassSession.start_time.desc()).limit(12).all()
     
     # Simple manual deduplication
     seen_ids = set()
     deduplicated_sessions = []
-    for s, tt, m in sessions:
+    for s, tt, m, l in sessions:
         if s.id not in seen_ids:
-            deduplicated_sessions.append((s, tt, m))
+            deduplicated_sessions.append((s, tt, m, l))
             seen_ids.add(s.id)
 
     result = []
-    for s, tt, m in deduplicated_sessions:
+    for s, tt, m, l in deduplicated_sessions:
         result.append({
             "id": s.id,
             "module_name": tt.module_name if tt else s.subject_id,
             "module_code": tt.module_code if tt else "N/A",
             "batch": tt.batch_id if tt else s.batch_id,
-            "date": s.start_time.strftime("%Y-%m-%d"),
-            "time": s.start_time.strftime("%I:%M %p"),
+            "date": s.start_time.strftime("%Y-%m-%d") if s.start_time else (tt.date if tt else "N/A"),
+            "start_time": tt.start_time if tt else (s.start_time.strftime("%I:%M %p") if s.start_time else "N/A"),
+            "end_time": tt.end_time if tt else None,
             "status": s.status,
             "degree": m.degree if m else "N/A",
             "semester": tt.semester if tt else "N/A",
-            "level": m.level if m else "N/A"
+            "level": m.level if m else "N/A",
+            "lecturer": l.name if l else "Unknown"
         })
 
     return result

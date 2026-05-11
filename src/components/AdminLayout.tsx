@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { LogOut, User, Wifi, WifiOff } from "lucide-react";
 import Sidebar from "./Sidebar";
@@ -7,8 +7,17 @@ import toast from "react-hot-toast";
 export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Offline");
+
+  // Scroll to top on every route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [location.pathname]);
 
   // Listen for explicit camera status changes from child components
   useEffect(() => {
@@ -177,6 +186,7 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
       />
 
       <div
+        ref={contentRef}
         className={`w-full transition-all duration-300 ${isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"}`}
       >
         <header className="top-0 z-40 bg-white shadow-md border-b border-gray-200">

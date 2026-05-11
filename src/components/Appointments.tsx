@@ -292,7 +292,7 @@ export default function Appointments() {
             ))}
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 border-dashed rounded-xl p-12 text-center shadow-md">
+          <div className="bg-white border-2 border-gray-300 border-dashed rounded-xl p-12 text-center shadow-md">
             <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3 animate-pulse" />
             <p className="text-gray-500">No pending consultation requests</p>
           </div>
@@ -362,7 +362,7 @@ export default function Appointments() {
             ))}
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 border-dashed rounded-xl p-12 text-center shadow-md">
+          <div className="bg-white border-2 border-gray-300 border-dashed rounded-xl p-12 text-center shadow-md">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No upcoming appointments scheduled</p>
           </div>
@@ -438,7 +438,7 @@ export default function Appointments() {
                 setDeclineReason("");
               }}
             ></div>
-            <div className="relative bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-[90%] max-w-md p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 Decline Request
               </h3>

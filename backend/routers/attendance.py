@@ -21,6 +21,7 @@ import crud
 import models
 import schemas
 from database import get_db, SessionLocal
+from auth import get_current_user
 from face_recognition_engine import (
     FaceResult, recognize_faces, annotate_frame
 )
@@ -910,8 +911,15 @@ def finalize_attendance(payload: FinalizePayload, db: Session = Depends(get_db))
     return {"message": "Attendance records finalized successfully"}
 
 @router.post("/manual-override")
-def manual_override_attendance(payload: schemas.ManualOverridePayload, db: Session = Depends(get_db)):
+def manual_override_attendance(
+    payload: schemas.ManualOverridePayload, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """Batch update or insert manual attendance overrides."""
+    if current_user.role not in ["Lecturer", "Admin"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
     for item in payload.records:
         record = db.query(models.AttendanceRecord).filter_by(
             student_id=item.student_id, session_id=item.session_id
