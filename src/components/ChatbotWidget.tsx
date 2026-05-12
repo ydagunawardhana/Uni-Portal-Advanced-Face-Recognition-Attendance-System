@@ -193,17 +193,17 @@ export default function ChatbotWidget({ onClose }: ChatbotWidgetProps) {
         ))}
         {isTyping && (
           <div className="flex justify-start mb-2 animate-in fade-in slide-in-from-left-2 duration-300">
-            <div className="bg-gray-200 p-4 rounded-2xl rounded-bl-none flex gap-1.5 items-center max-w-[85%]">
+            <div className="bg-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center max-w-[85%]">
               <div
-                className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"
+                className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
                 style={{ animationDelay: "0ms" }}
               ></div>
               <div
-                className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"
+                className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
                 style={{ animationDelay: "150ms" }}
               ></div>
               <div
-                className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"
+                className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
                 style={{ animationDelay: "300ms" }}
               ></div>
             </div>

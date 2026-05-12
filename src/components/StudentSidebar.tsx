@@ -56,8 +56,12 @@ export default function StudentSidebar({
             <span className="text-white font-bold text-2xl">U</span>
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white text-xl tracking-wider">Student Portal</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold">University System</p>
+            <h2 className="font-bold text-gray-900 dark:text-white text-xl tracking-wider">
+              Student Portal
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold">
+              University System
+            </p>
           </div>
         </div>
       </div>

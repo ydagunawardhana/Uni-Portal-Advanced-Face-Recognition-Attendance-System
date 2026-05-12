@@ -267,7 +267,7 @@ export default function EditLecturerModal({
                 onChange={(e) => {
                   setFaculty(e.target.value);
                   setDepartment("");
-                  setAssignedSubjects([]); // Flush mismatch constraints
+                  setAssignedSubjects([]);
                 }}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
               >
@@ -288,7 +288,7 @@ export default function EditLecturerModal({
                 value={department}
                 onChange={(e) => {
                   setDepartment(e.target.value);
-                  setAssignedSubjects([]); // Flush on cascade hop
+                  setAssignedSubjects([]);
                 }}
                 disabled={!faculty}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"

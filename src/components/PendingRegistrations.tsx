@@ -37,7 +37,7 @@ interface PendingRegistrationsProps {
   onProcess: (data: PreRegistration) => void;
 }
 
-// Reject Modal 
+// Reject Modal
 interface RejectModalProps {
   student: PreRegistration | null;
   onClose: () => void;
@@ -86,7 +86,9 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
       <div
         className="absolute inset-0 animate-in fade-in duration-200 ease-out"
         style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-        onClick={() => { if (!isSubmitting) onClose(); }}
+        onClick={() => {
+          if (!isSubmitting) onClose();
+        }}
       ></div>
 
       {/* Modal Box */}
@@ -144,8 +146,7 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
               htmlFor="rejection-reason"
               className="block text-sm font-bold text-gray-700 mb-1.5"
             >
-              Reason for Rejection{" "}
-              <span className="text-red-500">*</span>
+              Reason for Rejection <span className="text-red-500">*</span>
             </label>
             <textarea
               id="rejection-reason"
@@ -162,15 +163,15 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
                 reason.trim().length === 0
                   ? "text-gray-400"
                   : reason.trim().length < 5
-                  ? "text-amber-500"
-                  : "text-green-600"
+                    ? "text-amber-500"
+                    : "text-green-600"
               }`}
             >
               {reason.trim().length === 0
                 ? "A reason is required to proceed."
                 : reason.trim().length < 5
-                ? "Please provide a more descriptive reason."
-                : `${reason.trim().length} characters — looks good.`}
+                  ? "Please provide a more descriptive reason."
+                  : `${reason.trim().length} characters — looks good.`}
             </p>
           </div>
         </div>
@@ -208,7 +209,7 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
   );
 }
 
-// Main Component 
+// Main Component
 export default function PendingRegistrations({
   onProcess,
 }: PendingRegistrationsProps) {
@@ -217,7 +218,9 @@ export default function PendingRegistrations({
   const [search, setSearch] = useState("");
 
   // Rejection modal state
-  const [rejectTarget, setRejectTarget] = useState<PreRegistration | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PreRegistration | null>(
+    null,
+  );
 
   const getToken = () => {
     const token = localStorage.getItem("adminToken");
@@ -271,7 +274,9 @@ export default function PendingRegistrations({
     if (!token) return;
 
     // Show loading toast immediately
-    const loadingToast = toast.loading("Rejecting application and sending email...");
+    const loadingToast = toast.loading(
+      "Rejecting application and sending email...",
+    );
 
     try {
       const res = await fetch(`${API_BASE}/api/admin/pre-registrations/${id}`, {
@@ -285,15 +290,21 @@ export default function PendingRegistrations({
       const result = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        toast.success("Student rejected and email sent successfully!", { id: loadingToast });
+        toast.success("Student rejected and email sent successfully!", {
+          id: loadingToast,
+        });
         setData((prev) => prev.filter((item) => item.id !== id));
         setRejectTarget(null);
       } else {
-        toast.error(result.detail || "Failed to reject application.", { id: loadingToast });
+        toast.error(result.detail || "Failed to reject application.", {
+          id: loadingToast,
+        });
       }
     } catch (err) {
       console.error(err);
-      toast.error("Network error. Could not complete the action.", { id: loadingToast });
+      toast.error("Network error. Could not complete the action.", {
+        id: loadingToast,
+      });
     }
   };
 

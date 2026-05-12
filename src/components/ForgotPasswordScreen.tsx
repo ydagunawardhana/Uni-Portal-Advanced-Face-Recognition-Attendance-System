@@ -599,7 +599,9 @@ export default function ForgotPasswordScreen({
                       We've sent a 6-digit verification code to your registered
                       email:
                       <br />{" "}
-                      <span className="text-gray-800 font-medium">{recoveryEmail}</span>
+                      <span className="text-gray-800 font-medium">
+                        {recoveryEmail}
+                      </span>
                     </p>
                   </div>
 

@@ -19,7 +19,6 @@ import {
   Info,
 } from "lucide-react";
 
-// Updated Interfaces based on the new backend grouped schema
 interface CorrectionRequest {
   id: number;
   student_id: string;
@@ -95,8 +94,6 @@ const LecturerAttendanceRequests = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
-
   // Updated Filter Logic for Cards
   const filteredGroups = useMemo(() => {
     return subjectGroups.filter((g) => {
@@ -154,7 +151,9 @@ const LecturerAttendanceRequests = () => {
           <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
             <Info className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-blue-800">Read-Only View</h4>
+              <h4 className="text-sm font-bold text-blue-800">
+                Read-Only View
+              </h4>
               <p className="text-sm font-semibold text-blue-700 mt-0.5 leading-relaxed">
                 This page is for your reference to track student absences and
                 excuses. Please note that all attendance correction requests are
@@ -297,7 +296,6 @@ const LecturerAttendanceRequests = () => {
                       <span className="flex items-center gap-1 bg-green-600 text-white font-bold border border-green-100 px-2.5 py-1 rounded-xl text-sm shadow-sm">
                         <Users className="w-3.5 h-3.5" /> Batch {group.batch}
                       </span>
-                     
                     </div>
                     {group.degree && (
                       <span
@@ -308,12 +306,12 @@ const LecturerAttendanceRequests = () => {
                         {group.degree}
                       </span>
                     )}
-                     {group.semester && (
-                        <span className=" text-gray-500 flex items-center gap-2 text-sm text-gray-500 font-medium line-clamp-1 ">
-                          <Calendar className="inline-block w-5 h-5 text-gray-700" />
-                          {group.semester}
-                        </span>
-                      )}
+                    {group.semester && (
+                      <span className=" text-gray-500 flex items-center gap-2 text-sm text-gray-500 font-medium line-clamp-1 ">
+                        <Calendar className="inline-block w-5 h-5 text-gray-700" />
+                        {group.semester}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -469,7 +467,6 @@ const LecturerAttendanceRequests = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

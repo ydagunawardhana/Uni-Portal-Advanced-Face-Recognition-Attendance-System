@@ -501,12 +501,12 @@ async def download_timetable_template():
     """
     wb = openpyxl.Workbook()
 
-    # ── Shared style tokens ────────────────────────────────────────────────────
+    
     TEMPLATE_HEADERS = [
         "Date", "Day", "Start Time", "End Time",
         "Module Code", "Module Name", "Lecturer", "Location"
     ]
-    COL_WIDTHS = [16, 12, 14, 14, 16, 34, 28, 16]  # aligned to each header
+    COL_WIDTHS = [16, 12, 14, 14, 16, 34, 28, 16]  
 
     # Header: dark green bg, bold white text
     HDR_FILL = PatternFill("solid", fgColor="1A5276")
@@ -527,14 +527,12 @@ async def download_timetable_template():
     CELL_BDR = Border(left=T_THIN, right=T_THIN, top=T_THIN, bottom=T_THIN)
     HEAD_BDR = Border(left=T_THICK, right=T_THICK, top=T_THICK, bottom=T_THICK)
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # SHEET 1 — Timetable Template
-    # ══════════════════════════════════════════════════════════════════════════
+    
     ws = wb.active
     ws.title = "Timetable Template"
     ws.sheet_view.showGridLines = False
 
-    # ── Title block (rows 1–3) ────────────────────────────────────────────────
+   
     num_cols = len(TEMPLATE_HEADERS)
     title_meta = [
         ("Timetable Upload Template",
@@ -553,7 +551,7 @@ async def download_timetable_template():
         if font:
             ws.cell(r, 1).font = font
 
-    # ── Column headers (row 5) ────────────────────────────────────────────────
+    
     ws.append(TEMPLATE_HEADERS)
     hdr_row = ws.max_row
     for col_idx in range(1, num_cols + 1):
@@ -563,7 +561,7 @@ async def download_timetable_template():
         c.alignment = T_CENTER
         c.border    = HEAD_BDR
 
-    # ── Sample row (row 6) ────────────────────────────────────────────────────
+   
     SAMPLE_ROW = [
         "2026-05-20", "Wednesday", "09:00 AM", "12:00 PM",
         "PUSL3190", "Computing Project",
@@ -584,7 +582,7 @@ async def download_timetable_template():
     label_cell.font      = Font(name="Calibri", italic=True, color="7F8C8D", size=9)
     label_cell.alignment = T_LEFT
 
-    # ── Blank data entry rows (rows 7–26, 20 rows) ────────────────────────────
+   
     for row_idx in range(20):
         ws.append([""] * num_cols)
         r = ws.max_row
@@ -595,16 +593,14 @@ async def download_timetable_template():
             if row_idx % 2 == 1:
                 c.fill = DATA_FILL_ALT
 
-    # ── Column widths ─────────────────────────────────────────────────────────
+    
     for col_idx, width in enumerate(COL_WIDTHS, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
     ws.row_dimensions[hdr_row].height = 22
-    ws.freeze_panes = f"A{hdr_row + 1}"  # Freeze above data
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # SHEET 2 — Instructions
-    # ══════════════════════════════════════════════════════════════════════════
+    ws.freeze_panes = f"A{hdr_row + 1}" 
+   
+    # Instructions
     ws2 = wb.create_sheet(title="Instructions")
     ws2.sheet_view.showGridLines = False
     ws2.column_dimensions["A"].width = 6
@@ -703,12 +699,9 @@ async def extract_standard_timetable(
     try:
         contents = await file.read()
 
-        # Auto-detect the real header row (handles styled templates that have
-        # a title block above the actual column names).
-        # Strategy: read without a header, then scan the first 10 rows for one
-        # that contains the word "date" (case-insensitive) — that is our header.
+        
         raw_df = pd.read_excel(io.BytesIO(contents), header=None)
-        header_row_idx = 0  # default: first row is the header (plain flat file)
+        header_row_idx = 0 
         for i, row in raw_df.head(10).iterrows():
             row_vals = [str(v).strip().lower() for v in row.values if pd.notna(v)]
             if "date" in row_vals:
@@ -1094,14 +1087,13 @@ async def stop_timetable_session(session_id: int, db: Session = Depends(get_db))
     if not session:
         raise HTTPException(status_code=404, detail="Session not found in timetable")
     session.is_live = False
-    session.status = "Completed"  # CRITICAL: Write to the new status column so hybrid logic can detect it
-    # NOTE: Do NOT clear cover_requested here. The flag must be preserved after
-    # completion so the frontend can correctly show "Covered by Admin" vs "Session Completed".
+    session.status = "Completed"  
+   
 
     # 2. Synchronize with the active ClassSession tracker
     class_session = db.query(models.ClassSession).filter(models.ClassSession.id == session_id).first()
     if class_session:
-        class_session.status = "Completed"  # Match the string the frontend checks
+        class_session.status = "Completed" 
 
     db.commit()
     return {"status": "success", "message": f"Session {session_id} is now COMPLETED."}

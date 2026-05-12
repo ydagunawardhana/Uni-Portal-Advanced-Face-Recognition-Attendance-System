@@ -222,7 +222,7 @@ export default function PostSessionReview() {
         module_code: data.module_code,
         date: data.date,
         location: data.location,
-        time: data.scheduled_time, // Bind to scheduled_time from backend
+        time: data.scheduled_time,
         total_session_minutes: data.total_session_minutes,
         session_type: data.session_type,
         batch: data.batch,

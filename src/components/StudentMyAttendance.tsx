@@ -19,8 +19,8 @@ interface SubjectSummary {
   total_sessions: number;
   attended_sessions: number;
   attendance_percentage: number;
-  level?: string;         
-  lecturer_name?: string; 
+  level?: string;
+  lecturer_name?: string;
 }
 
 interface SessionDetail {
@@ -212,7 +212,9 @@ const StudentMyAttendance = () => {
                   {/* Lecturer name footer */}
                   <div className="pt-3 mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-bold">
                     <User className="w-5 h-5 flex-shrink-0" />
-                    <span className="truncate">{sub.lecturer_name || "TBA"}</span>
+                    <span className="truncate">
+                      {sub.lecturer_name || "TBA"}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -294,8 +296,8 @@ const StudentMyAttendance = () => {
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-8 flex-wrap">
                             {getStatusBadge(session.status)}
-                            {session.status === "Absent" && (
-                              session.request_status === "Pending" ? (
+                            {session.status === "Absent" &&
+                              (session.request_status === "Pending" ? (
                                 <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-600 border border-yellow-200 rounded-lg text-sm font-bold whitespace-nowrap animate-pulse">
                                   Pending Appeal
                                 </span>
@@ -306,8 +308,7 @@ const StudentMyAttendance = () => {
                                 >
                                   Request Correction
                                 </button>
-                              )
-                            )}
+                              ))}
                           </div>
                         </td>
                       </tr>

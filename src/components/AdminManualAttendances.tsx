@@ -142,11 +142,10 @@ interface CompletedSession {
 
 const formatTime = (timeString: string | undefined) => {
   if (!timeString) return "";
-  // If already formatted like "01:00 PM", return as is
+
   if (timeString.includes("AM") || timeString.includes("PM")) return timeString;
 
   try {
-    // Try parsing as full date string first
     const dateObj = new Date(timeString);
     if (!isNaN(dateObj.getTime())) {
       return dateObj.toLocaleTimeString("en-US", {
@@ -155,14 +154,14 @@ const formatTime = (timeString: string | undefined) => {
         hour12: true,
       });
     }
-    // Fallback for strict "HH:MM:SS" strings
+
     const [hour, minute] = timeString.split(":");
     const h = parseInt(hour, 10);
     const ampm = h >= 12 ? "PM" : "AM";
     const formattedHour = h % 12 || 12;
     return `${formattedHour.toString().padStart(2, "0")}:${minute} ${ampm}`;
   } catch (e) {
-    return timeString; // Fallback to raw string
+    return timeString;
   }
 };
 
@@ -212,7 +211,7 @@ export default function AdminManualAttendances() {
   const filteredLecturers = useMemo(() => {
     return allLecturers.filter((lec) => {
       if (lecturerType === "all") return true;
-      // Visiting lecturers have 'VIS' in their employee_id, Internal have 'LEC'
+
       if (lecturerType === "Visiting") return lec.employee_id?.includes("VIS");
       if (lecturerType === "Full Time") return lec.employee_id?.includes("LEC");
       return true;
@@ -307,7 +306,10 @@ export default function AdminManualAttendances() {
     fetchInitialData();
   }, []);
 
-  const fetchSessions = async (moduleCodeOverride?: string, batchOverride?: string) => {
+  const fetchSessions = async (
+    moduleCodeOverride?: string,
+    batchOverride?: string,
+  ) => {
     const activeModule = moduleCodeOverride || selectedModule;
     const activeBatch = batchOverride || selectedBatch;
 
@@ -350,8 +352,6 @@ export default function AdminManualAttendances() {
       setIsLoadingSessions(false);
     }
   };
-
-
 
   const handleResetFilters = () => {
     // Clear Session Storage

@@ -37,9 +37,9 @@ export default function LecturerSidebar({
   const handleLogout = () => {
     // Clear any auth tokens or user data from localStorage
     localStorage.clear();
-    
+
     // Redirect to the login page
-    navigate('/'); 
+    navigate("/");
   };
 
   const menuItems = [
@@ -114,8 +114,12 @@ export default function LecturerSidebar({
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="text-xl font-bold text-white tracking-wider">Lecturer Portal</h2>
-              <p className="text-sm text-gray-400 ml-0.5 font-semibold mt-0.5">Attendance System</p>
+              <h2 className="text-xl font-bold text-white tracking-wider">
+                Lecturer Portal
+              </h2>
+              <p className="text-sm text-gray-400 ml-0.5 font-semibold mt-0.5">
+                Attendance System
+              </p>
             </div>
           )}
         </div>
@@ -139,7 +143,9 @@ export default function LecturerSidebar({
               title={isCollapsed ? item.label : undefined}
             >
               <div className="flex items-center space-x-3">
-                <Icon className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`} />
+                <Icon
+                  className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`}
+                />
                 {!isCollapsed && (
                   <span className="text-sm font-medium">{item.label}</span>
                 )}
@@ -163,7 +169,9 @@ export default function LecturerSidebar({
             title={isCollapsed ? "Logout" : undefined}
             className={`w-full flex items-center ${isCollapsed ? "justify-center px-0" : "px-4 gap-3"} py-3 rounded-lg text-gray-200 hover:text-white hover:bg-gray-800 transition-all cursor-pointer font-medium text-sm group`}
           >
-            <LogOut className={`min-w-[20px] shrink-0 transition-transform group-hover:-translate-x-1 ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`} />
+            <LogOut
+              className={`min-w-[20px] shrink-0 transition-transform group-hover:-translate-x-1 ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`}
+            />
             {!isCollapsed && <span className="truncate">Logout</span>}
           </button>
         </div>

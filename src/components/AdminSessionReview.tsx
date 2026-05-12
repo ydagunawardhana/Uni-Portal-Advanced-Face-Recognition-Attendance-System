@@ -49,7 +49,7 @@ const calculateSessionDuration = (timeString: string) => {
       return h * 60 + m;
     };
     const diff = parseTime(end) - parseTime(start);
-    return diff > 0 ? diff : 1; 
+    return diff > 0 ? diff : 1;
   } catch (e) {
     return 120;
   }
@@ -92,7 +92,10 @@ export default function AdminSessionReview() {
   const navigate = useNavigate();
   const { sessionId: paramSessionId } = useParams();
 
-  const sessionId = paramSessionId || location.state?.sessionId || localStorage.getItem("pendingReviewSessionId");
+  const sessionId =
+    paramSessionId ||
+    location.state?.sessionId ||
+    localStorage.getItem("pendingReviewSessionId");
 
   const [loading, setLoading] = useState(!!sessionId);
   const [isSaving, setIsSaving] = useState(false);
@@ -113,7 +116,12 @@ export default function AdminSessionReview() {
     Record<string, "Present" | "Absent">
   >({});
 
-  type FilterType = "ALL" | "PRESENT" | "ABSENT" | "TIME_INSUFFICIENT" | "FLAGGED";
+  type FilterType =
+    | "ALL"
+    | "PRESENT"
+    | "ABSENT"
+    | "TIME_INSUFFICIENT"
+    | "FLAGGED";
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
 
   const handleFilterClick = (filter: FilterType) => {
@@ -208,7 +216,7 @@ export default function AdminSessionReview() {
         module_code: data.module_code,
         date: data.date,
         location: data.location,
-        time: data.scheduled_time, 
+        time: data.scheduled_time,
         total_session_minutes: data.total_session_minutes,
         session_type: data.session_type,
         batch: data.batch,

@@ -53,11 +53,11 @@ export default function AddVisitingLecturerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
         onClick={onClose}
       />
-      
+
       <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-blue-50/50">
@@ -88,7 +88,9 @@ export default function AddVisitingLecturerModal({
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="e.g. Dr. Jane Smith"
                   className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all"
                 />
@@ -107,12 +109,20 @@ export default function AddVisitingLecturerModal({
                 <select
                   required
                   value={formData.faculty}
-                  onChange={(e) => setFormData({ ...formData, faculty: e.target.value, department: "" })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      faculty: e.target.value,
+                      department: "",
+                    })
+                  }
                   className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all appearance-none bg-white"
                 >
                   <option value="">Select Faculty</option>
                   {Object.keys(universityData).map((fac) => (
-                    <option key={fac} value={fac}>{fac}</option>
+                    <option key={fac} value={fac}>
+                      {fac}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -131,13 +141,18 @@ export default function AddVisitingLecturerModal({
                   required
                   disabled={!formData.faculty}
                   value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, department: e.target.value })
+                  }
                   className="w-full pl-10 pr-4 py-2 cursor-pointer border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-blue-500 outline-none transition-all appearance-none bg-white disabled:bg-gray-50"
                 >
                   <option value="">Select Department</option>
-                  {formData.faculty && universityData[formData.faculty]?.map((dept) => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
+                  {formData.faculty &&
+                    universityData[formData.faculty]?.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -170,6 +185,6 @@ export default function AddVisitingLecturerModal({
         </form>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

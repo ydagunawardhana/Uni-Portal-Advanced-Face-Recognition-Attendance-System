@@ -615,7 +615,7 @@ export default function ManageStudents({
               value={selectedFacultyFilter}
               onChange={(e) => {
                 setSelectedFacultyFilter(e.target.value);
-                setSelectedDepartment("all"); // Reset department when faculty changes
+                setSelectedDepartment("all");
               }}
               className="px-4 py-2.5 border border-gray-300 rounded-xl cursor-pointer text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[200px] max-w-[250px] truncate"
             >
@@ -864,164 +864,197 @@ export default function ManageStudents({
               onClick={() => setIsEditModalOpen(false)}
             ></div>
             <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 ease-out">
-            {/* Modal Header */}
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-blue-600" />
-                Edit Student Details
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Body - Scrollable */}
-            <div className="p-6 space-y-4 overflow-y-auto text-left flex-1 custom-scrollbar">
-              {/* Read-only Identifiers */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-500 mb-1">
-                    Index Number (Read-only)
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.index_number}
-                    disabled
-                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-500 mb-1">
-                    Official Email (Read-only)
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.email}
-                    disabled
-                    className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
-                  />
-                </div>
+              {/* Modal Header */}
+              <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-blue-600" />
+                  Edit Student Details
+                </h3>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
               </div>
 
-              <hr className="border-gray-100" />
-
-              {/* Editable Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, name: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Personal Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={editForm.personal_email}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        personal_email: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
+              {/* Modal Body - Scrollable */}
+              <div className="p-6 space-y-4 overflow-y-auto text-left flex-1 custom-scrollbar">
+                {/* Read-only Identifiers */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Mobile Number
+                    <label className="block text-sm font-semibold text-gray-500 mb-1">
+                      Index Number (Read-only)
                     </label>
                     <input
                       type="text"
-                      value={editForm.mobile}
+                      value={editForm.index_number}
+                      disabled
+                      className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-500 mb-1">
+                      Official Email (Read-only)
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.email}
+                      disabled
+                      className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Editable Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.name}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, mobile: e.target.value })
+                        setEditForm({ ...editForm, name: e.target.value })
                       }
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      NIC Number
+                      Personal Email Address
                     </label>
                     <input
-                      type="text"
-                      value={editForm.nic_number}
+                      type="email"
+                      value={editForm.personal_email}
                       onChange={(e) =>
-                        setEditForm({ ...editForm, nic_number: e.target.value })
+                        setEditForm({
+                          ...editForm,
+                          personal_email: e.target.value,
+                        })
                       }
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
-                </div>
 
-                {/* --- Academic Details --- */}
-                <div className="space-y-4">
-                  {/* Row: Faculty and Department */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Faculty
+                        Mobile Number
                       </label>
-                      <select
-                        value={editFaculty}
-                        onChange={(e) => {
-                          setEditFaculty(e.target.value);
-                          setEditSubDepartment("");
-                          setEditForm({
-                            ...editForm,
-                            faculty: e.target.value,
-                            department: "",
-                            degree_program: "",
-                          });
-                        }}
+                      <input
+                        type="text"
+                        value={editForm.mobile}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, mobile: e.target.value })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="">Select Faculty</option>
-                        {Object.keys(universityData).map((faculty) => (
-                          <option key={faculty} value={faculty}>
-                            {faculty}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Department
+                        NIC Number
                       </label>
-                      <select
-                        value={editSubDepartment}
-                        onChange={(e) => {
-                          setEditSubDepartment(e.target.value);
+                      <input
+                        type="text"
+                        value={editForm.nic_number}
+                        onChange={(e) =>
                           setEditForm({
                             ...editForm,
-                            department: e.target.value,
-                            degree_program: "",
-                          });
-                        }}
-                        disabled={!editFaculty}
+                            nic_number: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* --- Academic Details --- */}
+                  <div className="space-y-4">
+                    {/* Row: Faculty and Department */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Faculty
+                        </label>
+                        <select
+                          value={editFaculty}
+                          onChange={(e) => {
+                            setEditFaculty(e.target.value);
+                            setEditSubDepartment("");
+                            setEditForm({
+                              ...editForm,
+                              faculty: e.target.value,
+                              department: "",
+                              degree_program: "",
+                            });
+                          }}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                          <option value="">Select Faculty</option>
+                          {Object.keys(universityData).map((faculty) => (
+                            <option key={faculty} value={faculty}>
+                              {faculty}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Department
+                        </label>
+                        <select
+                          value={editSubDepartment}
+                          onChange={(e) => {
+                            setEditSubDepartment(e.target.value);
+                            setEditForm({
+                              ...editForm,
+                              department: e.target.value,
+                              degree_program: "",
+                            });
+                          }}
+                          disabled={!editFaculty}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Department</option>
+                          {editFaculty &&
+                            Object.keys(universityData[editFaculty]).map(
+                              (dept) => (
+                                <option key={dept} value={dept}>
+                                  {dept}
+                                </option>
+                              ),
+                            )}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Row: Degree Program */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Degree Program
+                      </label>
+                      <select
+                        value={editForm.degree_program}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            degree_program: e.target.value,
+                          })
+                        }
+                        disabled={!editSubDepartment}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                       >
-                        <option value="">Select Department</option>
+                        <option value="">Select Degree Program</option>
                         {editFaculty &&
-                          Object.keys(universityData[editFaculty]).map(
-                            (dept) => (
-                              <option key={dept} value={dept}>
-                                {dept}
+                          editSubDepartment &&
+                          universityData[editFaculty][editSubDepartment].map(
+                            (degree) => (
+                              <option key={degree} value={degree}>
+                                {degree}
                               </option>
                             ),
                           )}
@@ -1029,382 +1062,354 @@ export default function ManageStudents({
                     </div>
                   </div>
 
-                  {/* Row: Degree Program */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Degree Program
-                    </label>
-                    <select
-                      value={editForm.degree_program}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          degree_program: e.target.value,
-                        })
-                      }
-                      disabled={!editSubDepartment}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Select Degree Program</option>
-                      {editFaculty &&
-                        editSubDepartment &&
-                        universityData[editFaculty][editSubDepartment].map(
-                          (degree) => (
-                            <option key={degree} value={degree}>
-                              {degree}
-                            </option>
-                          ),
-                        )}
-                    </select>
+                  {/* Gender & Batch */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Gender
+                      </label>
+                      <select
+                        value={editForm.gender}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, gender: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Batch (Year)
+                      </label>
+                      <select
+                        value={editForm.academic_year}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            academic_year: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="Year 1">Year 1</option>
+                        <option value="Year 2">Year 2</option>
+                        <option value="Year 3">Year 3</option>
+                        <option value="Year 4">Year 4</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                {/* --- Row: Gender & Batch --- */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Gender
-                    </label>
-                    <select
-                      value={editForm.gender}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, gender: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
+                  {/* Row: Intake */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Intake
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 26.1"
+                        value={editForm.intake}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, intake: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Batch (Year)
-                    </label>
-                    <select
-                      value={editForm.academic_year}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          academic_year: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="Year 1">Year 1</option>
-                      <option value="Year 2">Year 2</option>
-                      <option value="Year 3">Year 3</option>
-                      <option value="Year 4">Year 4</option>
-                    </select>
-                  </div>
-                </div>
 
-                {/* --- Row: Intake --- */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Intake
+                  {/* Status Toggle */}
+                  <div className="mb-4 mt-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Account Status
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 26.1"
-                      value={editForm.intake}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, intake: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50/50">
+                      {/* Dynamic Text Section */}
+                      <div className="flex-1 pr-4">
+                        <h4
+                          className={`text-sm font-bold transition-colors ${
+                            isActive ? "text-green-700" : "text-red-600"
+                          }`}
+                        >
+                          {isActive ? "Account Active" : "Account Suspended"}
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {isActive
+                            ? "Student has full portal access and can log in."
+                            : "Student portal access is completely revoked."}
+                        </p>
+                      </div>
 
-                {/* Status Toggle */}
-                <div className="mb-4 mt-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Account Status
-                  </label>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50/50">
-                    {/* Dynamic Text Section */}
-                    <div className="flex-1 pr-4">
-                      <h4
-                        className={`text-sm font-bold transition-colors ${
-                          isActive ? "text-green-700" : "text-red-600"
+                      {/* Foolproof Toggle Button */}
+                      <button
+                        aria-label="Toggle Status"
+                        onClick={() => setIsActive(!isActive)}
+                        className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
+                          isActive
+                            ? "bg-blue-600 shadow-lg shadow-blue-200"
+                            : "bg-gray-300"
                         }`}
                       >
-                        {isActive ? "Account Active" : "Account Suspended"}
-                      </h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {isActive
-                          ? "Student has full portal access and can log in."
-                          : "Student portal access is completely revoked."}
-                      </p>
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 ${
+                            isActive ? "translate-x-8" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
                     </div>
-
-                    {/* Foolproof Toggle Button */}
-                    <button
-                      aria-label="Toggle Status"
-                      onClick={() => setIsActive(!isActive)}
-                      className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 ${
-                        isActive
-                          ? "bg-blue-600 shadow-lg shadow-blue-200"
-                          : "bg-gray-300"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 ${
-                          isActive ? "translate-x-8" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer - Fixed */}
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 flex-shrink-0 rounded-b-2xl">
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-6 py-2 border cursor-pointer border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-6 py-2 bg-blue-600 cursor-pointer text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Save Changes
-              </button>
+              {/* Modal Footer - Fixed */}
+              <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 flex-shrink-0 rounded-b-2xl">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-6 py-2 border cursor-pointer border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-6 py-2 bg-blue-600 cursor-pointer text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Recapture Modal - PORTED STRICT LOGIC */}
       {studentToCapture &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
               onClick={closeCaptureModal}
             />
             <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
-            {/* Modal Header */}
-            <div className="bg-blue-100 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Camera className="w-7 h-7 text-blue-600" />
+              {/* Modal Header */}
+              <div className="bg-blue-100 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <Camera className="w-7 h-7 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-black">
+                      Face Recapture
+                    </h3>
+                    <p className="text-sm text-gray-700">
+                      Refreshing dataset for {studentToCapture.name}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-black">
-                    Face Recapture
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    Refreshing dataset for {studentToCapture.name}
-                  </p>
-                </div>
+                <button
+                  onClick={closeCaptureModal}
+                  className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-800" />
+                </button>
               </div>
-              <button
-                onClick={closeCaptureModal}
-                className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-gray-800" />
-              </button>
-            </div>
 
-            {/* Modal Body */}
-            <div className="p-8 bg-white grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column: Live Feed with Overlay */}
-              <div className="space-y-6">
-                <div className="aspect-video w-full min-h-[320px] bg-gray-100 rounded-xl overflow-hidden relative border-2 border-gray-500 shadow-xl">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover absolute inset-0"
-                  />
+              {/* Modal Body */}
+              <div className="p-8 bg-white grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column: Live Feed with Overlay */}
+                <div className="space-y-6">
+                  <div className="aspect-video w-full min-h-[320px] bg-gray-100 rounded-xl overflow-hidden relative border-2 border-gray-500 shadow-xl">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover absolute inset-0"
+                    />
 
-                  {/* Green Guide Overlay */}
-                  {camActive && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                      <div
-                        className="w-[220px] h-[280px] z-10 rounded-[30px] border-2 border-green-500/20 relative flex items-center justify-center transition-all duration-300"
-                        style={{ boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.2)" }}
-                      >
-                        <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-green-500 rounded-tl-[30px]"></div>
-                        <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-green-500 rounded-tr-[30px]"></div>
-                        <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-green-500 rounded-bl-[30px]"></div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-green-500 rounded-br-[30px]"></div>
+                    {/* Green Guide Overlay */}
+                    {camActive && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                        <div
+                          className="w-[220px] h-[280px] z-10 rounded-[30px] border-2 border-green-500/20 relative flex items-center justify-center transition-all duration-300"
+                          style={{
+                            boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.2)",
+                          }}
+                        >
+                          <div className="absolute -top-0.5 -left-0.5 w-10 h-10 border-t-4 border-l-4 border-green-500 rounded-tl-[30px]"></div>
+                          <div className="absolute -top-0.5 -right-0.5 w-10 h-10 border-t-4 border-r-4 border-green-500 rounded-tr-[30px]"></div>
+                          <div className="absolute -bottom-0.5 -left-0.5 w-10 h-10 border-b-4 border-l-4 border-green-500 rounded-bl-[30px]"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-10 h-10 border-b-4 border-r-4 border-green-500 rounded-br-[30px]"></div>
 
-                        <span className="absolute -bottom-14 text-white text-xs font-bold bg-black/60 px-4 py-1.5 rounded-full whitespace-nowrap">
-                          Center face in frame
+                          <span className="absolute -bottom-14 text-white text-xs font-bold bg-black/60 px-4 py-1.5 rounded-full whitespace-nowrap">
+                            Center face in frame
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!camActive && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400 space-y-4">
+                        <Camera className="w-16 h-16 text-gray-300 animate-pulse" />
+                        <p className="text-sm font-medium">Webcam Inactive</p>
+                      </div>
+                    )}
+
+                    {(capturing || isUploading) && (
+                      <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1.5 rounded flex items-center gap-2 z-20">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        {isUploading ? "Uploading..." : "Capturing..."}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => (camActive ? stopCamera() : startCamera())}
+                      disabled={isUploading || capturing}
+                      className={`flex-1 py-3 rounded-xl cursor-pointer font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                        camActive
+                          ? "border-2 border-red-500 text-red-500 hover:bg-red-50"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
+                    >
+                      <Camera className="w-5 h-5" />
+                      {camActive ? "Turn Off Camera" : "Start Camera"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Progress & Status */}
+                <div className="flex flex-col justify-between">
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-bold text-gray-900">
+                          Registration Info
+                        </h4>
+                        <span className="text-xs font-mono text-gray-500 uppercase">
+                          {studentToCapture.index_number}
                         </span>
                       </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 flex justify-between">
+                          <span>Email:</span>
+                          <span className="font-medium text-gray-900">
+                            {studentToCapture.email}
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-600 flex justify-between">
+                          <span>Department:</span>
+                          <span className="font-medium text-gray-900">
+                            {studentToCapture.department || "N/A"}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                  )}
 
-                  {!camActive && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400 space-y-4">
-                      <Camera className="w-16 h-16 text-gray-300 animate-pulse" />
-                      <p className="text-sm font-medium">Webcam Inactive</p>
-                    </div>
-                  )}
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-bold text-gray-700">
+                          Capture Progress
+                        </label>
+                        {faceStatus && (
+                          <span
+                            className={`text-[11px] font-bold uppercase ${
+                              faceStatus.isError
+                                ? "text-red-500"
+                                : "text-green-600"
+                            }`}
+                          >
+                            {faceStatus.message}
+                          </span>
+                        )}
+                      </div>
 
-                  {(capturing || isUploading) && (
-                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1.5 rounded flex items-center gap-2 z-20">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      {isUploading ? "Uploading..." : "Capturing..."}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => (camActive ? stopCamera() : startCamera())}
-                    disabled={isUploading || capturing}
-                    className={`flex-1 py-3 rounded-xl cursor-pointer font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
-                      camActive
-                        ? "border-2 border-red-500 text-red-500 hover:bg-red-50"
-                        : "bg-green-600 text-white hover:bg-green-700"
-                    }`}
-                  >
-                    <Camera className="w-5 h-5" />
-                    {camActive ? "Turn Off Camera" : "Start Camera"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Column: Progress & Status */}
-              <div className="flex flex-col justify-between">
-                <div className="space-y-6">
-                  <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-bold text-gray-900">
-                        Registration Info
-                      </h4>
-                      <span className="text-xs font-mono text-gray-500 uppercase">
-                        {studentToCapture.index_number}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600 flex justify-between">
-                        <span>Email:</span>
-                        <span className="font-medium text-gray-900">
-                          {studentToCapture.email}
+                      <div className="h-4 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                        <div
+                          className={`h-full transition-all duration-300 rounded-full ${
+                            imagesCaptured === TOTAL_FRAMES
+                              ? "bg-green-500"
+                              : "bg-blue-600 shadow-lg"
+                          }`}
+                          style={{
+                            width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-[11px] font-bold text-gray-400 mt-2">
+                        <span>0%</span>
+                        <span>
+                          {imagesCaptured} OF {TOTAL_FRAMES} FRAMES
                         </span>
-                      </p>
-                      <p className="text-xs text-gray-600 flex justify-between">
-                        <span>Department:</span>
-                        <span className="font-medium text-gray-900">
-                          {studentToCapture.department || "N/A"}
-                        </span>
-                      </p>
+                        <span>100%</span>
+                      </div>
+
+                      {imagesCaptured >= TOTAL_FRAMES && (
+                        <p className="text-sm text-green-600 mt-2 font-medium flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          All images captured successfully!
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-bold text-gray-700">
-                        Capture Progress
-                      </label>
-                      {faceStatus && (
-                        <span
-                          className={`text-[11px] font-bold uppercase ${
-                            faceStatus.isError
-                              ? "text-red-500"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {faceStatus.message}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="h-4 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                      <div
-                        className={`h-full transition-all duration-300 rounded-full ${
-                          imagesCaptured === TOTAL_FRAMES
-                            ? "bg-green-500"
-                            : "bg-blue-600 shadow-lg"
+                  <div className="pt-6">
+                    {imagesCaptured < TOTAL_FRAMES ? (
+                      <button
+                        onClick={handleStartCapture}
+                        disabled={!camActive || capturing || isUploading}
+                        className={`w-full py-4 cursor-pointer rounded-xl font-bold text-lg shadow-xl flex items-center justify-center gap-3 transition-all ${
+                          camActive && !capturing && !isUploading
+                            ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02]"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
                         }`}
-                        style={{
-                          width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-[11px] font-bold text-gray-400 mt-2">
-                      <span>0%</span>
-                      <span>
-                        {imagesCaptured} OF {TOTAL_FRAMES} FRAMES
-                      </span>
-                      <span>100%</span>
-                    </div>
-
-                    {imagesCaptured >= TOTAL_FRAMES && (
-                      <p className="text-sm text-green-600 mt-2 font-medium flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        All images captured successfully!
-                      </p>
+                      >
+                        {capturing ? (
+                          <>
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            Validating Face...
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-6 h-6" />
+                            Start Capture Sequence
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="flex gap-4">
+                        <button
+                          onClick={handleRetakeImages}
+                          disabled={isUploading}
+                          className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg shadow-md hover:bg-gray-300 transition-all flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw className="w-5 h-5" />
+                          Retake
+                        </button>
+                        <button
+                          onClick={handleConfirmUpload}
+                          disabled={isUploading}
+                          className="flex-1 py-4 bg-green-600 cursor-pointer text-white rounded-xl font-bold text-lg shadow-xl shadow-green-200 hover:bg-green-700 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          {isUploading ? (
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                          ) : (
+                            <Save className="w-6 h-6" />
+                          )}
+                          {isUploading ? "Uploading..." : "Confirm & Save"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
-
-                <div className="pt-6">
-                  {imagesCaptured < TOTAL_FRAMES ? (
-                    <button
-                      onClick={handleStartCapture}
-                      disabled={!camActive || capturing || isUploading}
-                      className={`w-full py-4 cursor-pointer rounded-xl font-bold text-lg shadow-xl flex items-center justify-center gap-3 transition-all ${
-                        camActive && !capturing && !isUploading
-                          ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-[1.02]"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      {capturing ? (
-                        <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          Validating Face...
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-6 h-6" />
-                          Start Capture Sequence
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="flex gap-4">
-                      <button
-                        onClick={handleRetakeImages}
-                        disabled={isUploading}
-                        className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg shadow-md hover:bg-gray-300 transition-all flex items-center justify-center gap-2"
-                      >
-                        <RefreshCw className="w-5 h-5" />
-                        Retake
-                      </button>
-                      <button
-                        onClick={handleConfirmUpload}
-                        disabled={isUploading}
-                        className="flex-1 py-4 bg-green-600 cursor-pointer text-white rounded-xl font-bold text-lg shadow-xl shadow-green-200 hover:bg-green-700 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        {isUploading ? (
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                        ) : (
-                          <Save className="w-6 h-6" />
-                        )}
-                        {isUploading ? "Uploading..." : "Confirm & Save"}
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Custom Delete Confirmation Modal */}
       {studentToDelete &&
@@ -1415,46 +1420,46 @@ export default function ManageStudents({
               onClick={() => setStudentToDelete(null)}
             ></div>
             <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 ease-out">
-            <div className="p-8 flex flex-col items-center text-center">
-              {/* Warning Icon Cluster */}
-              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8 text-red-600" />
+              <div className="p-8 flex flex-col items-center text-center">
+                {/* Warning Icon Cluster */}
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                  <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  Delete Student Profile?
+                </h3>
+                <p className="text-gray-600 mb-8 px-2">
+                  Are you sure you want to delete{" "}
+                  <span className="font-bold text-gray-900">
+                    {studentToDelete.name}
+                  </span>
+                  ? This action cannot be undone and will permanently remove
+                  their data and face records from the system.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4 w-full text-center">
+                  <button
+                    onClick={() => setStudentToDelete(null)}
+                    className="px-6 py-3 border border-gray-300 cursor-pointer text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-6 py-3 bg-red-600 text-white rounded-xl cursor-pointer font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                  >
+                    <Trash className="w-4 h-4" />
+                    Yes, Delete
+                  </button>
                 </div>
               </div>
-
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Delete Student Profile?
-              </h3>
-              <p className="text-gray-600 mb-8 px-2">
-                Are you sure you want to delete{" "}
-                <span className="font-bold text-gray-900">
-                  {studentToDelete.name}
-                </span>
-                ? This action cannot be undone and will permanently remove their
-                data and face records from the system.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 w-full text-center">
-                <button
-                  onClick={() => setStudentToDelete(null)}
-                  className="px-6 py-3 border border-gray-300 cursor-pointer text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="px-6 py-3 bg-red-600 text-white rounded-xl cursor-pointer font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center justify-center gap-2"
-                >
-                  <Trash className="w-4 h-4" />
-                  Yes, Delete
-                </button>
-              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

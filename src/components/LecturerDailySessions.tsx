@@ -206,7 +206,8 @@ export default function LecturerDailySessions() {
   ).length;
 
   const liveCount = sessions.filter(
-    (s) => s.date === todayStr && (s.is_live || s.status?.toLowerCase() === "live"),
+    (s) =>
+      s.date === todayStr && (s.is_live || s.status?.toLowerCase() === "live"),
   ).length;
   const completedCount = sessions.filter(
     (s) =>
@@ -611,15 +612,22 @@ export default function LecturerDailySessions() {
 
                     {/* Cover Request Badge */}
                     {session.cover_requested && (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 mt-0.5 uppercase rounded-full text-sm font-bold ${
-                        session.status?.toLowerCase() === "completed" || session.is_completed
-                          ? "bg-gray-100 text-gray-500 border border-gray-200"
-                          : "bg-red-100 text-red-700 animate-pulse"
-                      }`}>
-                        {session.status?.toLowerCase() === "completed" || session.is_completed ? (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 mt-0.5 uppercase rounded-full text-sm font-bold ${
+                          session.status?.toLowerCase() === "completed" ||
+                          session.is_completed
+                            ? "bg-gray-100 text-gray-500 border border-gray-200"
+                            : "bg-red-100 text-red-700 animate-pulse"
+                        }`}
+                      >
+                        {session.status?.toLowerCase() === "completed" ||
+                        session.is_completed ? (
                           <>Covered</>
                         ) : (
-                          <><AlertCircle className="w-3.5 h-3.5" /> Cover Requested</>
+                          <>
+                            <AlertCircle className="w-3.5 h-3.5" /> Cover
+                            Requested
+                          </>
                         )}
                       </span>
                     )}
@@ -634,7 +642,10 @@ export default function LecturerDailySessions() {
                     <span>Batch {session.batch}</span>
                     <span className="text-gray-400">•</span>
                     <span className="text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-xl text-sm">
-                      {session.enrolled_count !== undefined ? session.enrolled_count : 0} Enrolled Students
+                      {session.enrolled_count !== undefined
+                        ? session.enrolled_count
+                        : 0}{" "}
+                      Enrolled Students
                     </span>
                   </p>
 
@@ -650,12 +661,15 @@ export default function LecturerDailySessions() {
 
                   {/* Display Cover Reason — hidden once session is completed */}
                   {session.cover_requested &&
-                    !(session.status?.toLowerCase() === "completed" || session.is_completed) && (
-                    <div className="mb-4 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      <span>Reason: {session.cover_reason}</span>
-                    </div>
-                  )}
+                    !(
+                      session.status?.toLowerCase() === "completed" ||
+                      session.is_completed
+                    ) && (
+                      <div className="mb-4 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>Reason: {session.cover_reason}</span>
+                      </div>
+                    )}
 
                   {/* Details Grid */}
                   <div className="grid grid-cols-2 gap-y-4 gap-x-3 mb-6 mt-2">
@@ -800,8 +814,8 @@ export default function LecturerDailySessions() {
                                 startingSessionId === session.id
                                   ? "bg-blue-600 text-white cursor-wait"
                                   : isFutureSession
-                                  ? "bg-gray-50 text-gray-400 border-2 border-gray-200 cursor-not-allowed hover:bg-gray-100"
-                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 cursor-pointer"
+                                    ? "bg-gray-50 text-gray-400 border-2 border-gray-200 cursor-not-allowed hover:bg-gray-100"
+                                    : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 cursor-pointer"
                               }`}
                             >
                               {startingSessionId === session.id ? (

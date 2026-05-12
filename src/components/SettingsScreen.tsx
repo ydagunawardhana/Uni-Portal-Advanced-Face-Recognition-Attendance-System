@@ -12,7 +12,11 @@ export default function SettingsScreen() {
   const [lateArrivalTime, setLateArrivalTime] = useState("08:30");
 
   const handlePurgeData = async () => {
-    if (!window.confirm("Are you sure you want to purge biometric data for all inactive students? This action cannot be undone.")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to purge biometric data for all inactive students? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -64,9 +68,9 @@ export default function SettingsScreen() {
     });
 
     toast.promise(resetPromise, {
-      loading: 'Restoring default settings...',
-      success: 'Settings reset to defaults.',
-      error: 'Error resetting settings.',
+      loading: "Restoring default settings...",
+      success: "Settings reset to defaults.",
+      error: "Error resetting settings.",
     });
   };
 
@@ -112,7 +116,7 @@ export default function SettingsScreen() {
               onChange={(e) => setFaceThreshold(Number(e.target.value))}
               className={`w-full h-3 rounded-lg appearance-none cursor-pointer outline-none slider dynamic-slider`}
               style={{
-                background: `linear-gradient(to right, #16a34a ${faceThreshold}%, #e5e7eb ${faceThreshold}%)`
+                background: `linear-gradient(to right, #16a34a ${faceThreshold}%, #e5e7eb ${faceThreshold}%)`,
               }}
             />
             <div className="flex justify-between text-sm font-bold text-gray-500 mt-1">
@@ -244,28 +248,49 @@ export default function SettingsScreen() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div className="w-full">
-              <h4 className="font-medium text-gray-900">Global Grace Period (Minutes)</h4>
-              <p className="text-sm text-gray-600 mt-1">Time allowed after session start before marking a student as 'Late'</p>
+              <h4 className="font-medium text-gray-900">
+                Global Grace Period (Minutes)
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Time allowed after session start before marking a student as
+                'Late'
+              </p>
             </div>
             <div className="w-full flex justify-end">
-              <input type="number" defaultValue={30} className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-md text-center font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
-            </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="w-full">
-              <h4 className="font-medium text-gray-900">Minimum Required Attendance (%)</h4>
-              <p className="text-sm text-gray-600 mt-1">Threshold for warning alerts across all modules</p>
-            </div>
-            <div className="w-full flex justify-end">
-              <input type="number" defaultValue={70} className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-md text-center font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+              <input
+                type="number"
+                defaultValue={30}
+                className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-md text-center font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
             </div>
           </div>
 
           <div className="flex justify-between items-center">
             <div className="w-full">
-              <h4 className="font-medium text-gray-900">Late Arrival Mark Time</h4>
-              <p className="text-sm text-gray-600 mt-1">Students arriving after this time will be marked as late</p>
+              <h4 className="font-medium text-gray-900">
+                Minimum Required Attendance (%)
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Threshold for warning alerts across all modules
+              </p>
+            </div>
+            <div className="w-full flex justify-end">
+              <input
+                type="number"
+                defaultValue={70}
+                className="w-20 px-4 py-2.5 border border-gray-300 rounded-xl text-md text-center font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="w-full">
+              <h4 className="font-medium text-gray-900">
+                Late Arrival Mark Time
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Students arriving after this time will be marked as late
+              </p>
             </div>
             <div className="w-full flex justify-end">
               <input
@@ -288,15 +313,21 @@ export default function SettingsScreen() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">Data & Privacy</h2>
-            <p className="text-sm text-gray-600">Manage biometric data retention and system backups</p>
+            <p className="text-sm text-gray-600">
+              Manage biometric data retention and system backups
+            </p>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center py-2">
             <div>
-              <h4 className="font-medium text-gray-900">Log Retention Period</h4>
-              <p className="text-sm text-gray-600 mt-1">Automatically delete attendance logs older than selected period</p>
+              <h4 className="font-medium text-gray-900">
+                Log Retention Period
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Automatically delete attendance logs older than selected period
+              </p>
             </div>
             <select className="px-4 py-2.5 border border-gray-300 rounded-xl cursor-pointer text-md font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50">
               <option>6 Months</option>
@@ -308,10 +339,15 @@ export default function SettingsScreen() {
 
           <div className="flex justify-between items-center">
             <div>
-              <h4 className="font-medium text-red-600">Purge Unused Biometric Data</h4>
-              <p className="text-sm text-gray-600 mt-1">Delete face encodings of students who have graduated or unenrolled</p>
+              <h4 className="font-medium text-red-600">
+                Purge Unused Biometric Data
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Delete face encodings of students who have graduated or
+                unenrolled
+              </p>
             </div>
-            <button 
+            <button
               onClick={handlePurgeData}
               className="px-6 py-2.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-lg text-md font-bold transition-colors shadow-sm cursor-pointer"
             >
@@ -323,13 +359,13 @@ export default function SettingsScreen() {
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-3 mt-8 mb-4">
-        <button 
+        <button
           onClick={handleReset}
           className="px-6 py-2 bg-gray-100 border-2 border-gray-200  hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-colors cursor-pointer"
         >
           Reset to Defaults
         </button>
-        <button 
+        <button
           onClick={handleSaveChanges}
           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer"
         >

@@ -11,7 +11,6 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Offline");
 
-  // Scroll to top on every route change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
     if (contentRef.current) {
@@ -19,9 +18,7 @@ export default function AdminLayout({ onLogout }: { onLogout: () => void }) {
     }
   }, [location.pathname]);
 
-  // Listen for explicit camera status changes from child components
   useEffect(() => {
-    // Default to offline when first loading the layout
     setCameraStatus("Offline");
 
     const handleCameraStatusChange = (e: Event) => {

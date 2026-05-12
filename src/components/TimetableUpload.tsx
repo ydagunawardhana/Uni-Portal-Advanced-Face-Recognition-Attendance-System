@@ -112,8 +112,8 @@ export default function TimetableUpload() {
           id: loadingToastId,
         });
         setIsEditModalOpen(false);
-        setViewBatchId(null); // Close the preview modal
-        setIsViewModalHidden(false); // Reset hidden state
+        setViewBatchId(null); 
+        setIsViewModalHidden(false); 
 
         // Refresh the table data silently
         if (viewBatchId) handleViewBatch(viewBatchId, false);
@@ -134,7 +134,7 @@ export default function TimetableUpload() {
     } catch (error) {
       toast.error("Network error. Please try again.", { id: loadingToastId });
     } finally {
-      setIsSaving(false); // Reset loading state
+      setIsSaving(false); 
     }
   };
 
@@ -387,20 +387,19 @@ export default function TimetableUpload() {
   const handleDownloadExcel = async () => {
     if (!viewBatchId) return;
 
-    // Step 1: Show loading toast FIRST, then flush render before starting fetch.
+    // Show loading toast FIRST, then flush render before starting fetch.
     setIsExporting(true);
     const TOAST_ID = "excel-export-toast";
     toast.loading("Generating Report, Please wait...", {
       id: TOAST_ID,
-      duration: Infinity, // Keep it alive until we explicitly dismiss it
+      duration: Infinity, 
     });
 
-    // Flush: yield to the browser so React commits the loading state
-    // and the toast renders before the fetch blocks the thread.
+    
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      // Step 2: Fetch the Excel blob — await so loading toast stays visible
+      // Fetch the Excel blob — await so loading toast stays visible
       const response = await fetch(
         `http://localhost:8000/api/timetable/export/${encodeURIComponent(viewBatchId)}`,
       );
@@ -410,7 +409,7 @@ export default function TimetableUpload() {
         throw new Error(errData?.detail || "Failed to generate Excel report.");
       }
 
-      // CRITICAL: Read as binary Blob — prevents .xlsx corruption
+      // Read as binary Blob — prevents .xlsx corruption
       const blob = await response.blob();
       const url = window.URL.createObjectURL(
         new Blob([blob], {
@@ -418,7 +417,7 @@ export default function TimetableUpload() {
         }),
       );
 
-      // Step 3: Trigger download via hidden anchor, then clean up
+      // Trigger download via hidden anchor, then clean up
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
@@ -428,13 +427,13 @@ export default function TimetableUpload() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      // Step 4: Replace loading toast with success
+      // Replace loading toast with success
       toast.success("Excel Report Downloaded Successfully! ", {
         id: TOAST_ID,
         duration: 4000,
       });
     } catch (error: any) {
-      // Step 5: Replace loading toast with error
+      // Replace loading toast with error
       toast.error(error.message || "Export Failed. Please try again.", {
         id: TOAST_ID,
         duration: 5000,
@@ -639,10 +638,9 @@ export default function TimetableUpload() {
     } catch (error: any) {
       console.error("Extraction Error:", error);
 
-      // Attempt to extract structured errors from response
+     
       try {
-        // Since we're using fetch, we need to handle the error parsing carefully
-        // If it's a validation error, the response.ok was false
+        
         if (error.response?.data?.detail?.errors) {
           setValidationErrors(error.response.data.detail.errors);
           setIsErrorModalOpen(true);

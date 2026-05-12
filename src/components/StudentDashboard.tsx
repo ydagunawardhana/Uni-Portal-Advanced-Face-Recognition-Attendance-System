@@ -8,7 +8,14 @@ import StudentProfileSecurity from "./StudentProfileSecurity";
 import StudentHelpSupport from "./StudentHelpSupport";
 import BookAppointments from "./BookAppointments";
 import StudentMyAttendance from "./StudentMyAttendance";
-import { Bell, LogOut, CheckCircle, AlertTriangle, Info, RefreshCw } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  RefreshCw,
+} from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const API_BASE = "http://localhost:8000";
@@ -127,7 +134,7 @@ export default function StudentDashboard({
 
         if (response.ok) {
           const data = await response.json();
-          // Extract first name (e.g., "Yashan Dinusha" -> "Yashan")
+
           const firstName = data.name.split(" ")[0];
           setStudentFirstName(firstName);
         }
@@ -191,7 +198,15 @@ export default function StudentDashboard({
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace("#", "");
-      const validTabs = ["dashboard", "timetable", "attendance", "request-correction", "profile", "help", "book-appointments"];
+      const validTabs = [
+        "dashboard",
+        "timetable",
+        "attendance",
+        "request-correction",
+        "profile",
+        "help",
+        "book-appointments",
+      ];
       if (hash && validTabs.includes(hash)) {
         setActiveTab(hash);
         window.scrollTo(0, 0);
@@ -200,7 +215,7 @@ export default function StudentDashboard({
 
     window.addEventListener("hashchange", handleHashChange);
     handleHashChange(); // Check on initial load
-    
+
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 

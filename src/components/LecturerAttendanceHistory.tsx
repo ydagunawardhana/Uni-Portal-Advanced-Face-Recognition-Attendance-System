@@ -30,10 +30,18 @@ export default function LecturerAttendanceHistory() {
   const passedState = location.state as any;
 
   // New Filter States - initialized from passedState if available
-  const [selectedDegree, setSelectedDegree] = useState(passedState?.degree?.trim() || "all");
-  const [selectedSemester, setSelectedSemester] = useState(passedState?.semester?.trim() || "all");
-  const [selectedModule, setSelectedModule] = useState(passedState?.module?.trim() || "all");
-  const [selectedBatch, setSelectedBatch] = useState(passedState?.batch?.trim() || "all");
+  const [selectedDegree, setSelectedDegree] = useState(
+    passedState?.degree?.trim() || "all",
+  );
+  const [selectedSemester, setSelectedSemester] = useState(
+    passedState?.semester?.trim() || "all",
+  );
+  const [selectedModule, setSelectedModule] = useState(
+    passedState?.module?.trim() || "all",
+  );
+  const [selectedBatch, setSelectedBatch] = useState(
+    passedState?.batch?.trim() || "all",
+  );
   const [selectedDate, setSelectedDate] = useState(passedState?.date || "");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -68,21 +76,24 @@ export default function LecturerAttendanceHistory() {
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const lecturerToken = localStorage.getItem('lecturerToken');
-        const response = await fetch('http://localhost:8000/api/lecturer/filter-options', {
-          headers: {
-            'Authorization': `Bearer ${lecturerToken}`
-          }
-        }); 
+        const lecturerToken = localStorage.getItem("lecturerToken");
+        const response = await fetch(
+          "http://localhost:8000/api/lecturer/filter-options",
+          {
+            headers: {
+              Authorization: `Bearer ${lecturerToken}`,
+            },
+          },
+        );
         if (response.ok) {
           const data = await response.json();
           console.log("Fetched Filter Options:", data);
-          
+
           setFilterOptions({
             degrees: data.degrees || [],
             semesters: data.semesters || [],
             modules: data.modules || [],
-            batches: data.batches || []
+            batches: data.batches || [],
           });
         } else {
           console.error("Failed to fetch options, Status:", response.status);
@@ -91,10 +102,13 @@ export default function LecturerAttendanceHistory() {
         console.error("Network error fetching filter options:", error);
         // Fallback so the UI doesn't break while debugging
         setFilterOptions({
-           degrees: [{name: "BSc (Hons) in Computer Science"}],
-           semesters: [{name: "Year 1 - Semester 1"}, {name: "Year 1 - Semester 2"}],
-           modules: [{name: "Full Stack Development - (PUSL3120)"}],
-           batches: [{name: "23.2"}]
+          degrees: [{ name: "BSc (Hons) in Computer Science" }],
+          semesters: [
+            { name: "Year 1 - Semester 1" },
+            { name: "Year 1 - Semester 2" },
+          ],
+          modules: [{ name: "Full Stack Development - (PUSL3120)" }],
+          batches: [{ name: "23.2" }],
         });
       }
     };
@@ -134,14 +148,14 @@ export default function LecturerAttendanceHistory() {
         if (searchQuery) queryParams.append("search", searchQuery);
         queryParams.append("page", currentPage.toString());
 
-        const lecturerToken = localStorage.getItem('lecturerToken');
+        const lecturerToken = localStorage.getItem("lecturerToken");
         const response = await fetch(
           `http://localhost:8000/api/attendance/history?${queryParams.toString()}`,
           {
             headers: {
-              'Authorization': `Bearer ${lecturerToken}`
-            }
-          }
+              Authorization: `Bearer ${lecturerToken}`,
+            },
+          },
         );
         if (!response.ok) throw new Error("Failed to fetch attendance history");
 
@@ -173,7 +187,9 @@ export default function LecturerAttendanceHistory() {
       return;
     }
 
-    const toastId = toast.loading("Preparing your professional Excel report...");
+    const toastId = toast.loading(
+      "Preparing your professional Excel report...",
+    );
 
     try {
       // 2.5s artificial delay for polished UX
@@ -184,49 +200,69 @@ export default function LecturerAttendanceHistory() {
       workbook.created = new Date();
       const ws = workbook.addWorksheet("Attendance History");
 
-      // ── Column definitions ────────────────────────────────────────────────
       ws.columns = [
-        { key: "date",         width: 15 },
-        { key: "studentName",  width: 30 },
-        { key: "indexNumber",  width: 20 },
-        { key: "subject",      width: 44 },
-        { key: "timeIn",       width: 14 },
-        { key: "timeOut",      width: 14 },
-        { key: "status",       width: 16 },
+        { key: "date", width: 15 },
+        { key: "studentName", width: 30 },
+        { key: "indexNumber", width: 20 },
+        { key: "subject", width: 44 },
+        { key: "timeIn", width: 14 },
+        { key: "timeOut", width: 14 },
+        { key: "status", width: 16 },
       ];
 
-      // ── Row 1: Title banner ───────────────────────────────────────────────
       ws.mergeCells("A1:G1");
       const titleCell = ws.getCell("A1");
       titleCell.value = "Attendance History Report";
-      titleCell.font   = { name: "Calibri", size: 16, bold: true, color: { argb: "FFFFFFFF" } };
-      titleCell.fill   = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
+      titleCell.font = {
+        name: "Calibri",
+        size: 16,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1E3A8A" },
+      };
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
       ws.getRow(1).height = 30;
 
-      // ── Row 2: Generated date ─────────────────────────────────────────────
       ws.mergeCells("A2:G2");
       const metaCell = ws.getCell("A2");
       const currentDate = new Date().toLocaleDateString("en-GB");
-      metaCell.value     = `Generated on: ${currentDate}  |  ${historyRecords.length} record(s) exported`;
-      metaCell.font      = { name: "Calibri", size: 10, italic: true, color: { argb: "FF374151" } };
+      metaCell.value = `Generated on: ${currentDate}  |  ${historyRecords.length} record(s) exported`;
+      metaCell.font = {
+        name: "Calibri",
+        size: 10,
+        italic: true,
+        color: { argb: "FF374151" },
+      };
       metaCell.alignment = { horizontal: "center" };
-      metaCell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEFF6FF" } };
+      metaCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFEFF6FF" },
+      };
 
-      // ── Row 3: blank spacer ───────────────────────────────────────────────
       ws.addRow([]);
 
-      // ── Rows 4-8: active filter metadata ─────────────────────────────────
       const filterLabelStyle: Partial<ExcelJS.Style> = {
         font: { bold: true, color: { argb: "FF1E40AF" } },
-        fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } },
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFDBEAFE" },
+        },
       };
       const filters: [string, string][] = [
-        ["Degree",   selectedDegree   !== "all" ? selectedDegree   : "All Degrees"],
-        ["Semester", selectedSemester !== "all" ? selectedSemester : "All Semesters"],
-        ["Module",   selectedModule   !== "all" ? selectedModule   : "All Modules"],
-        ["Batch",    selectedBatch    !== "all" ? selectedBatch    : "All Batches"],
-        ["Date",     selectedDate                ? selectedDate    : "All Dates"],
+        ["Degree", selectedDegree !== "all" ? selectedDegree : "All Degrees"],
+        [
+          "Semester",
+          selectedSemester !== "all" ? selectedSemester : "All Semesters",
+        ],
+        ["Module", selectedModule !== "all" ? selectedModule : "All Modules"],
+        ["Batch", selectedBatch !== "all" ? selectedBatch : "All Batches"],
+        ["Date", selectedDate ? selectedDate : "All Dates"],
       ];
       filters.forEach(([label, value]) => {
         const row = ws.addRow([`${label} Filter:`, value]);
@@ -234,37 +270,51 @@ export default function LecturerAttendanceHistory() {
         row.getCell(2).font = { italic: true };
       });
 
-      // ── Blank spacer before table ─────────────────────────────────────────
       ws.addRow([]);
 
-      // ── Table header row ──────────────────────────────────────────────────
       const headerRow = ws.addRow([
-        "Date", "Student Name", "Index Number", "Subject",
-        "Time In", "Time Out", "Status",
+        "Date",
+        "Student Name",
+        "Index Number",
+        "Subject",
+        "Time In",
+        "Time Out",
+        "Status",
       ]);
       headerRow.height = 22;
       headerRow.eachCell((cell) => {
-        cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-        cell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2563EB" } };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF2563EB" },
+        };
         cell.alignment = { vertical: "middle", horizontal: "center" };
-        cell.border    = {
-          top:    { style: "thin", color: { argb: "FF1D4ED8" } },
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF1D4ED8" } },
           bottom: { style: "thin", color: { argb: "FF1D4ED8" } },
-          left:   { style: "thin", color: { argb: "FF1D4ED8" } },
-          right:  { style: "thin", color: { argb: "FF1D4ED8" } },
+          left: { style: "thin", color: { argb: "FF1D4ED8" } },
+          right: { style: "thin", color: { argb: "FF1D4ED8" } },
         };
       });
 
-      // ── Data rows ────────────────────────────────────────────────────────
       const borderStyle: Partial<ExcelJS.Borders> = {
-        top:    { style: "hair", color: { argb: "FFE5E7EB" } },
+        top: { style: "hair", color: { argb: "FFE5E7EB" } },
         bottom: { style: "hair", color: { argb: "FFE5E7EB" } },
-        left:   { style: "hair", color: { argb: "FFE5E7EB" } },
-        right:  { style: "hair", color: { argb: "FFE5E7EB" } },
+        left: { style: "hair", color: { argb: "FFE5E7EB" } },
+        right: { style: "hair", color: { argb: "FFE5E7EB" } },
       };
-      // Alternate row fill colours
-      const rowFillEven: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
-      const rowFillOdd:  ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+
+      const rowFillEven: ExcelJS.Fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF9FAFB" },
+      };
+      const rowFillOdd: ExcelJS.Fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFFFFFFF" },
+      };
 
       historyRecords.forEach((record, idx) => {
         const subjectDisplay = record.module_code
@@ -272,44 +322,53 @@ export default function LecturerAttendanceHistory() {
           : record.subject || "--";
 
         const dataRow = ws.addRow([
-          record.date        || "--",
-          record.studentName || record.student_name  || "--",
-          record.indexNumber || record.index_number  || "--",
+          record.date || "--",
+          record.studentName || record.student_name || "--",
+          record.indexNumber || record.index_number || "--",
           subjectDisplay,
-          record.timeIn      || record.time_in        || "--",
-          record.timeOut     || record.time_out       || "--",
-          record.status      || "--",
+          record.timeIn || record.time_in || "--",
+          record.timeOut || record.time_out || "--",
+          record.status || "--",
         ]);
 
         dataRow.eachCell((cell) => {
-          cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
-          cell.border    = borderStyle as ExcelJS.Borders;
-          cell.fill      = idx % 2 === 0 ? rowFillEven : rowFillOdd;
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: false,
+          };
+          cell.border = borderStyle as ExcelJS.Borders;
+          cell.fill = idx % 2 === 0 ? rowFillEven : rowFillOdd;
         });
 
-        // Conditional colour for Status (column 7)
         const statusCell = dataRow.getCell(7);
-        statusCell.font = { bold: true, color: {
-          argb:
-            record.status === "Present" ? "FF15803D" :  // green-700
-            record.status === "Absent"  ? "FFDC2626" :  // red-600
-                                         "FFD97706",   // amber-600
-        }};
+        statusCell.font = {
+          bold: true,
+          color: {
+            argb:
+              record.status === "Present"
+                ? "FF15803D"
+                : record.status === "Absent"
+                  ? "FFDC2626"
+                  : "FFD97706",
+          },
+        };
       });
 
-      // ── Generate & download ───────────────────────────────────────────────
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const modulePart = selectedModule !== "all" ? `_${selectedModule}` : "";
-      const batchPart  = selectedBatch  !== "all" ? `_Batch${selectedBatch}` : "";
-      const datePart   = new Date().toISOString().split("T")[0];
-      const fileName   = `Attendance_Report${modulePart}${batchPart}_${datePart}.xlsx`;
+      const batchPart = selectedBatch !== "all" ? `_Batch${selectedBatch}` : "";
+      const datePart = new Date().toISOString().split("T")[0];
+      const fileName = `Attendance_Report${modulePart}${batchPart}_${datePart}.xlsx`;
 
       saveAs(blob, fileName);
-      toast.success(`Report downloaded: ${fileName}`, { id: toastId, duration: 4000 });
-
+      toast.success(`Report downloaded: ${fileName}`, {
+        id: toastId,
+        duration: 4000,
+      });
     } catch (error) {
       console.error("Export failed:", error);
       toast.error("Failed to generate Excel report.", { id: toastId });
@@ -569,7 +628,9 @@ export default function LecturerAttendanceHistory() {
                             </div>
                           )}
                           <span className="text-sm font-medium text-gray-900">
-                            {record.studentName || record.student_name || "Unknown Student"}
+                            {record.studentName ||
+                              record.student_name ||
+                              "Unknown Student"}
                           </span>
                         </div>
                       </td>
@@ -577,7 +638,9 @@ export default function LecturerAttendanceHistory() {
                         {record.indexNumber || record.index_number}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
-                        {record.module_code ? `${record.module_code} - ${record.subject}` : record.subject}
+                        {record.module_code
+                          ? `${record.module_code} - ${record.subject}`
+                          : record.subject}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-bold">
                         {record.timeIn || record.time_in}

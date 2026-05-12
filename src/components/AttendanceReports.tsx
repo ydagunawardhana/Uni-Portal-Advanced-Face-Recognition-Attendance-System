@@ -18,7 +18,7 @@ import { saveAs } from "file-saver";
 
 interface StudentRecord {
   student_id: string;
-  index_number?: string;   
+  index_number?: string;
   name: string;
   status: string;
   attendance_percentage: number;
@@ -319,8 +319,6 @@ export default function AttendanceReports({
       worksheet.getCell("A2").font = { italic: true };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
 
-      // --- Section 2: Side-by-Side Dashboard (Rows 4 to 8) ---
-      // Left Side: Module Info
       const setInfo = (cell: string, value: any, bold = false) => {
         const c = worksheet.getCell(cell);
         c.value = value;
@@ -407,7 +405,7 @@ export default function AttendanceReports({
             "",
             "Attended",
             "Overall %",
-          ] // Blank string for Spacer Col D
+          ]
         : [
             "Index Number",
             "Student Name",
@@ -422,7 +420,7 @@ export default function AttendanceReports({
       const headerRow = worksheet.getRow(15);
       headerRow.values = headerRowValues;
       headerRow.eachCell((cell, colNumber) => {
-        if (colNumber === 4) return; // Skip Spacer
+        if (colNumber === 4) return;
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
         cell.fill = {
           type: "pattern",
@@ -486,10 +484,8 @@ export default function AttendanceReports({
             horizontal: colNumber > 2 ? "center" : "left",
           };
 
-          // Specific formatting for Single Session View
           if (!isOverall) {
             if (colNumber === 5) {
-              // Status Column
               const status = cell.value?.toString().toLowerCase();
               if (status === "present")
                 cell.font = { color: { argb: "FF16A34A" }, bold: true };
@@ -497,24 +493,20 @@ export default function AttendanceReports({
                 cell.font = { color: { argb: "FFDC2626" }, bold: true };
             }
             if (colNumber === 8 && cell.value !== "-") {
-              // Reason Column (Highlight issues in red text)
               cell.font = { color: { argb: "FFDC2626" }, italic: true };
             }
-          }
-          // Specific formatting for Overall View
-          else {
+          } else {
             if (colNumber === 6) {
-              // Percentage Column — 4-tier colour coding
               const percentage = parseFloat(
                 cell.value?.toString().replace("%", "") || "0",
               );
               if (percentage >= 70)
-                cell.font = { color: { argb: "FF16A34A" }, bold: true }; // green
+                cell.font = { color: { argb: "FF16A34A" }, bold: true };
               else if (percentage >= 50)
-                cell.font = { color: { argb: "FFEAB308" }, bold: true }; // yellow
+                cell.font = { color: { argb: "FFEAB308" }, bold: true };
               else if (percentage >= 20)
-                cell.font = { color: { argb: "FFF97316" }, bold: true }; // orange
-              else cell.font = { color: { argb: "FFDC2626" }, bold: true }; // red
+                cell.font = { color: { argb: "FFF97316" }, bold: true };
+              else cell.font = { color: { argb: "FFDC2626" }, bold: true };
             }
           }
         });
@@ -881,9 +873,7 @@ export default function AttendanceReports({
                         {/* Student Details */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
-                            >
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
                               {(student.name || "ST")
                                 .split(" ")
                                 .map((n: string) => n[0])
@@ -896,7 +886,9 @@ export default function AttendanceReports({
                                 {student.name}
                               </p>
                               <p className="text-[11px] text-gray-500  font-bold mt-0.5 tracking-wide">
-                                {student.index_number || student.student_id || "N/A"}
+                                {student.index_number ||
+                                  student.student_id ||
+                                  "N/A"}
                               </p>
                             </div>
                           </div>

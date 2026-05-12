@@ -92,7 +92,7 @@ export default function LiveSessionsDashboard() {
 
   const handleFacultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFacultyFilter(e.target.value);
-    setDepartmentFilter(""); // Reset department when faculty changes
+    setDepartmentFilter("");
   };
 
   // Determine which departments to show
@@ -169,7 +169,7 @@ export default function LiveSessionsDashboard() {
       } else {
         fetchData();
       }
-    }, 5000); // 5-second polling for real-time sync
+    }, 5000);
     return () => clearInterval(interval);
   }, [selectedDate, viewMode]);
 
@@ -436,10 +436,10 @@ export default function LiveSessionsDashboard() {
                         session.status === "Live"
                           ? "bg-green-100 text-green-600 animate-pulse border-2 border-green-200"
                           : session.status === "Completed"
-                          ? "bg-green-100 text-green-600"
-                          : session.status === "Missed"
-                          ? "bg-red-100 text-red-600 font-bold border border-red-200 shadow-sm"
-                          : "bg-blue-100 text-blue-700"
+                            ? "bg-green-100 text-green-600"
+                            : session.status === "Missed"
+                              ? "bg-red-100 text-red-600 font-bold border border-red-200 shadow-sm"
+                              : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {session.status === "Live"
@@ -449,15 +449,21 @@ export default function LiveSessionsDashboard() {
 
                     {/* Cover Request Badge */}
                     {session.cover_requested && (
-                      <span className={`px-3 py-1 text-sm font-bold rounded-full flex items-center gap-1 uppercase ${
-                        session.status?.toLowerCase() === "completed" || session.is_completed
-                          ? "bg-gray-100 text-gray-500 border border-gray-200"
-                          : "bg-red-100 text-red-700 animate-pulse"
-                      }`}>
-                        {session.status?.toLowerCase() === "completed" || session.is_completed ? (
+                      <span
+                        className={`px-3 py-1 text-sm font-bold rounded-full flex items-center gap-1 uppercase ${
+                          session.status?.toLowerCase() === "completed" ||
+                          session.is_completed
+                            ? "bg-gray-100 text-gray-500 border border-gray-200"
+                            : "bg-red-100 text-red-700 animate-pulse"
+                        }`}
+                      >
+                        {session.status?.toLowerCase() === "completed" ||
+                        session.is_completed ? (
                           <>Covered</>
                         ) : (
-                          <><AlertCircle className="w-4 h-4" /> Cover Requested</>
+                          <>
+                            <AlertCircle className="w-4 h-4" /> Cover Requested
+                          </>
                         )}
                       </span>
                     )}
@@ -471,13 +477,17 @@ export default function LiveSessionsDashboard() {
                 </div>
 
                 {/* Display Cover Reason — hidden once session is completed */}
-                {session.cover_requested && session.cover_reason &&
-                  !(session.status?.toLowerCase() === "completed" || session.is_completed) && (
-                  <div className="mb-3 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>Reason: {session.cover_reason}</span>
-                  </div>
-                )}
+                {session.cover_requested &&
+                  session.cover_reason &&
+                  !(
+                    session.status?.toLowerCase() === "completed" ||
+                    session.is_completed
+                  ) && (
+                    <div className="mb-3 bg-red-50 border-2 border-red-100 rounded-lg p-2 text-xs text-red-600 font-medium flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>Reason: {session.cover_reason}</span>
+                    </div>
+                  )}
 
                 <div className="mb-4">
                   <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
@@ -489,7 +499,10 @@ export default function LiveSessionsDashboard() {
                     <span>Batch {session.batch}</span>
                     <span className="text-gray-400">•</span>
                     <span className="text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-xl text-sm">
-                      {session.enrolled_count !== undefined ? session.enrolled_count : 0} Enrolled Students
+                      {session.enrolled_count !== undefined
+                        ? session.enrolled_count
+                        : 0}{" "}
+                      Enrolled Students
                     </span>
                   </p>
                   {/* Date Display (Forced Render with Fallback) */}
@@ -559,7 +572,6 @@ export default function LiveSessionsDashboard() {
                   const sessionId = String(
                     (session as any).batch_id || session.id,
                   );
-                  // Dynamically check memory on every render to avoid stale state issues
                   const activeAdminSession = localStorage.getItem(
                     "admin_activeSession",
                   );
@@ -569,7 +581,6 @@ export default function LiveSessionsDashboard() {
                     session.status?.toLowerCase() === "completed" ||
                     session.is_completed
                   ) {
-                    // STATE 0: COMPLETED — permanently locked
                     return (
                       <button
                         disabled
@@ -598,7 +609,6 @@ export default function LiveSessionsDashboard() {
                           navigate(
                             `/admin/live-camera?sessionId=${session.id}`,
                             {
-                              // Explicitly pass viewOnly: false so they return as Host
                               state: {
                                 sessionData: session,
                                 isLive: true,
@@ -644,7 +654,6 @@ export default function LiveSessionsDashboard() {
                       </button>
                     );
                   } else if (session.cover_requested || session.is_visiting) {
-                    // PERMITTED: Admin can start if there's a cover request or it's a visiting lecturer session
                     return (
                       <button
                         onClick={() =>
@@ -674,7 +683,6 @@ export default function LiveSessionsDashboard() {
                       </button>
                     );
                   } else {
-                    // BLOCKED: Normal session — Admin must wait for the Lecturer to start it
                     return (
                       <button
                         disabled

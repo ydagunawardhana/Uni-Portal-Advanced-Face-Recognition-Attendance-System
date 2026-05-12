@@ -77,8 +77,6 @@ export default function AdminManualOverride() {
       const session = sessions.find((s: any) => s.id === parseInt(sessionId));
 
       if (!session) {
-        // Fallback: If not in recent 12, try to construct a minimal object from sessionId if we can't find it
-        // Or just show an error. The user wants fallback.
         setSessionDetails({
           module_name: "Session Details Unavailable",
           module_code: "N/A",
@@ -116,8 +114,6 @@ export default function AdminManualOverride() {
 
         setStudents(transformedStudents);
       } else {
-        // If we don't have metadata, we can't fetch the attendance list from the current lecturer endpoint
-        // because it requires module_code, date, and batch.
         toast.error("Insufficient session data to load attendance list.");
       }
     } catch (error) {

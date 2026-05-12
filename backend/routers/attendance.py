@@ -582,7 +582,7 @@ def get_session_stats(session_id: int, db: Session = Depends(get_db)):
 
     return {
         "currently_inside": currently_inside,
-        "left_early": total_exited, # This maps to 'Total Exited' in frontend
+        "left_early": total_exited, 
         "total_entered": total_unique_entered
     }
 @router.post("/manual")
@@ -603,8 +603,7 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
             detail=f"Account for {student_index} is currently blocked/inactive."
         )
 
-    # 3. Resolve the correct Class Session ID
-    # The frontend might send a timetable_id instead of a class_session_id.
+    
     active_session = db.query(models.ClassSession).filter(models.ClassSession.id == payload.session_id).first()
     
     if not active_session:
@@ -619,8 +618,7 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
     if not active_session:
         raise HTTPException(status_code=404, detail="Active class session not found. Please ensure the 'Start Session' button was clicked.")
 
-    # NEW: Validate Batch Match for Manual Override (Block "Not Allowed" students)
-    # 1. Resolve actual batch from Timetable using the session's batch_id (pointer)
+   
     tt_record = db.query(models.Timetable).filter(models.Timetable.id == active_session.batch_id).first()
     session_batch_val = str(tt_record.batch_id).strip() if tt_record else str(active_session.batch_id).strip()
     student_intake_val = str(student.intake).strip()
@@ -637,8 +635,7 @@ def mark_manual_attendance(payload: schemas.ManualAttendanceSchema, db: Session 
         models.AttendanceLog.student_id == student.id
     ).order_by(models.AttendanceLog.timestamp.desc()).first()
 
-    # Normalize internal status for sequence check
-    # Map 'entered' -> 'IN', 'exited' -> 'OUT' for comparison if necessary
+   
     def _normalize(s):
         if not s: return "OUT"
         s = s.upper()
@@ -1266,9 +1263,7 @@ def admin_approve_request(
         else:
              print(f"DEBUG: Student with index {req.student_id} not found during approval.")
     else:
-        # If no class_session exists yet, we can't create an AttendanceRecord (FK constraint)
-        # However, the status resolution in get_subject_sessions will now handle this 
-        # by checking CorrectionRequest table directly.
+        
         print(f"DEBUG: No class_session found for timetable ID {req.session_id}. AttendanceRecord will be resolved via CorrectionRequest status.")
 
     try:
@@ -1618,12 +1613,11 @@ def get_student_dashboard_summary(
         mod_info = db.query(models.Module).filter(models.Module.module_code == tt.module_code).first()
         mod_name = mod_info.module_name if mod_info else (tt.module_name or tt.module_code)
         
-        # --- FIXED LECTURER FETCHING LOGIC ---
-        # The database schema shows the name is directly in the timetable table
+       
         lecturer_name = getattr(tt, 'lecturer', 'TBA')
-        if not lecturer_name: # Handle empty string or null cases safely
+        if not lecturer_name: 
              lecturer_name = "TBA"
-        # -------------------------------------
+        
         
         todays_schedule.append(schemas.TodaysScheduleSummary(
             module_name=f"{tt.module_code} - {mod_name}",

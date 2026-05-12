@@ -38,8 +38,6 @@ export default function Sidebar({
   const [reTrainCount, setReTrainCount] = useState(0);
   const [pendingCorrectionCount, setPendingCorrectionCount] = useState(0);
 
-  // Fetch the pre-registration queue count using the admin token.
-  // Runs once on mount and every 60 seconds to stay fresh.
   useEffect(() => {
     const fetchCounts = async () => {
       const token = localStorage.getItem("adminToken");

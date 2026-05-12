@@ -309,9 +309,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
               ) : statsError ? (
                 <p className="text-2xl font-bold text-red-400">Error</p>
               ) : (
-                <p className={`text-3xl font-bold`}>
-                  {stat.value}
-                </p>
+                <p className={`text-3xl font-bold`}>{stat.value}</p>
               )}
             </div>
           );

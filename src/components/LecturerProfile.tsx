@@ -469,22 +469,24 @@ export default function LecturerProfile() {
             <div className="flex flex-wrap gap-3 mt-2">
               {lecturerData?.assigned_subjects_detailed &&
               lecturerData.assigned_subjects_detailed.length > 0 ? (
-                lecturerData.assigned_subjects_detailed.map((subject, index) => (
-                  <span
-                    key={index}
-                    className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm border-2 border-blue-200 flex items-center gap-2 shadow-sm hover:bg-blue-100 transition-colors cursor-default"
-                  >
-                    <span className="font-bold">{subject.code}</span>
-                    {subject.name && subject.name !== "Unknown Module" && (
-                      <>
-                        <span className="text-blue-300 font-bold">-</span>
-                        <span className="font-medium text-gray-700">
-                          {subject.name}
-                        </span>
-                      </>
-                    )}
-                  </span>
-                ))
+                lecturerData.assigned_subjects_detailed.map(
+                  (subject, index) => (
+                    <span
+                      key={index}
+                      className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm border-2 border-blue-200 flex items-center gap-2 shadow-sm hover:bg-blue-100 transition-colors cursor-default"
+                    >
+                      <span className="font-bold">{subject.code}</span>
+                      {subject.name && subject.name !== "Unknown Module" && (
+                        <>
+                          <span className="text-blue-300 font-bold">-</span>
+                          <span className="font-medium text-gray-700">
+                            {subject.name}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  ),
+                )
               ) : (
                 <span className="text-gray-500 text-sm italic">
                   No subjects assigned currently.

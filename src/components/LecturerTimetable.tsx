@@ -26,7 +26,7 @@ const getCardColor = (moduleName: string) => {
   for (let i = 0; i < moduleName.length; i++) {
     hash = moduleName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  hash = hash + moduleName.length * 7; // Added salt to prevent collisions
+  hash = hash + moduleName.length * 7;
   return colorPalette[Math.abs(hash) % colorPalette.length];
 };
 
@@ -105,7 +105,10 @@ export default function LecturerTimetable() {
       // 206 = profile fields missing — descriptive warning, not a crash
       if (res.status === 206) {
         const warn = await res.json();
-        setWarningMessage(warn.message || "Your timetable cannot be displayed. Please update your profile.");
+        setWarningMessage(
+          warn.message ||
+            "Your timetable cannot be displayed. Please update your profile.",
+        );
         setMissingFields(warn.missing_fields || []);
         setSchedule([]);
         return;
@@ -168,7 +171,9 @@ export default function LecturerTimetable() {
         <div className="flex items-center gap-3">
           <Calendar className="w-10 h-10 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Weekly Teaching Schedule</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Weekly Teaching Schedule
+            </h2>
             <p className="text-gray-500 text-md mt-1">
               View your sessions for the week of{" "}
               <span className="font-bold text-blue-600">
@@ -228,8 +233,8 @@ export default function LecturerTimetable() {
             No Sessions Scheduled
           </h3>
           <p className="text-gray-500 text-center max-w-md leading-relaxed">
-            You don't have any teaching sessions assigned for this week. Enjoy your free
-            time!
+            You don't have any teaching sessions assigned for this week. Enjoy
+            your free time!
           </p>
           <button
             onClick={async () => {
@@ -301,7 +306,7 @@ export default function LecturerTimetable() {
                           )} text-white p-3 rounded-lg shadow-md border border-white/20 flex flex-col gap-1 cursor-default hover:brightness-105 hover:scale-105 transition-all`}
                         >
                           <h4 className="font-bold text-md leading-tight line-clamp-2">
-                            {cls.module_name } - {cls.module_code}
+                            {cls.module_name} - {cls.module_code}
                           </h4>
                           <div className="space-y-2 text-sm text-white font-medium mt-2">
                             <p className="flex items-center gap-1">

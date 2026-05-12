@@ -24,11 +24,9 @@ import {
   LogOut,
 } from "lucide-react";
 
-// Constants
 const API_BASE = "http://localhost:8000";
-const CAPTURE_INTERVAL_MS = 3000; // send a frame every 3 seconds
+const CAPTURE_INTERVAL_MS = 3000;
 
-// Props / Data Interfaces
 interface LecturerLiveClassMonitoringProps {
   onLogout: () => void;
   onNavigate: (screen: any) => void;
@@ -51,7 +49,6 @@ interface FaceBox {
   name: string;
 }
 
-// API Response shapes
 interface ApiFaceResult {
   label: string;
   user_id: number;
@@ -78,7 +75,6 @@ interface ApiAttendanceResponse {
   timestamp: string;
 }
 
-// Helpers
 let _logIdCounter = 1000;
 
 function nowTimeString(): string {
@@ -101,7 +97,6 @@ function bboxToPercent(
   };
 }
 
-// Helper to calculate MM:SS or HH:MM:SS format
 const formatElapsedTime = (startMillis: number) => {
   const diff = Date.now() - startMillis;
   if (diff < 0) return "00:00:00";
@@ -115,7 +110,6 @@ const formatElapsedTime = (startMillis: number) => {
     .toString()
     .padStart(2, "0");
 
-  // Hide hours if it's less than 1 hour for a cleaner look
   return h === "00" ? `${m}:${s}` : `${h}:${m}:${s}`;
 };
 
@@ -170,7 +164,6 @@ const RealTimeClock = () => {
   );
 };
 
-// Component
 export default function LecturerLiveClassMonitoring({
   onLogout,
   onNavigate,
@@ -184,9 +177,8 @@ export default function LecturerLiveClassMonitoring({
     ? "admin_activeSession"
     : "lecturer_activeSession";
 
-  // FIX: Rely strictly on the route path to determine the active role context, avoiding localStorage token confusion
   const role = isAdminRoute ? "Admin" : "Lecturer";
-  // UI state
+
   const [activeTab, setActiveTab] = useState<"camera" | "manual">(
     isAdminRoute ? "manual" : "camera",
   );
@@ -216,19 +208,14 @@ export default function LecturerLiveClassMonitoring({
   });
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
-  // Face box state – now driven by live annotated frames
   const [annotatedFrame, setAnnotatedFrame] = useState<string | null>(null);
 
-  // Attendance log state
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
-  // Attendance notification toast
   const [attendanceToast, setAttendanceToast] = useState<string | null>(null);
 
-  // Live Elapsed Timer state
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
 
-  // Camera / recognition refs & state
   const entranceVideoRef = useRef<HTMLVideoElement>(null);
   const exitVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -258,13 +245,11 @@ export default function LecturerLiveClassMonitoring({
   const selectedSessionDetails = (todaySessions || []).find(
     (s) => String(s.id) === String(selectedSession),
   );
-  // Determine if current user is the host
-  // Check if current user is the owner. Fallback to currentSessionId if selectedSession is pending.
+
   const isOwner =
     localStorage.getItem(storageKey) ===
     String(selectedSession || currentSessionId);
 
-  // Track which session this admin is actively hosting to prevent View-Only flashes during teardown
   const hostedSessionIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (isOwner) hostedSessionIdRef.current = String(selectedSession);
@@ -274,13 +259,12 @@ export default function LecturerLiveClassMonitoring({
   const [isViewOnly, setIsViewOnly] = useState(false);
 
   useEffect(() => {
-    // 1. STRONGEST OVERRIDE: If the dashboard explicitly says this is NOT view-only (Resume Session clicked)
     if (location.state?.viewOnly === false) {
       setIsViewOnly(false);
       return;
     }
 
-    // 2. Check memory ownership
+    // Check memory ownership
     const isTearingDownOwnSession =
       hostedSessionIdRef.current === String(selectedSession) && !isOwner;
     if (!isAdminRoute || isOwner || isTearingDownOwnSession) {
@@ -288,7 +272,6 @@ export default function LecturerLiveClassMonitoring({
       return;
     }
 
-    // 3. Fallback for actual viewers
     const isLiveSession =
       location.state?.viewOnly === true ||
       location.state?.isLive === true ||
@@ -303,13 +286,11 @@ export default function LecturerLiveClassMonitoring({
     location.state,
   ]);
 
-  // Bulletproof lock to prevent multiple toasts natively
   const toastShownRef = useRef(false);
 
-  // Trigger notification when arriving from Dashboard securely
   useEffect(() => {
     if (location.state?.sessionStarted && !toastShownRef.current) {
-      toastShownRef.current = true; // Lock it immediately so it never fires twice
+      toastShownRef.current = true;
 
       const moduleName = location.state?.moduleName || "Class";
 
@@ -317,13 +298,12 @@ export default function LecturerLiveClassMonitoring({
         duration: 6000,
         position: "top-right",
         style: {
-          background: "#1e3b8adc", // Dark blue
+          background: "#1e3b8adc",
           color: "#fff",
           fontWeight: "bold",
         },
       });
 
-      // Safely strip 'sessionStarted' from the React Router state
       const currentState = { ...location.state };
       delete currentState.sessionStarted;
 
@@ -334,11 +314,9 @@ export default function LecturerLiveClassMonitoring({
     }
   }, [location.state, navigate, location.pathname, location.search]);
 
-  // --- CRITICAL FIX: Smart Memory Management on Exit ---
   const isHostingRef = useRef(false);
 
   useEffect(() => {
-    // Keep track of whether we are the active host
     isHostingRef.current =
       sessionActive &&
       localStorage.getItem(storageKey) === String(selectedSession);
@@ -346,12 +324,7 @@ export default function LecturerLiveClassMonitoring({
 
   useEffect(() => {
     return () => {
-      // This runs whenever the component is unmounted (leaving the page)
-      // ONLY clear memory if the Admin is just VIEWING. If they are HOSTING, keep memory to resume later!
       if (isAdminRoute && !isHostingRef.current) {
-        // SAFE: Only remove the Admin's own session marker.
-        // DO NOT remove 'activeAttendanceSession' or 'sessionStartTime' — these belong
-        // to the Lecturer's live session and clearing them would break their active monitoring!
         localStorage.removeItem("admin_activeSession");
       }
     };
@@ -404,15 +377,15 @@ export default function LecturerLiveClassMonitoring({
       const startMs = parseTimeToMs(selectedSessionDetails.start_time);
       const endMs = parseTimeToMs(selectedSessionDetails.end_time);
       scheduledDurationMs = endMs - startMs;
-      if (scheduledDurationMs < 0) scheduledDurationMs += 24 * 60 * 60 * 1000; // Handle overnight sessions
+      if (scheduledDurationMs < 0) scheduledDurationMs += 24 * 60 * 60 * 1000;
     }
 
     // 2. Set Interval
     if ((sessionActive || isViewOnly) && startTimeMs && !isNaN(startTimeMs)) {
-      setElapsedTime(formatElapsedTime(startTimeMs)); // Immediate tick
+      setElapsedTime(formatElapsedTime(startTimeMs));
       interval = setInterval(() => {
         const now = new Date().getTime();
-        const diff = Math.max(0, now - startTimeMs); // Elapsed time in MS
+        const diff = Math.max(0, now - startTimeMs);
 
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -446,10 +419,8 @@ export default function LecturerLiveClassMonitoring({
         );
         setVideoDevices(videoInputs);
 
-        // 3. CRITICAL: Stop the stream immediately to turn off the camera light!
         stream.getTracks().forEach((track) => track.stop());
 
-        // Set defaults if available
         if (videoInputs.length > 0) setInCameraId(videoInputs[0].deviceId);
         if (videoInputs.length > 1) setOutCameraId(videoInputs[1].deviceId);
       } catch (err) {
@@ -466,7 +437,6 @@ export default function LecturerLiveClassMonitoring({
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
         });
-        // Permission granted, stop the stream immediately (we just wanted to check)
         stream.getTracks().forEach((track) => track.stop());
       } catch (error) {
         toast.error(
@@ -486,7 +456,6 @@ export default function LecturerLiveClassMonitoring({
     checkCameraPermissions();
   }, []);
 
-  // Absolute cleanup to prevent memory/hardware leaks when navigating away
   useEffect(() => {
     return () => {
       // 1. Stop frontend capture polling
@@ -503,9 +472,6 @@ export default function LecturerLiveClassMonitoring({
         );
       }
 
-      // 3. SMART BACKEND CLEANUP:
-      // ONLY stop the backend OpenCV stream if this user is the HOST.
-      // If an Admin (Viewer) navigates away, they exit silently without freezing the Lecturer's feed.
       if (isHostingRef.current) {
         fetch(`${API_BASE}/api/attendance/stop_cameras`, {
           method: "POST",
@@ -515,7 +481,6 @@ export default function LecturerLiveClassMonitoring({
     };
   }, []);
 
-  // Comprehensive Initialization: Restore active session OR load targeted session
   useEffect(() => {
     const navSessionData = location.state?.sessionData;
     const navSessionId = navSessionData
@@ -530,7 +495,6 @@ export default function LecturerLiveClassMonitoring({
         const parsed = JSON.parse(saved);
         const savedSessionId = String(parsed.selectedSession);
 
-        // RESTORE CONDITION: If there's no specific navigation target, OR the target matches the saved session
         if (
           parsed.sessionId &&
           (!navSessionId || navSessionId === savedSessionId)
@@ -538,7 +502,6 @@ export default function LecturerLiveClassMonitoring({
           setCurrentSessionId(parsed.sessionId);
           setSessionActive(true);
 
-          // Explicitly disable camera states on return to prevent frozen streams
           setIsEntranceActive(false);
           setIsExitActive(false);
 
@@ -556,18 +519,15 @@ export default function LecturerLiveClassMonitoring({
       }
     }
 
-    // LOAD NEW TARGET: If we didn't restore (e.g., viewing a different session), load from navigation state safely
     if (!restoredFromMemory && navSessionData) {
       setSelectedSession(navSessionId || "");
       setSelectedSubject(
         navSessionData.subject_id || navSessionData.moduleCode || "",
       );
       setSessionDetails(navSessionData);
-      // Note: sessionActive is NOT set to true here. isViewOnly handles live states for viewers.
     }
   }, [location.state]);
 
-  // Fetch Lecturer ID on mount (Auth Context placeholder)
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -752,7 +712,6 @@ export default function LecturerLiveClassMonitoring({
       let fetchedLogsData = null;
 
       try {
-        // 1. SMART FETCH: Try multiple common endpoint patterns to guarantee we hit the right logs API
         const logEndpoints = [
           `${API_BASE}/api/attendance/session_logs/${targetId}`,
           `${API_BASE}/api/attendance/live_logs/${targetId}`,
@@ -764,11 +723,9 @@ export default function LecturerLiveClassMonitoring({
             const res = await fetch(endpoint);
             if (res.ok) {
               fetchedLogsData = await res.json();
-              break; // Found the correct endpoint, exit the loop!
+              break;
             }
-          } catch (e) {
-            // Ignore network errors for incorrect endpoints and try the next one
-          }
+          } catch (e) {}
         }
 
         // 2. Fetch Stats
@@ -779,12 +736,10 @@ export default function LecturerLiveClassMonitoring({
         if (statsRes.ok) {
           const statsData = await statsRes.json();
 
-          // Fallback: If the backend bundles logs directly inside the stats response, use them!
           if (!fetchedLogsData && statsData.logs) {
             fetchedLogsData = statsData.logs;
           }
         } else if (statsRes.status === 404 || statsRes.status === 400) {
-          // Session was ended remotely by the host
           if (isViewOnly) {
             toast.error("The Host has ended this live session.", {
               duration: 5000,
@@ -793,7 +748,6 @@ export default function LecturerLiveClassMonitoring({
           }
         }
 
-        // 3. Safely map and set the log entries if we successfully retrieved them
         if (fetchedLogsData) {
           const logsArray = Array.isArray(fetchedLogsData)
             ? fetchedLogsData
@@ -822,7 +776,7 @@ export default function LecturerLiveClassMonitoring({
 
     const pollData = () => {
       fetchLiveData();
-      interval = setInterval(fetchLiveData, 5000); // Poll every 5 seconds for stability
+      interval = setInterval(fetchLiveData, 5000);
     };
 
     if (sessionActive || isViewOnly) {
@@ -1071,10 +1025,8 @@ export default function LecturerLiveClassMonitoring({
       const data = await res.json();
       setCurrentSessionId(data.id);
 
-      // Mark Admin as Host on Start
       localStorage.setItem("admin_hosted_session", String(selectedSession));
 
-      // Persist session to localStorage for navigation resilience
       localStorage.setItem(storageKey, String(selectedSession));
       localStorage.setItem(
         "activeAttendanceSession",
@@ -1085,13 +1037,11 @@ export default function LecturerLiveClassMonitoring({
           sessionDetails: { ...sessionDetails, location: sessionLocation },
         }),
       );
-      // Save absolute start time so the timer survives navigation
+
       localStorage.setItem("sessionStartTime", Date.now().toString());
 
-      // 2. Start frontend camera hardware
       await startCamera();
 
-      // SYNC: Mark timetable session as live for real-time dashboard updates
       try {
         await fetch(`${API_BASE}/api/timetable/${selectedSession}/start`, {
           method: "POST",
@@ -1103,12 +1053,10 @@ export default function LecturerLiveClassMonitoring({
       setSessionActive(true);
       setAttendanceToast(null);
 
-      // Dispatch explicitly for global Layout
       window.dispatchEvent(
         new CustomEvent("camera-status", { detail: "Online" }),
       );
 
-      // Optionally start neither, but let's start entrance by default if specified
       if (inCameraId) setIsEntranceActive(true);
     } catch (err: any) {
       console.error("Camera access error:", err);
@@ -1158,8 +1106,6 @@ export default function LecturerLiveClassMonitoring({
       } catch (err) {}
     }
   };
-
-  // No longer polling the frontend React camera canvas! Wait for backend to perform attendance via stream.
 
   const handleEndSession = useCallback(async () => {
     if (isViewOnly) return;

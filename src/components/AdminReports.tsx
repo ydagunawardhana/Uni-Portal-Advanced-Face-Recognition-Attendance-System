@@ -184,7 +184,9 @@ export default function AdminReports({
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [attendanceRecords, setAttendanceRecords] = useState<StudentRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<StudentRecord[]>(
+    [],
+  );
   const [subjectDetails, setSubjectDetails] = useState({
     total_students: 0,
     total_sessions_held: 0,
@@ -442,11 +444,18 @@ export default function AdminReports({
         !searchQuery ||
         s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.index_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s as any).student_id?.toLowerCase().includes(searchQuery.toLowerCase());
+        (s as any).student_id
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
       return matchesRisk && matchesSearch;
     });
-  }, [attendanceRecords, riskFilter, searchQuery, subjectDetails.total_sessions_held]);
+  }, [
+    attendanceRecords,
+    riskFilter,
+    searchQuery,
+    subjectDetails.total_sessions_held,
+  ]);
 
   // Dynamic Stats Calculation (As requested by USER)
   const filteredStats = useMemo(() => {
@@ -483,7 +492,9 @@ export default function AdminReports({
 
   const handleExportExcel = async () => {
     if (filterDegree === "all") {
-      toast.error("Please filter down to at least a specific Degree before exporting data.");
+      toast.error(
+        "Please filter down to at least a specific Degree before exporting data.",
+      );
       return;
     }
     if (!displayedStudents || displayedStudents.length === 0) {
@@ -540,13 +551,22 @@ export default function AdminReports({
       ).length;
 
       // --- Section 1: Main Titles ---
-      const selectedModuleObj = availableModules.find(m => m.module_code === (subject?.module_code || selectedModule));
-      const moduleDisplayName = subject?.module_name || selectedModuleObj?.module_name || (selectedModule === "all" ? "All Modules" : selectedModule);
-      const batchDisplayName = subject?.batch || (selectedBatch !== "all" ? selectedBatch : "All Batches");
+      const selectedModuleObj = availableModules.find(
+        (m) => m.module_code === (subject?.module_code || selectedModule),
+      );
+      const moduleDisplayName =
+        subject?.module_name ||
+        selectedModuleObj?.module_name ||
+        (selectedModule === "all" ? "All Modules" : selectedModule);
+      const batchDisplayName =
+        subject?.batch ||
+        (selectedBatch !== "all" ? selectedBatch : "All Batches");
 
       worksheet.mergeCells("A1", `${maxCol}1`);
       const titleCell = worksheet.getCell("A1");
-      const displayModuleCode = subject?.module_code || (selectedModule !== "all" ? selectedModule : "All Modules");
+      const displayModuleCode =
+        subject?.module_code ||
+        (selectedModule !== "all" ? selectedModule : "All Modules");
       titleCell.value = `Attendance Report: ${displayModuleCode} - ${moduleDisplayName} - ${batchDisplayName}`;
       titleCell.font = {
         name: "Arial",
@@ -578,11 +598,18 @@ export default function AdminReports({
       setInfo("A4", "Module:", true);
       setInfo("B4", moduleDisplayName);
       setInfo("A5", "Degree:", true);
-      setInfo("B5", subject?.degree || (filterDegree !== "all" ? filterDegree : "All Degrees"));
+      setInfo(
+        "B5",
+        subject?.degree ||
+          (filterDegree !== "all" ? filterDegree : "All Degrees"),
+      );
       setInfo("A6", "Semester:", true);
       setInfo("B6", subject?.semester || selectedModuleObj?.level || "N/A");
       setInfo("A7", "Lecturer:", true);
-      setInfo("B7", filterLecturerName !== "all" ? filterLecturerName : "All Lecturers");
+      setInfo(
+        "B7",
+        filterLecturerName !== "all" ? filterLecturerName : "All Lecturers",
+      );
       setInfo("A8", "Total Enrolled:", true);
       setInfo("B8", enrolledCount);
       setInfo("A9", "Total Present:", true);
@@ -592,7 +619,10 @@ export default function AdminReports({
       setInfo("A11", "Faculty:", true);
       setInfo("B11", filterFaculty !== "all" ? filterFaculty : "All Faculties");
       setInfo("A12", "Department:", true);
-      setInfo("B12", filterDepartment !== "all" ? filterDepartment : "All Departments");
+      setInfo(
+        "B12",
+        filterDepartment !== "all" ? filterDepartment : "All Departments",
+      );
       setInfo("A13", "Risk Filter:", true);
       setInfo(
         "B13",
@@ -650,7 +680,6 @@ export default function AdminReports({
       addRiskRow(7, "Critical (20% - 49%)", criticalCount, "FFF97316");
       addRiskRow(8, "Fail (< 20%)", failCount, "FFDC2626");
 
-      // --- Section 3: Main Student Table ---
       const headerRowValues = isOverall
         ? [
             "Index Number",
@@ -659,7 +688,7 @@ export default function AdminReports({
             "",
             "Attended",
             "Overall %",
-          ] // Blank string for Spacer Col D
+          ]
         : [
             "Index Number",
             "Student Name",
@@ -674,7 +703,7 @@ export default function AdminReports({
       const headerRow = worksheet.getRow(15);
       headerRow.values = headerRowValues;
       headerRow.eachCell((cell, colNumber) => {
-        if (colNumber === 4) return; // Skip Spacer
+        if (colNumber === 4) return;
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
         cell.fill = {
           type: "pattern",
@@ -777,11 +806,16 @@ export default function AdminReports({
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      const safeModuleCode = subject?.module_code || (selectedModule !== "all" ? selectedModule : "All_Modules");
-      const safeBatch = (subject?.batch || (selectedBatch !== "all" ? selectedBatch : "All_Batches")).replace(/\s+/g, '');
+      const safeModuleCode =
+        subject?.module_code ||
+        (selectedModule !== "all" ? selectedModule : "All_Modules");
+      const safeBatch = (
+        subject?.batch ||
+        (selectedBatch !== "all" ? selectedBatch : "All_Batches")
+      ).replace(/\s+/g, "");
       const viewType = isOverall ? "Overall" : fromDate;
       const datePart = new Date().toISOString().split("T")[0];
-      
+
       saveAs(
         blob,
         `Attendance_${safeModuleCode}_Batch${safeBatch}_${viewType}_${datePart}.xlsx`,
@@ -1020,7 +1054,9 @@ export default function AdminReports({
               <div
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
-                  toast.error("Please select a Degree first to view its batches.")
+                  toast.error(
+                    "Please select a Degree first to view its batches.",
+                  )
                 }
               ></div>
             )}
@@ -1050,7 +1086,9 @@ export default function AdminReports({
               <div
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
-                  toast.error("Please select a Degree or a Lecturer first to view modules.")
+                  toast.error(
+                    "Please select a Degree or a Lecturer first to view modules.",
+                  )
                 }
               ></div>
             )}
@@ -1068,23 +1106,32 @@ export default function AdminReports({
                   {availableModules
                     .filter((mod) => {
                       const matchesFaculty =
-                        filterFaculty === "all" || mod.faculty === filterFaculty;
+                        filterFaculty === "all" ||
+                        mod.faculty === filterFaculty;
                       const matchesDept =
                         filterDepartment === "all" ||
                         mod.department === filterDepartment;
-                      
+
                       // 1. Check Degree (comma-separated in DB)
                       const matchesDegree =
-                        filterDegree === "all" || 
+                        filterDegree === "all" ||
                         (mod.degree && mod.degree.includes(filterDegree));
-                      
+
                       // 2. Check Lecturer (If a lecturer is selected, find their assigned subjects)
                       let matchesLecturer = true;
                       if (filterLecturerName !== "all") {
-                        const selectedLecturer = allLecturers.find(l => l.name === filterLecturerName);
-                        if (selectedLecturer && selectedLecturer.assigned_subjects) {
+                        const selectedLecturer = allLecturers.find(
+                          (l) => l.name === filterLecturerName,
+                        );
+                        if (
+                          selectedLecturer &&
+                          selectedLecturer.assigned_subjects
+                        ) {
                           // Check if this module's code is in the lecturer's assigned_subjects string
-                          matchesLecturer = selectedLecturer.assigned_subjects.includes(mod.module_code);
+                          matchesLecturer =
+                            selectedLecturer.assigned_subjects.includes(
+                              mod.module_code,
+                            );
                         } else {
                           matchesLecturer = false; // Lecturer has no subjects
                         }
@@ -1116,7 +1163,9 @@ export default function AdminReports({
               <div
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
-                  toast.error("Please select a Module first to view its sessions.")
+                  toast.error(
+                    "Please select a Module first to view its sessions.",
+                  )
                 }
               ></div>
             )}
@@ -1154,7 +1203,9 @@ export default function AdminReports({
                 type="date"
                 value={fromDate}
                 onChange={handleDateChange}
-                disabled={selectedSessionId === "" || selectedSessionId === "Overall"}
+                disabled={
+                  selectedSessionId === "" || selectedSessionId === "Overall"
+                }
                 className={`w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm h-[42px] ${
                   selectedSessionId === "" || selectedSessionId === "Overall"
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"

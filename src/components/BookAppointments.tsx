@@ -313,7 +313,9 @@ export default function BookAppointments() {
                 ))
               ) : (
                 <div className="text-center py-10">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No lecturers found.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No lecturers found.
+                  </p>
                 </div>
               )}
             </div>
@@ -528,7 +530,7 @@ export default function BookAppointments() {
                       <span
                         className={`px-4 py-1 text-sm font-bold rounded-full border shadow-sm ${
                           req.status === "Pending"
-                            ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                            ? "bg-yellow-100 text-yellow-600 border-yellow-200 animate-pulse"
                             : req.status === "Approved"
                               ? "bg-green-100 dark:bg-green-900/30 text-green-800 border-green-200"
                               : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200"
@@ -540,7 +542,7 @@ export default function BookAppointments() {
                       {req.status === "Pending" && (
                         <button
                           onClick={() => openCancelModal(req.id)}
-                          className="p-2 text-red-600 hover:text-red-600 hover:bg-red-50 dark:bg-red-900/20 rounded-lg transition-all duration-200"
+                          className="p-2 text-red-600 cursor-pointer hover:text-red-600 hover:bg-red-50 dark:bg-red-900/20 rounded-lg transition-all duration-200"
                           title="Cancel Request"
                         >
                           <Trash2 className="w-5 h-5" />

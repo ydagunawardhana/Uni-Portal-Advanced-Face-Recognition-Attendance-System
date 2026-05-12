@@ -25,7 +25,7 @@ const getCardColor = (moduleName: string) => {
   for (let i = 0; i < moduleName.length; i++) {
     hash = moduleName.charCodeAt(i) + ((hash << 5) - hash);
   }
-  hash = hash + moduleName.length * 18; // Added salt to prevent collisions
+  hash = hash + moduleName.length * 18;
   return colorPalette[Math.abs(hash) % colorPalette.length];
 };
 
@@ -99,10 +99,12 @@ export default function StudentTimetable() {
         headers: { Authorization: `Bearer ${studentToken}` },
       });
 
-      // 206 = profile fields missing — descriptive warning, not a crash
       if (res.status === 206) {
         const warn = await res.json();
-        setWarningMessage(warn.message || "Your timetable cannot be displayed. Please update your profile.");
+        setWarningMessage(
+          warn.message ||
+            "Your timetable cannot be displayed. Please update your profile.",
+        );
         setMissingFields(warn.missing_fields || []);
         setSchedule([]);
         return;
@@ -167,14 +169,16 @@ export default function StudentTimetable() {
           <div>
             {/* Title and Badges in one row */}
             <div className="flex items-center gap-4 mb-1">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Weekly Class Schedule</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Weekly Class Schedule
+              </h2>
               {schedule.length > 0 && (
                 <div className="flex items-center gap-3 mt-1 mb-1">
                   <span className="px-2.5 py-0.1 bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
-                    {schedule[0]?.academic_year || 'Year 1'}
+                    {schedule[0]?.academic_year || "Year 1"}
                   </span>
                   <span className="px-2.5 py-0.1 bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-bold rounded-full border-2 border-red-100 tracking-widest shadow-sm">
-                    {schedule[0]?.semester || 'Semester 1'}
+                    {schedule[0]?.semester || "Semester 1"}
                   </span>
                 </div>
               )}
@@ -199,7 +203,7 @@ export default function StudentTimetable() {
         </button>
       </div>
 
-      {/* Warning Banner — shown when backend returns 206 (missing profile fields) */}
+      {/* Warning Banner - shown when backend returns 206 (missing profile fields) */}
       {warningMessage && (
         <div className="mb-6 flex gap-3 items-start bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm">
           <div className="shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl font-black">

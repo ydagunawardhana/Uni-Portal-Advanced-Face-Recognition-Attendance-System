@@ -150,12 +150,10 @@ export default function ManualAttendanceMarking() {
         if (!res.ok) throw new Error("Failed to load students");
         const data = await res.json();
 
-        // The endpoint returns { students: [...], subject_details: {...} }
         const studentList = data.students || [];
 
-        // Transform the data if necessary
         const transformedStudents = studentList.map((s: any) => ({
-          id: s.id, // Use the numeric PK
+          id: s.id,
           name: s.name,
           indexNumber: s.index_number,
           avatar: s.avatar || "https://via.placeholder.com/150",
@@ -191,7 +189,10 @@ export default function ManualAttendanceMarking() {
         ...prev[studentId], // Keep existing reason if any
         status: newStatus,
         // Auto-clear reason if marked present
-        reason: newStatus.toLowerCase() === "present" ? "" : (prev[studentId]?.reason || "")
+        reason:
+          newStatus.toLowerCase() === "present"
+            ? ""
+            : prev[studentId]?.reason || "",
       },
     }));
   };
@@ -200,7 +201,7 @@ export default function ManualAttendanceMarking() {
     setEdits((prev) => ({
       ...prev,
       [studentId]: {
-        ...prev[studentId], // Keep existing status if any
+        ...prev[studentId],
         reason: newReason,
       },
     }));
@@ -219,15 +220,18 @@ export default function ManualAttendanceMarking() {
     try {
       // 1. Construct the payload safely
       const payload = Object.keys(edits)
-        .filter((key) => key !== "undefined" && key !== "NaN") // Prevent bad keys
+        .filter((key) => key !== "undefined" && key !== "NaN")
         .map((studentIdStr) => {
           const studentId = parseInt(studentIdStr, 10);
           const edit = edits[studentId];
-          // Find the original record safely
           const originalRecord = students.find((r) => r.id === studentId);
 
-          const finalStatus = edit?.status || originalRecord?.status || "Absent";
-          let finalReason = edit?.reason !== undefined ? edit.reason : (originalRecord?.reason || "");
+          const finalStatus =
+            edit?.status || originalRecord?.status || "Absent";
+          let finalReason =
+            edit?.reason !== undefined
+              ? edit.reason
+              : originalRecord?.reason || "";
 
           // If explicitly marked present manually, set a standard note
           if (finalStatus.toLowerCase() === "present") {
@@ -237,8 +241,8 @@ export default function ManualAttendanceMarking() {
           }
 
           return {
-            student_id: studentId, // STRICTLY INTEGER
-            session_id: parseInt(String(selectedSessionId), 10), // STRICTLY INTEGER
+            student_id: studentId,
+            session_id: parseInt(String(selectedSessionId), 10),
             status: finalStatus,
             reason: finalReason,
           };
@@ -261,7 +265,10 @@ export default function ManualAttendanceMarking() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        console.error("FastAPI Validation Error Details:", JSON.stringify(errorData, null, 2));
+        console.error(
+          "FastAPI Validation Error Details:",
+          JSON.stringify(errorData, null, 2),
+        );
         throw new Error("Failed to save overrides");
       }
 

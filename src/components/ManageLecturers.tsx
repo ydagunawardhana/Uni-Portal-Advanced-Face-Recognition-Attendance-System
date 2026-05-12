@@ -190,7 +190,7 @@ export default function ManageLecturers() {
             duration: 6000,
           },
         );
-        setIsModalOpen(false); // Move inside ok block
+        setIsModalOpen(false);
         fetchLecturers();
       } else {
         const data = await res
@@ -416,7 +416,7 @@ export default function ManageLecturers() {
               value={facultyFilter}
               onChange={(e) => {
                 setFacultyFilter(e.target.value);
-                setDepartmentFilter("All Departments"); // Reset department cascade
+                setDepartmentFilter("All Departments");
               }}
               className="w-full px-4 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white truncate appearance-none cursor-pointer"
             >
@@ -439,7 +439,7 @@ export default function ManageLecturers() {
               value={departmentFilter}
               onChange={(e) => {
                 setDepartmentFilter(e.target.value);
-                setSubjectFilter("All Subjects"); // Reset subject cascade
+                setSubjectFilter("All Subjects");
               }}
               disabled={
                 facultyFilter !== "All Faculties" &&

@@ -232,22 +232,30 @@ export default function DashboardOverview({
 
           <div className="w-full mt-1 space-y-3">
             <div className="flex justify-between items-center text-md">
-              <span className="text-gray-600 dark:text-gray-400 font-medium">Batch :</span>
+              <span className="text-gray-600 dark:text-gray-400 font-medium">
+                Batch :
+              </span>
               <span className="font-bold text-gray-900 dark:text-white">
                 {profile.batch || "Unknown"}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center text-md">
-              <span className="text-gray-600 dark:text-gray-400 font-medium">Overall Status :</span>
-              <span className={`font-bold ${(stats.overall_percentage || 0) >= 70 ? "text-green-600" : "text-red-600"}`}>
+              <span className="text-gray-600 dark:text-gray-400 font-medium">
+                Overall Status :
+              </span>
+              <span
+                className={`font-bold ${(stats.overall_percentage || 0) >= 70 ? "text-green-600" : "text-red-600"}`}
+              >
                 {stats.overall_percentage || 0}%
               </span>
             </div>
 
             {/* NEW: Face Recognition Status */}
             <div className="flex justify-between items-center text-md">
-              <span className="text-gray-600 dark:text-gray-400 font-medium">Face ID Model :</span>
+              <span className="text-gray-600 dark:text-gray-400 font-medium">
+                Face ID Model :
+              </span>
               {profile.biometric_registered ? (
                 <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-bold rounded-xl border-2 border-green-200">
                   <span className="relative flex h-2 w-2 animate-pulse">
@@ -466,7 +474,7 @@ export default function DashboardOverview({
         </div>
 
         {/* 3. Quick Actions */}
-        {/* Notice NO absolute wrapper here! This card naturally dictates the height for the entire row! */}
+
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
           <h2 className="text-xl flex items-center gap-2 font-bold text-gray-900 dark:text-white mb-4 pb-2 shrink-0">
             <Edit className="h-6 w-6 text-red-600" />
@@ -591,7 +599,9 @@ export default function DashboardOverview({
       {/* Recent Correction Requests Table */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Appeals</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Recent Appeals
+          </h2>
           <span className="text-md font-bold text-gray-500 dark:text-gray-400 tracking-widest">
             Latest 4 Requests
           </span>

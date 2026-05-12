@@ -98,7 +98,8 @@ export default function LecturerSettings() {
                 Attendance Correction Requests
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                Get notified via notifications when a student submits an attendance appeal
+                Get notified via notifications when a student submits an
+                attendance appeal
               </p>
             </div>
             <button
@@ -150,8 +151,12 @@ export default function LecturerSettings() {
             <Monitor className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Display Preferences</h2>
-            <p className="text-sm text-gray-600">Customize how information is shown on your dashboard</p>
+            <h2 className="text-xl font-bold text-gray-900">
+              Display Preferences
+            </h2>
+            <p className="text-sm text-gray-600">
+              Customize how information is shown on your dashboard
+            </p>
           </div>
         </div>
 
@@ -159,7 +164,9 @@ export default function LecturerSettings() {
           <div className="flex items-center justify-between py-3">
             <div>
               <p className="font-medium text-gray-900">24-Hour Time Format</p>
-              <p className="text-sm text-gray-600 mt-1">Display times as 13:00 instead of 01:00 PM</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Display times as 13:00 instead of 01:00 PM
+              </p>
             </div>
             <button
               aria-label="Toggle 24-Hour Time Format"

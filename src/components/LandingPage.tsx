@@ -6,7 +6,7 @@ import {
   ArrowRight,
   Mail,
   Phone,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 
 interface LandingPageProps {
@@ -120,7 +120,10 @@ export default function LandingPage({
                   className="text-blue-400 text-md cursor-pointer font-bold hover:text-white hover:scale-105 transition-colors flex items-center"
                 >
                   Pre-Register for Enrollment
-                  <ChevronRight size={15} className="ml-1 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight
+                    size={15}
+                    className="ml-1 group-hover:translate-x-0.5 transition-transform"
+                  />
                 </button>
               </div>
 

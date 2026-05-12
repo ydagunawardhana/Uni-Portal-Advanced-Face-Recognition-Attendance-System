@@ -194,13 +194,16 @@ export default function StudentRegistration() {
     try {
       // Briefly request stream to force permission check and get actual labels, then stop it immediately
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(t => t.stop());
+      stream.getTracks().forEach((t) => t.stop());
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       setAvailableCameras(videoDevices);
-      
-      if (videoDevices.length > 0 && !videoDevices.find(d => d.deviceId === selectedCameraId)) {
+
+      if (
+        videoDevices.length > 0 &&
+        !videoDevices.find((d) => d.deviceId === selectedCameraId)
+      ) {
         setSelectedCameraId(videoDevices[0].deviceId);
       }
       toast.success("Camera list refreshed!");
@@ -210,28 +213,38 @@ export default function StudentRegistration() {
     }
   };
 
-  const startCamera = useCallback(async (deviceIdToUse?: string) => {
-    const targetDeviceId = typeof deviceIdToUse === "string" ? deviceIdToUse : selectedCameraId;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: targetDeviceId
-          ? { deviceId: { exact: targetDeviceId }, width: 640, height: 480 }
-          : { width: 640, height: 480, facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+  const startCamera = useCallback(
+    async (deviceIdToUse?: string) => {
+      const targetDeviceId =
+        typeof deviceIdToUse === "string" ? deviceIdToUse : selectedCameraId;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: targetDeviceId
+            ? { deviceId: { exact: targetDeviceId }, width: 640, height: 480 }
+            : { width: 640, height: 480, facingMode: "user" },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+        setCamActive(true);
+        // Notify Header
+        window.dispatchEvent(
+          new CustomEvent("camera-status", { detail: "Online" }),
+        );
+      } catch {
+        toast.error(
+          "Could not access webcam. Please allow camera permissions.",
+        );
+        window.dispatchEvent(
+          new CustomEvent("camera-status", { detail: "Offline" }),
+        );
       }
-      setCamActive(true);
-      // Notify Header
-      window.dispatchEvent(new CustomEvent("camera-status", { detail: "Online" }));
-    } catch {
-      toast.error("Could not access webcam. Please allow camera permissions.");
-      window.dispatchEvent(new CustomEvent("camera-status", { detail: "Offline" }));
-    }
-  }, [selectedCameraId]);
+    },
+    [selectedCameraId],
+  );
 
   const stopCamera = useCallback(() => {
     captureActiveRef.current = false;
@@ -242,7 +255,9 @@ export default function StudentRegistration() {
     setCamActive(false);
     setCapturing(false);
     // Notify Header
-    window.dispatchEvent(new CustomEvent("camera-status", { detail: "Offline" }));
+    window.dispatchEvent(
+      new CustomEvent("camera-status", { detail: "Offline" }),
+    );
   }, []);
 
   // Ensure camera turns off and status resets when navigating away
@@ -250,7 +265,9 @@ export default function StudentRegistration() {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
-        window.dispatchEvent(new CustomEvent("camera-status", { detail: "Offline" }));
+        window.dispatchEvent(
+          new CustomEvent("camera-status", { detail: "Offline" }),
+        );
       }
     };
   }, []);
@@ -507,9 +524,9 @@ export default function StudentRegistration() {
           gender: gender,
           academic_year: academicYearText,
           intake: intake,
-          face_frames: capturedFrames, // FIXED KEY
-          auto_gen_password: autoGeneratePassword, // FIXED KEY
-          pre_registration_id: pendingPreRegId, // FIXED KEY
+          face_frames: capturedFrames,
+          auto_gen_password: autoGeneratePassword,
+          pre_registration_id: pendingPreRegId,
         }),
       });
 

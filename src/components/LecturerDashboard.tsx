@@ -463,7 +463,6 @@ export default function LecturerDashboard({
     );
   }
 
-
   // Old live class view kept for reference (should not be reached)
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">

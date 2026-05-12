@@ -17,7 +17,7 @@ import {
   Calendar,
   AlertTriangle,
   Info,
-  Book, 
+  Book,
 } from "lucide-react";
 
 interface AdminCorrectionRequest {
@@ -404,7 +404,7 @@ const AdminAttendanceRequests = () => {
                           {req.student_name}
                         </span>
                         <span className="text-sm text-gray-500 font-medium">
-                          {req.student_id}  •  Batch: {req.batch}
+                          {req.student_id} • Batch: {req.batch}
                         </span>
                       </div>
                     </td>

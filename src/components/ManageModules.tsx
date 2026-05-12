@@ -549,8 +549,8 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
         onClick={onClose}
       />
       <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 ease-out">
@@ -829,8 +829,8 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
         onClick={onClose}
       />
       <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 ease-out">

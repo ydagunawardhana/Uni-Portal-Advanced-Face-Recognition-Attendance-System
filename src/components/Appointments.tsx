@@ -67,7 +67,7 @@ export default function Appointments() {
           studentName: app.student_name,
           indexNumber: app.student_index,
           requestedSlot: `${app.appointment_date}, ${app.time_slot}`,
-          location: "Consultation Area", // Placeholder as location isn't in appointment model yet
+          location: "Consultation Area",
           status: app.status,
           reason: app.reason,
           studentFaculty: app.student_faculty,
@@ -97,7 +97,6 @@ export default function Appointments() {
       `${newStatus === "Approved" ? "Approving" : "Rejecting"} appointment...`,
     );
     try {
-      // 2. Simulate API/Network delay (1.5 seconds)
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const res = await fetch(`${API_BASE}/api/appointments/${id}/status`, {

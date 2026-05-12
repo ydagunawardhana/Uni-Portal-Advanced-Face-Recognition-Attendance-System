@@ -37,53 +37,45 @@ export default function AttendanceCorrectionRequest({
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
 
-  // Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<number | null>(null);
 
-  // Filter state
   const [timeFilter, setTimeFilter] = useState<"week" | "all">("week");
 
-  // Auto-select session when navigated from My Attendance with a prefilledSessionId
   useEffect(() => {
     const prefilled = location.state?.prefilledSessionId;
     if (prefilled) {
       setSessionId(prefilled.toString());
-      // Switch to 'all' so the pre-selected session is visible regardless of date
+
       setTimeFilter("all");
     }
   }, [location.state]);
 
-  // Compute filtered and sorted sessions
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
 
     const today = new Date();
-    today.setHours(23, 59, 59, 999); // End of today
+    today.setHours(23, 59, 59, 999);
 
     const lastWeek = new Date();
     lastWeek.setDate(today.getDate() - 7);
-    lastWeek.setHours(0, 0, 0, 0); // Start of 7 days ago
+    lastWeek.setHours(0, 0, 0, 0);
 
     return sessions
       .filter((session) => {
-        // Assume session.date is 'YYYY-MM-DD'
         const sessionDate = new Date(session.date);
 
-        // 1. Exclude future sessions completely
         if (sessionDate > today) return false;
 
-        // 2. Apply time filter
         if (timeFilter === "week") {
           return sessionDate >= lastWeek;
         }
 
-        return true; // 'all' past sessions
+        return true;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort Newest to Oldest
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sessions, timeFilter]);
 
-  // Fetch student's sessions on mount
   useEffect(() => {
     fetchSessions();
     fetchHistory();
@@ -138,13 +130,11 @@ export default function AttendanceCorrectionRequest({
       return;
     }
 
-    // --- NEW VALIDATION: Check for existing requests ---
     const existingRequests = pastRequests.filter(
       (req) => req.session_id.toString() === sessionId.toString(),
     );
 
     if (existingRequests.length > 0) {
-      // Assuming history is sorted newest first
       const latestRequest = existingRequests[0];
 
       if (latestRequest.status === "Pending") {
@@ -174,7 +164,6 @@ export default function AttendanceCorrectionRequest({
     try {
       const studentToken = localStorage.getItem("studentToken");
 
-      // Construct FormData for file upload
       const formData = new FormData();
       formData.append("session_id", sessionId);
       formData.append("reason_type", reasonType);
@@ -189,7 +178,6 @@ export default function AttendanceCorrectionRequest({
           method: "POST",
           headers: {
             Authorization: `Bearer ${studentToken}`,
-            // Do NOT set Content-Type; let the browser handle it for FormData
           },
           body: formData,
         },
@@ -197,7 +185,6 @@ export default function AttendanceCorrectionRequest({
 
       if (!response.ok) throw new Error("Failed to submit");
 
-      // ARTIFICIAL DELAY: Wait for 3 seconds to show the loading toast nicely
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
       toast.success("Correction request submitted successfully!", {
@@ -205,13 +192,11 @@ export default function AttendanceCorrectionRequest({
         duration: 3000,
       });
 
-      // Reset form
       setReasonType("");
       setDescription("");
       setSessionId("");
       setEvidenceFile(null);
 
-      // Refresh history
       fetchHistory();
     } catch (error) {
       console.error(error);
@@ -533,7 +518,12 @@ export default function AttendanceCorrectionRequest({
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-bold text-md text-gray-900 dark:text-white">
-                          {request.module_name || request.subject_name || (sessionInfo ? (sessionInfo.module_name || sessionInfo.module_code) : `Session #${request.session_id}`)}
+                          {request.module_name ||
+                            request.subject_name ||
+                            (sessionInfo
+                              ? sessionInfo.module_name ||
+                                sessionInfo.module_code
+                              : `Session #${request.session_id}`)}
                         </h4>
                         <div className="flex items-center gap-2">
                           <span
@@ -565,7 +555,9 @@ export default function AttendanceCorrectionRequest({
                           <span>
                             Session Date :{" "}
                             <span className="font-bold">
-                              {request.session_date || sessionInfo?.date || "N/A"}
+                              {request.session_date ||
+                                sessionInfo?.date ||
+                                "N/A"}
                             </span>
                           </span>
                         </div>
@@ -583,7 +575,10 @@ export default function AttendanceCorrectionRequest({
                           <span>
                             Session Time :{" "}
                             <span className="font-bold">
-                              {request.session_time || (sessionInfo ? `${sessionInfo.start_time} - ${sessionInfo.end_time}` : "N/A")}
+                              {request.session_time ||
+                                (sessionInfo
+                                  ? `${sessionInfo.start_time} - ${sessionInfo.end_time}`
+                                  : "N/A")}
                             </span>
                           </span>
                         </div>
