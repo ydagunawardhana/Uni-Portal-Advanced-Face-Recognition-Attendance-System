@@ -31,7 +31,7 @@ The system implements a strict Role-Based Access Control (RBAC) architecture wit
 - **Dynamic Encoding Library**: Intelligent `encodings.pkl` system that auto-updates as new students enroll.
 - **Anti-Proxy Logic**: Secure biometric verification that ensures physical presence.
 
-#### 🧠 Biometric Pipeline (How it works)
+### 🧠 Biometric Pipeline (How it works)
 
 The system uses a multi-stage pipeline to identify students with high precision:
 
@@ -204,7 +204,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 Developed with ❤️ by the **UniPortal Engineering Team**.
-
-```
 
 ```
