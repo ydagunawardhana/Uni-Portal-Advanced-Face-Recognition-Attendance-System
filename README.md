@@ -35,10 +35,10 @@ The system implements a strict Role-Based Access Control (RBAC) architecture wit
 
 The system uses a multi-stage pipeline to identify students with high precision:
 
-1.  **Face Detection (`haarcascade_frontalface_default.xml`)**: Uses OpenCV's Haar Cascades to find human faces in the camera frame.
-2.  **Landmark Mapping (`shape_predictor_68_face_landmarks.dat`)**: Uses Dlib to identify 68 facial landmarks, allowing the system to align and "straighten" faces for consistent recognition.
-3.  **Facial Encoding**: Converts the aligned face into a 128-dimensional mathematical vector (embedding).
-4.  **Identity Matching (`encodings.pkl`)**: Compares the live vector against a database of stored student embeddings. If a match is found within a specific distance threshold, the identity is confirmed.
+- **Face Detection (`haarcascade_frontalface_default.xml`)**: Uses OpenCV's Haar Cascades to find human faces in the camera frame.
+- **Landmark Mapping (`shape_predictor_68_face_landmarks.dat`)**: Uses Dlib to identify 68 facial landmarks, allowing the system to align and "straighten" faces for consistent recognition.
+- **Facial Encoding**: Converts the aligned face into a 128-dimensional mathematical vector (embedding).
+- **Identity Matching (`encodings.pkl`)**: Compares the live vector against a database of stored student embeddings. If a match is found within a specific distance threshold, the identity is confirmed.
 
 ### 🏢 Admin Control Center
 
