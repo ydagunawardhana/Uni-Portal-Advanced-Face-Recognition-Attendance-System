@@ -48,6 +48,7 @@ The system uses a multi-stage pipeline to identify students with high precision:
 - **Attendance Request Management**: Centralized workflow to approve or reject student-submitted manual correction requests.
 - **System Audit Logs**: Comprehensive logging of all administrative actions for transparency and security.
 - **Pre-Registration System**: Streamlined onboarding for new students with preliminary data collection.
+- **Timetable Upload**: CSV/Excel processing engine for bulk timetable and module scheduling.
 
 ### 👨‍🏫 Lecturer Portal
 
@@ -56,7 +57,6 @@ The system uses a multi-stage pipeline to identify students with high precision:
 - **Attendance Heatmaps**: Visual representation of student participation across different modules.
 - **Live Class Monitoring**: Real-time dashboard showing active sessions, current headcounts, and biometric verification status.
 - **Automated Reporting**: One-click generation of PDF and CSV reports for attendance statistics and student trends.
-- **Timetable Upload**: CSV/Excel processing engine for bulk timetable and module scheduling.
 
 ### 💬 AI Support Assistant
 
