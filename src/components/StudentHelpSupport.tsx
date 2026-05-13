@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Search,
   Camera,
@@ -9,6 +9,7 @@ import {
   Phone,
   HelpCircle,
   Clock,
+  Send,
 } from "lucide-react";
 
 interface AccordionItem {
@@ -16,9 +17,93 @@ interface AccordionItem {
   answer: string;
 }
 
+interface ChatMessage {
+  sender: "user" | "bot";
+  text: string;
+}
+
 export default function StudentHelpSupport() {
   const [searchQuery, setSearchQuery] = useState("");
   const [openAccordion, setOpenAccordion] = useState<number | null>(null);
+
+  // --- Integrated Chatbot Logic ---
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const savedMessages = localStorage.getItem("support_chatbot_history");
+    if (savedMessages) {
+      try {
+        return JSON.parse(savedMessages);
+      } catch (e) {
+        console.error("Failed to parse chat history");
+      }
+    }
+    // Default initial state if nothing is in local storage
+    return [
+      {
+        sender: "bot",
+        text: "Hello! I am your AI Support Assistant. How can I help you with your attendance or portal access today?",
+      },
+    ];
+  });
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (messages.length > 1 || isTyping) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+
+  // Persist messages to local storage whenever they change
+  useEffect(() => {
+    localStorage.setItem("support_chatbot_history", JSON.stringify(messages));
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userText = inputValue.trim();
+    const userMsg: ChatMessage = { sender: "user", text: userText };
+    setMessages((prev) => [...prev, userMsg]);
+    setInputValue("");
+    setIsTyping(true);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/chatbot/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText }),
+      });
+
+      const data = await response.json();
+
+      // Natural typing delay
+      setTimeout(() => {
+        const botMsg: ChatMessage = {
+          sender: "bot",
+          text:
+            data.reply ||
+            "I'm sorry, I'm having trouble processing that right now.",
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        setIsTyping(false);
+      }, 1500);
+    } catch (error) {
+      setIsTyping(false);
+      const errorMsg: ChatMessage = {
+        sender: "bot",
+        text: "Support server is currently unavailable. Please try again later.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    }
+  };
 
   const faqCategories = [
     {
@@ -26,21 +111,21 @@ export default function StudentHelpSupport() {
       icon: Camera,
       description: "Camera detection, Absent marking",
       questions: 5,
-      color: "bg-red-50 dark:bg-red-900/20 text-red-600",
+      color: "bg-red-100 dark:bg-red-900/20 text-red-600",
     },
     {
       title: "Login Problems",
       icon: LogIn,
       description: "Password reset, Access issues",
       questions: 4,
-      color: "bg-blue-50 text-blue-600",
+      color: "bg-blue-100 text-blue-600",
     },
     {
       title: "Profile Updates",
       icon: User,
       description: "Face re-training, Personal info",
       questions: 3,
-      color: "bg-purple-50 text-purple-600",
+      color: "bg-purple-100 text-purple-600",
     },
   ];
 
@@ -78,29 +163,121 @@ export default function StudentHelpSupport() {
 
   return (
     <div className="p-8 bg-white dark:bg-gray-800 min-h-full animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-10 mb-8 border border-red-100">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-600 rounded-full mb-6">
-            <HelpCircle className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-            How can we help?
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Search for answers or browse help topics below
-          </p>
+      {/* Merged Hero & Chatbot Section */}
+      <div className="bg-red-50 dark:bg-gray-800/50 rounded-2xl p-8 mb-10 flex flex-col items-center border border-red-100 dark:border-gray-700 shadow-sm animate-in fade-in slide-in-from-top-4 duration-700">
+        {/* Header Info */}
+        <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white mb-5 shadow-lg">
+          <HelpCircle className="w-8 h-8 animate-pulse" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 text-center">
+          How can we help?
+        </h2>
+        <p className="text-gray-700 dark:text-gray-400 mb-8 text-center max-w-lg">
+          Ask our AI Assistant for instant answers or browse the help topics
+          below
+        </p>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        {/* Chat Interface Container - Enforcing max-width for alignment */}
+        <div className="w-full">
+          {/* Dynamic Height Container - Using Inline Styles for Guaranteed Constraints */}
+          <div
+            className="px-4 pb-4 flex flex-col gap-4 custom-scrollbar"
+            style={{ maxHeight: "400px", overflowY: "auto" }}
+          >
+            {messages.map((msg, idx) => (
+              <div key={idx} className="flex flex-col">
+                {/* Chat Bubble */}
+                <div
+                  className={`flex ${
+                    msg.sender === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`px-4 py-2.5 rounded-2xl text-sm font-semibold leading-relaxed max-w-[85%] shadow-md ${
+                      msg.sender === "user"
+                        ? "bg-red-600 rounded-2xl text-white font-semibold"
+                        : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-tl-sm shadow-sm"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+
+                {/* Suggestion Chips (Only under the first greeting) */}
+                {idx === 0 && messages.length === 1 && (
+                  <div className="flex flex-wrap gap-2 mt-4 mb-2 ml-2 animate-in fade-in slide-in-from-left-4 duration-500 delay-300">
+                    <button
+                      onClick={() =>
+                        setInputValue(
+                          "How do I request an attendance correction?",
+                        )
+                      }
+                      className="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-600 dark:text-gray-400 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600 transition-all shadow-sm cursor-pointer"
+                    >
+                      Attendance Correction
+                    </button>
+                    <button
+                      onClick={() =>
+                        setInputValue(
+                          "My camera is not working, what should I do?",
+                        )
+                      }
+                      className="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-600 dark:text-gray-400 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600 transition-all shadow-sm cursor-pointer"
+                    >
+                      System Error
+                    </button>
+                    <button
+                      onClick={() =>
+                        setInputValue("How can I check my attendance history?")
+                      }
+                      className="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-600 dark:text-gray-400 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600 transition-all shadow-sm cursor-pointer"
+                    >
+                      Check History
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex justify-start mb-2">
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl rounded-tl-sm flex gap-2 items-center max-w-[85%] shadow-sm">
+                  <div
+                    className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area - Added shrink-0 to prevent flex squishing */}
+          <div className="mt-4 flex bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-100 dark:border-gray-700 p-1.5 mx-4 shrink-0">
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for help articles or FAQs..."
-              className="w-full pl-14 pr-6 py-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-4 focus:ring-red-100 outline-none transition-all text-gray-900 dark:text-white placeholder-gray-500"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+              className="flex-1 px-6 py-3 outline-none text-sm bg-transparent rounded-l-full dark:text-white"
+              placeholder="Type your question here..."
             />
+            <button
+              onClick={sendMessage}
+              disabled={!inputValue.trim() || isTyping}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer disabled:opacity-50 text-white px-8 py-3 rounded-full font-bold text-sm transition-all flex items-center gap-2 shadow-sm active:scale-95"
+            >
+              <span>Send</span>
+              <Send className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -116,7 +293,7 @@ export default function StudentHelpSupport() {
             return (
               <button
                 key={index}
-                className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-red-300 hover:shadow-lg transition-all duration-300 text-left group"
+                className="bg-white dark:bg-gray-800 cursor-pointer border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-red-300 hover:shadow-lg transition-all duration-300 text-left group"
               >
                 <div
                   className={`inline-flex items-center justify-center w-14 h-14 ${category.color} rounded-xl mb-4 group-hover:scale-110 transition-transform`}
@@ -148,11 +325,11 @@ export default function StudentHelpSupport() {
           {popularQuestions.map((item, index) => (
             <div
               key={index}
-              className="border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:border-red-200 transition-colors"
+              className="border-2 border-gray-200 cursor-pointer dark:border-gray-700 rounded-xl overflow-hidden hover:border-red-200 transition-colors"
             >
               <button
                 onClick={() => toggleAccordion(index)}
-                className="w-full flex items-center justify-between p-5 hover:bg-gray-50 dark:bg-gray-700 transition-colors text-left"
+                className="w-full flex items-center cursor-pointer justify-between p-5 hover:bg-gray-50 dark:bg-gray-700 transition-colors text-left"
               >
                 <span className="font-semibold text-gray-900 dark:text-white pr-4">
                   {item.question}
@@ -187,7 +364,7 @@ export default function StudentHelpSupport() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Email Support */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700 hover:border-red-300 hover:shadow-md transition-all">
+            <div className="bg-red-50 dark:bg-gray-800 rounded-xl p-6 text-center border-2 border-red-200 dark:border-gray-700 hover:border-red-300 hover:shadow-md transition-all">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full mb-4">
                 <Mail className="w-6 h-6" />
               </div>
@@ -206,7 +383,7 @@ export default function StudentHelpSupport() {
             </div>
 
             {/* Hotline */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700 hover:border-red-300 hover:shadow-md transition-all">
+            <div className="bg-green-50 dark:bg-gray-800 rounded-xl p-6 text-center border-2 border-green-200 dark:border-green-700 hover:border-green-500 hover:shadow-md transition-all">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
                 <Phone className="w-6 h-6" />
               </div>
@@ -225,7 +402,7 @@ export default function StudentHelpSupport() {
             </div>
 
             {/* Office Hours */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700 hover:border-red-300 hover:shadow-md transition-all">
+            <div className="bg-blue-50 dark:bg-gray-800 rounded-xl p-6 text-center border-2 border-blue-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-md transition-all">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-600 rounded-full mb-4">
                 <Clock className="w-6 h-6" />
               </div>
