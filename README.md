@@ -31,14 +31,14 @@ The system implements a strict Role-Based Access Control (RBAC) architecture wit
 - **Dynamic Encoding Library**: Intelligent `encodings.pkl` system that auto-updates as new students enroll.
 - **Anti-Proxy Logic**: Secure biometric verification that ensures physical presence.
 
-#### 🧠 Biometric Pipeline (How it works)
+### 🧠 Biometric Pipeline (How it works)
 
 The system uses a multi-stage pipeline to identify students with high precision:
 
-1.  **Face Detection (`haarcascade_frontalface_default.xml`)**: Uses OpenCV's Haar Cascades to find human faces in the camera frame.
-2.  **Landmark Mapping (`shape_predictor_68_face_landmarks.dat`)**: Uses Dlib to identify 68 facial landmarks, allowing the system to align and "straighten" faces for consistent recognition.
-3.  **Facial Encoding**: Converts the aligned face into a 128-dimensional mathematical vector (embedding).
-4.  **Identity Matching (`encodings.pkl`)**: Compares the live vector against a database of stored student embeddings. If a match is found within a specific distance threshold, the identity is confirmed.
+- **Face Detection (`haarcascade_frontalface_default.xml`)**: Uses OpenCV's Haar Cascades to find human faces in the camera frame.
+- **Landmark Mapping (`shape_predictor_68_face_landmarks.dat`)**: Uses Dlib to identify 68 facial landmarks, allowing the system to align and "straighten" faces for consistent recognition.
+- **Facial Encoding**: Converts the aligned face into a 128-dimensional mathematical vector (embedding).
+- **Identity Matching (`encodings.pkl`)**: Compares the live vector against a database of stored student embeddings. If a match is found within a specific distance threshold, the identity is confirmed.
 
 ### 🏢 Admin Control Center
 
@@ -48,6 +48,7 @@ The system uses a multi-stage pipeline to identify students with high precision:
 - **Attendance Request Management**: Centralized workflow to approve or reject student-submitted manual correction requests.
 - **System Audit Logs**: Comprehensive logging of all administrative actions for transparency and security.
 - **Pre-Registration System**: Streamlined onboarding for new students with preliminary data collection.
+- **Timetable Upload**: CSV/Excel processing engine for bulk timetable and module scheduling.
 
 ### 👨‍🏫 Lecturer Portal
 
@@ -56,7 +57,6 @@ The system uses a multi-stage pipeline to identify students with high precision:
 - **Attendance Heatmaps**: Visual representation of student participation across different modules.
 - **Live Class Monitoring**: Real-time dashboard showing active sessions, current headcounts, and biometric verification status.
 - **Automated Reporting**: One-click generation of PDF and CSV reports for attendance statistics and student trends.
-- **Timetable Upload**: CSV/Excel processing engine for bulk timetable and module scheduling.
 
 ### 💬 AI Support Assistant
 
@@ -202,9 +202,5 @@ Contributions are welcome! Please follow these steps:
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
-
 Developed with ❤️ by the **UniPortal Engineering Team**.
 
-```
-
-```
