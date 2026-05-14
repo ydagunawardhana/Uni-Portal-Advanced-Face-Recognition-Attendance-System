@@ -1,0 +1,54 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vite
+
+# Environment Variables
+.env
+**/.env
+
+# Python / Backend
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# Large Machine Learning Models
+backend/trainer.yml
+backend/shape_predictor_68_face_landmarks.dat
+
+# Face Dataset & Uploads
+dataset/
+/uploads/
+*.jpg
+*.png
+*.pdf
+*.jpeg
+
+# Ignore Pickle files
+*.pkl
+backend/encodings.pkl
+
+
