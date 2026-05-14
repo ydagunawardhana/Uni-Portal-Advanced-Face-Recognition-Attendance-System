@@ -28,6 +28,7 @@ The system implements a strict Role-Based Access Control (RBAC) architecture wit
 ### 🤖 Biometric Core & AI Engine
 
 - **99% Recognition Accuracy**: High-precision student identification using FaceNet and OpenCV.
+- **C++ Optimized Engine**: Core processing powered by high-performance C++ libraries (Dlib/OpenCV) for industrial-grade reliability.
 - **Dynamic Encoding Library**: Intelligent `encodings.pkl` system that auto-updates as new students enroll.
 - **Anti-Proxy Logic**: Secure biometric verification that ensures physical presence.
 
@@ -76,6 +77,8 @@ The system uses a multi-stage pipeline to identify students with high precision:
 ### **Frontend (Client Side)**
 
 - **Framework**: React 18 (Vite) with TypeScript.
+- **Runtime Environment**: Node.js (v18+).
+- **Package Management**: NPM (Node Package Manager).
 - **Styling**: Tailwind CSS (Custom Design System).
 - **Visualization**: Recharts for dynamic data analytics.
 - **Icons**: Lucide React for consistent UI patterns.
@@ -83,6 +86,7 @@ The system uses a multi-stage pipeline to identify students with high precision:
 ### **Backend (Server Side)**
 
 - **API Engine**: FastAPI (Python 3.12).
+- **Core Engine**: C++ (via Dlib and OpenCV bindings).
 - **ORM**: SQLAlchemy for scalable database interaction.
 - **Biometrics**: `face_recognition` library, OpenCV, and Dlib.
 - **Documentation**: Automatic OpenAPI (Swagger) integration.
@@ -95,9 +99,14 @@ The system uses a multi-stage pipeline to identify students with high precision:
 
 ---
 
-## ⚡ Hardware Acceleration (NVIDIA CUDA)
+UniPortal is a **Dual-Stack** application that leverages the strengths of two distinct runtimes:
 
-UniPortal is optimized for high-performance processing using **NVIDIA CUDA**:
+1. **Node.js Environment**: Powers the entire user interface and development workflow. It handles the compilation of TypeScript, the processing of Tailwind CSS via Vite, and the management of all client-side dependencies.
+2. **Python Environment**: Powers the backend REST API, biometric processing, and AI logic.
+
+---
+
+## ⚡ Hardware Acceleration (NVIDIA CUDA)
 
 - **Inference Speed**: Reduces face detection time from ~500ms (CPU) to **<20ms** (GPU).
 - **Parallel Processing**: Thousands of GPU cores handle multiple simultaneous biometric streams.
