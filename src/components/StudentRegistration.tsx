@@ -949,6 +949,7 @@ export default function StudentRegistration() {
               autoPlay
               playsInline
               muted
+              style={{ transform: 'scaleX(-1)' }}
               className={`absolute inset-0 w-full h-full object-cover ${camActive ? "opacity-100" : "opacity-0"}`}
             />
 

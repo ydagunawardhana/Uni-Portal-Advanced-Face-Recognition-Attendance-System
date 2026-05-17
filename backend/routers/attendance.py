@@ -254,6 +254,11 @@ def generate_frames(cam_id: int, session_id: Optional[int] = None, mode: str = "
             if not ret:
                 time.sleep(0.01)
                 continue
+
+            # Mirror the frame horizontally so the display matches a natural mirror view.
+            # This must happen BEFORE any bounding boxes or text are drawn so annotations
+            # are rendered on the correct (already-flipped) coordinates.
+            frame = cv2.flip(frame, 1)
                 
             frame = np.ascontiguousarray(frame)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

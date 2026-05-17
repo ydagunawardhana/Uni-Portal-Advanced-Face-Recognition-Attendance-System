@@ -97,6 +97,11 @@ export default function LecturerDashboardHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weeklyGoal, setWeeklyGoal] = useState({ completed: 0, total: 5 });
+  // Cycling attendance stat card
+  const [cycleIndex, setCycleIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+  // Tracks how many slides exist so the cycling effect can run at the top level
+  const [slideCount, setSlideCount] = useState(1);
 
   useEffect(() => {
     // Simulate fetching weekly progress
@@ -153,6 +158,39 @@ export default function LecturerDashboardHome() {
     fetchDashboard();
   }, []);
 
+  // Keep slideCount in sync whenever dashboardData changes
+  useEffect(() => {
+    if (!dashboardData) return;
+    const count = 1 + (dashboardData.recent_classes?.length ?? 0);
+    setSlideCount(count);
+    // Reset to slide 0 when new data arrives
+    setCycleIndex(0);
+  }, [dashboardData]);
+
+  // Cycling animation — MUST stay here (top level, before any early returns)
+  useEffect(() => {
+    if (slideCount <= 1) return;
+    const interval = setInterval(() => {
+      // Step 1: Fade OUT — commit opacity-0 to the DOM
+      setIsFading(true);
+
+      // Step 2: Wait for the CSS fade-out transition (500ms), then swap the data
+      setTimeout(() => {
+        // Swap the slide FIRST in its own render commit
+        setCycleIndex((prev) => (prev + 1) % slideCount);
+
+        // Step 3: After the browser paints the new (still-invisible) data,
+        // trigger fade-IN in the next animation frame so the CSS transition fires
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setIsFading(false);
+          });
+        });
+      }, 500);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [slideCount]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -187,6 +225,22 @@ export default function LecturerDashboardHome() {
     todays_schedule,
   } = dashboardData;
 
+  // Build slide deck (plain derived variable, no hook — data is guaranteed here)
+  const statSlides = [
+    {
+      value: stats.averageAttendance ?? stats.average_attendance ?? 0,
+      label: "All Sessions",
+      sub: "Overall average",
+    },
+    ...recent_classes.map((c) => ({
+      value: c.attendance_percentage,
+      label: c.subject_id,
+      sub: c.date ?? "—",
+    })),
+  ];
+
+  const currentSlide = statSlides[cycleIndex] ?? statSlides[0];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       {/* Top Stats Row */}
@@ -201,26 +255,57 @@ export default function LecturerDashboardHome() {
               {stats.totalClassesConducted ?? stats.total_classes ?? 0}
             </span>
           </div>
-          <h3 className="text-sm font-bold text-gray-600">
+          <h3 className="text-md font-bold text-gray-600">
             Total Classes Conducted
           </h3>
           <p className="text-sm text-gray-700 mt-1">This semester</p>
         </div>
 
-        {/* Average Attendance */}
-        <div className="bg-green-50 rounded-xl shadow-md p-6 border border-green-200">
-          <div className="flex items-center justify-between mb-4">
+        {/* Average Attendance — auto-cycling with fade */}
+        <div className="bg-green-50 rounded-xl shadow-md p-6 border border-green-200 relative overflow-hidden">
+          {/* Dot indicators */}
+          <div className="absolute top-3 right-3 flex gap-1">
+            {statSlides.map((_, i) => (
+              <span
+                key={i}
+                className={`block w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  i === cycleIndex ? "bg-green-500 scale-125" : "bg-green-200"
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between mb-3">
             <div className="p-3 bg-green-100 rounded-lg">
               <TrendingUp className="w-8 h-8 text-green-600" />
             </div>
-            <span className="text-3xl font-bold text-gray-900">
-              {stats.averageAttendance ?? stats.average_attendance ?? 0}%
+            {/* Fading value */}
+            <span
+              className={`text-3xl font-bold text-gray-900 transition-opacity duration-500 ease-in-out ${
+                isFading ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              {currentSlide.value}%
             </span>
           </div>
-          <h3 className="text-sm font-bold text-gray-600">
+
+          <h3 className="text-md font-bold text-gray-600">
             Average Attendance
           </h3>
-          <p className="text-sm text-gray-700 mt-1">Across all classes</p>
+
+          {/* Fading subtitle */}
+          <div
+            className={`mt-1 flex items-center gap-3 transition-opacity duration-500 ease-in-out ${
+              isFading ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            <p className="text-sm font-semibold text-green-600 truncate">
+              {currentSlide.label}
+            </p>
+            <p className="text-sm text-gray-600 font-bold">
+              {currentSlide.sub}
+            </p>
+          </div>
         </div>
 
         {/* Total Students Assigned */}
@@ -233,7 +318,7 @@ export default function LecturerDashboardHome() {
               {stats.totalStudentsAssigned ?? stats.total_students ?? 0}
             </span>
           </div>
-          <h3 className="text-sm font-bold text-gray-600">
+          <h3 className="text-md font-bold text-gray-600">
             Total Students Assigned
           </h3>
           <p className="text-sm text-gray-700 mt-1">Active enrollment</p>

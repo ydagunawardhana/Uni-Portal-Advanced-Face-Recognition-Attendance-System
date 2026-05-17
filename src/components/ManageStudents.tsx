@@ -1226,6 +1226,7 @@ export default function ManageStudents({
                       autoPlay
                       muted
                       playsInline
+                      style={{ transform: 'scaleX(-1)' }}
                       className="w-full h-full object-cover absolute inset-0"
                     />
 

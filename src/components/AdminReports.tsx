@@ -881,7 +881,7 @@ export default function AdminReports({
           <div className="h-10 w-[2px] bg-gray-200"></div>
           <div className="text-right">
             <p className="text-sm font-bold text-gray-700">Current Semester</p>
-            <p className="text-xl font-bold text-blue-600">Semester 2</p>
+            <p className="text-xl font-bold text-blue-600">Semester 1</p>
           </div>
         </div>
       </div>

@@ -202,19 +202,42 @@ export default function AttendanceReports({
     return percentage < 70;
   }).length;
 
-  const avgAttendance =
-    totalStudentsCount > 0
-      ? (
-          students.reduce(
-            (acc, curr) =>
-              acc +
-              (subjectDetails.total_sessions_held === 0
-                ? 0
-                : curr.attendance_percentage || 0),
-            0,
-          ) / totalStudentsCount
-        ).toFixed(1)
-      : 0;
+  const avgAttendance = (() => {
+    if (totalStudentsCount === 0) return "0.0";
+
+    if (selectedSessionId === "all") {
+      // Overall view: average of each student's overall attendance_percentage
+      // Guard: if backend hasn't set total_sessions_held yet, treat as 0
+      const sum = students.reduce(
+        (acc, curr) =>
+          acc +
+          (subjectDetails.total_sessions_held === 0
+            ? 0
+            : curr.attendance_percentage || 0),
+        0,
+      );
+      return (sum / totalStudentsCount).toFixed(1);
+    } else {
+      // Specific-session view: the backend returns per-student status strings
+      const presentStatuses = new Set(["present", "entered", "late", "in"]);
+      const presentCount = students.filter((s) =>
+        presentStatuses.has((s.status ?? "").toLowerCase()),
+      ).length;
+      return ((presentCount / totalStudentsCount) * 100).toFixed(1);
+    }
+  })();
+
+  // Label shown under the Average Attendance card
+  const selectedSessionLabel = (() => {
+    if (selectedSessionId === "all") return "All Sessions (Overall)";
+    const s = sessions.find(
+      (s) => s.session_id?.toString() === selectedSessionId,
+    );
+    if (!s) return "Selected Session";
+    return `${s.session_type ?? "Session"} • ${s.date ?? ""}${
+      s.start_time ? ` (${s.start_time})` : ""
+    }`;
+  })();
 
   const displayedStudents = students.filter((s) => {
     let matchesRisk = true;
@@ -618,13 +641,20 @@ export default function AttendanceReports({
           </div>
         </div>
         <div className="bg-green-50 p-5 rounded-xl border-2 border-green-200 shadow-sm flex items-center justify-between hover:border-green-200 transition-colors">
-          <div>
+          <div className="flex-1 min-w-0 pr-3">
             <p className="text-md font-bold text-gray-600 mb-1">
               Average Attendance
             </p>
             <h4 className="text-2xl font-bold text-gray-900 leading-none">
-              {avgAttendance}%
+              {isLoading ? (
+                <span className="inline-block w-12 h-6 bg-green-200 animate-pulse rounded" />
+              ) : (
+                <>{avgAttendance}%</>
+              )}
             </h4>
+            <p className="text-sm font-bold text-green-600 mt-1.5 truncate">
+              {selectedSessionLabel}
+            </p>
           </div>
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 shrink-0">
             <CheckCircle className="w-8 h-8" />
