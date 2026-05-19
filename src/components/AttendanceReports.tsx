@@ -90,10 +90,12 @@ export default function AttendanceReports({
       }
 
       const res = await fetch(
-        `http://localhost:8000/api/lecturer/attendance/${subject.module_code}?${params.toString()}`,
+        `http://localhost:8000/api/lecturer/attendance/${
+          subject.module_code
+        }?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       const data = await res.json();
 
@@ -109,7 +111,7 @@ export default function AttendanceReports({
 
       setStudents(formattedRecords);
       setSubjectDetails(
-        data.subject_details || { total_students: 0, total_sessions_held: 0 },
+        data.subject_details || { total_students: 0, total_sessions_held: 0 }
       );
     } catch (err) {
       console.error(err);
@@ -134,14 +136,16 @@ export default function AttendanceReports({
         console.log(
           "Fetching sessions for:",
           subject?.module_code,
-          subject?.batch,
+          subject?.batch
         );
 
         const response = await fetch(
-          `http://localhost:8000/api/attendance/sessions?module_code=${subject?.module_code}&batch_id=${subject?.batch || ""}`,
+          `http://localhost:8000/api/attendance/sessions?module_code=${
+            subject?.module_code
+          }&batch_id=${subject?.batch || ""}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
 
         if (response.ok) {
@@ -167,7 +171,7 @@ export default function AttendanceReports({
 
     if (sessionId !== "all") {
       const selectedSession = sessions.find(
-        (s) => s.session_id.toString() === sessionId,
+        (s) => s.session_id.toString() === sessionId
       );
       if (selectedSession && selectedSession.date) {
         // Force strict YYYY-MM-DD format for the input field
@@ -214,14 +218,14 @@ export default function AttendanceReports({
           (subjectDetails.total_sessions_held === 0
             ? 0
             : curr.attendance_percentage || 0),
-        0,
+        0
       );
       return (sum / totalStudentsCount).toFixed(1);
     } else {
       // Specific-session view: the backend returns per-student status strings
       const presentStatuses = new Set(["present", "entered", "late", "in"]);
       const presentCount = students.filter((s) =>
-        presentStatuses.has((s.status ?? "").toLowerCase()),
+        presentStatuses.has((s.status ?? "").toLowerCase())
       ).length;
       return ((presentCount / totalStudentsCount) * 100).toFixed(1);
     }
@@ -231,7 +235,7 @@ export default function AttendanceReports({
   const selectedSessionLabel = (() => {
     if (selectedSessionId === "all") return "All Sessions (Overall)";
     const s = sessions.find(
-      (s) => s.session_id?.toString() === selectedSessionId,
+      (s) => s.session_id?.toString() === selectedSessionId
     );
     if (!s) return "Selected Session";
     return `${s.session_type ?? "Session"} • ${s.date ?? ""}${
@@ -305,7 +309,7 @@ export default function AttendanceReports({
             .length;
 
       const safeCount = displayedStudents.filter(
-        (r) => (parseFloat(String(r.attendance_percentage)) || 0) >= 70,
+        (r) => (parseFloat(String(r.attendance_percentage)) || 0) >= 70
       ).length;
       const warningCount = displayedStudents.filter((r) => {
         const a = parseFloat(String(r.attendance_percentage)) || 0;
@@ -316,13 +320,15 @@ export default function AttendanceReports({
         return a >= 20 && a < 50;
       }).length;
       const failCount = displayedStudents.filter(
-        (r) => (parseFloat(String(r.attendance_percentage)) || 0) < 20,
+        (r) => (parseFloat(String(r.attendance_percentage)) || 0) < 20
       ).length;
 
       // --- Section 1: Main Titles ---
       worksheet.mergeCells("A1", `${maxCol}1`);
       const titleCell = worksheet.getCell("A1");
-      titleCell.value = `Attendance Report: ${subject?.module_name || "Module"} - Batch ${subject?.batch || ""}`;
+      titleCell.value = `Attendance Report: ${
+        subject?.module_name || "Module"
+      } - Batch ${subject?.batch || ""}`;
       titleCell.font = {
         name: "Arial",
         size: 16,
@@ -337,8 +343,11 @@ export default function AttendanceReports({
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
       worksheet.mergeCells("A2", `${maxCol}2`);
-      worksheet.getCell("A2").value =
-        `Generated on: ${new Date().toLocaleDateString()} | View: ${isOverall ? "Overall Summary" : `Session on ${fromDate}`}`;
+      worksheet.getCell(
+        "A2"
+      ).value = `Generated on: ${new Date().toLocaleDateString()} | View: ${
+        isOverall ? "Overall Summary" : `Session on ${fromDate}`
+      }`;
       worksheet.getCell("A2").font = { italic: true };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
 
@@ -367,7 +376,7 @@ export default function AttendanceReports({
         "B11",
         riskFilter === "all"
           ? "All Students"
-          : riskFilter.charAt(0).toUpperCase() + riskFilter.slice(1),
+          : riskFilter.charAt(0).toUpperCase() + riskFilter.slice(1)
       );
       setInfo("A12", "Search Query:", true);
       setInfo("B12", searchQuery || "None");
@@ -390,7 +399,7 @@ export default function AttendanceReports({
         rowNum: number,
         label: string,
         count: number,
-        colorHex: string,
+        colorHex: string
       ) => {
         worksheet.getCell(`E${rowNum}`).value = label;
         worksheet.getCell(`E${rowNum}`).font = {
@@ -481,7 +490,9 @@ export default function AttendanceReports({
               record.total_sessions || 0,
               "",
               record.attended_sessions || 0,
-              `${parseFloat(String(record.attendance_percentage || 0)).toFixed(1)}%`,
+              `${parseFloat(String(record.attendance_percentage || 0)).toFixed(
+                1
+              )}%`,
             ]
           : [
               record.index_number || record.student_id || "N/A",
@@ -521,7 +532,7 @@ export default function AttendanceReports({
           } else {
             if (colNumber === 6) {
               const percentage = parseFloat(
-                cell.value?.toString().replace("%", "") || "0",
+                cell.value?.toString().replace("%", "") || "0"
               );
               if (percentage >= 70)
                 cell.font = { color: { argb: "FF16A34A" }, bold: true };
@@ -543,12 +554,14 @@ export default function AttendanceReports({
       const datePart = new Date().toISOString().split("T")[0];
       saveAs(
         blob,
-        `${subject?.module_code}_Batch${subject?.batch}_${isOverall ? "Overall" : fromDate}_${datePart}.xlsx`,
+        `${subject?.module_code}_Batch${subject?.batch}_${
+          isOverall ? "Overall" : fromDate
+        }_${datePart}.xlsx`
       );
 
       if (toast.dismiss) toast.dismiss(toastId);
       toast.success(
-        `Report downloaded: ${displayedStudents.length} record(s) exported.`,
+        `Report downloaded: ${displayedStudents.length} record(s) exported.`
       );
     } catch (error) {
       console.error(error);
@@ -756,7 +769,9 @@ export default function AttendanceReports({
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className={`w-full h-[42px] px-3 py-2 border cursor-pointer rounded-lg text-sm font-bold outline-none transition-colors duration-200 ${getRiskDropdownColor(riskFilter)}`}
+              className={`w-full h-[42px] px-3 py-2 border cursor-pointer rounded-lg text-sm font-bold outline-none transition-colors duration-200 ${getRiskDropdownColor(
+                riskFilter
+              )}`}
             >
               <option value="all">⚠️ All Students</option>
               <option value="safe">🟢 Exam Eligible - (≥ 70%)</option>
@@ -776,7 +791,9 @@ export default function AttendanceReports({
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"}`}
+                className={`w-4 h-4 ${
+                  isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"
+                }`}
               />
               Refresh
             </button>
@@ -870,7 +887,7 @@ export default function AttendanceReports({
                     const statusLower =
                       student.status?.toLowerCase() || "absent";
                     let statusBadge = (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                      <span className="px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
                         {student.status || "No Session"}
                       </span>
                     );
@@ -953,7 +970,11 @@ export default function AttendanceReports({
                                       : "bg-red-500"
                                   }`}
                                   style={{
-                                    width: `${subjectDetails.total_sessions_held === 0 ? 0 : student.attendance_percentage}%`,
+                                    width: `${
+                                      subjectDetails.total_sessions_held === 0
+                                        ? 0
+                                        : student.attendance_percentage
+                                    }%`,
                                   }}
                                 ></div>
                               </div>
@@ -997,10 +1018,10 @@ export default function AttendanceReports({
                                       .includes("manual")
                                       ? "bg-purple-100 text-purple-700 border border-purple-200 rounded-xl"
                                       : student.reason
-                                            .toLowerCase()
-                                            .includes("insufficient")
-                                        ? "bg-orange-100 text-orange-700 border border-orange-200 rounded-xl"
-                                        : "bg-red-100 text-red-600 border border-red-200 rounded-xl"
+                                          .toLowerCase()
+                                          .includes("insufficient")
+                                      ? "bg-orange-100 text-orange-700 border border-orange-200 rounded-xl"
+                                      : "bg-red-100 text-red-600 border border-red-200 rounded-xl"
                                   }`}
                                 >
                                   {student.reason}

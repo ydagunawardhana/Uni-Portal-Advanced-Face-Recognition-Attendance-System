@@ -1057,88 +1057,129 @@ def get_correction_requests_grouped(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Allows a lecturer to view correction requests grouped by subject/batch."""
+    """Allows a lecturer to view ONLY their own correction requests, grouped by subject/batch."""
     if current_user.role != "Lecturer":
         raise HTTPException(status_code=403, detail="Only lecturers can view correction requests")
-        
-    # 1. Join CorrectionRequest -> Timetable (using session_id) -> Module
-    results = db.query(
-        models.CorrectionRequest,
-        models.Timetable, 
-        models.Module     
-    ).outerjoin(
-        models.Timetable, models.CorrectionRequest.session_id == models.Timetable.id
-    ).outerjoin(
-        models.Module, models.Timetable.module_code == models.Module.module_code
-    ).order_by(models.CorrectionRequest.submitted_at.desc()).all()
 
-    # 2. Grouping Logic
-    grouped_data = {}
-    
+    # 1. Resolve the logged-in user to their Lecturer profile 
+    lecturer = db.query(models.Lecturer).filter(
+        models.Lecturer.email == current_user.email
+    ).first()
+    if not lecturer:
+        raise HTTPException(status_code=404, detail="Lecturer profile not found.")
+
+    # 2. Collect this lecturer's authorised module codes 
+    # Source A: assigned_subjects field (comma-separated)
+    assigned_raw = lecturer.assigned_subjects or ""
+    assigned_codes = set(c.strip() for c in assigned_raw.split(",") if c.strip())
+
+    # Source B: any timetable entry where Timetable.lecturer == lecturer.name
+    timetable_codes = db.query(models.Timetable.module_code).filter(
+        models.Timetable.lecturer == lecturer.name,
+        models.Timetable.module_code.isnot(None),
+    ).distinct().all()
+    for (code,) in timetable_codes:
+        if code:
+            assigned_codes.add(code.strip())
+
+    # If the lecturer has no assigned modules at all, return an empty list fast
+    if not assigned_codes:
+        return []
+
+    # 3. Fetch only correction requests whose timetable entry belongs to
+    #        this lecturer (module code in assigned set AND lecturer name match)
+    results = (
+        db.query(
+            models.CorrectionRequest,
+            models.Timetable,
+            models.Module,
+        )
+        .join(                          # INNER join — discard orphan requests
+            models.Timetable,
+            models.CorrectionRequest.session_id == models.Timetable.id,
+        )
+        .outerjoin(                     # LEFT join — module info is optional
+            models.Module,
+            models.Timetable.module_code == models.Module.module_code,
+        )
+        .filter(
+            # ★ DATA-ISOLATION FILTERS ★
+            models.Timetable.module_code.in_(assigned_codes),
+            models.Timetable.lecturer == lecturer.name,
+        )
+        .order_by(models.CorrectionRequest.submitted_at.desc())
+        .all()
+    )
+
+    # 4. Grouping logic (unchanged from original)
+    grouped_data: dict = {}
+
     for req, timetable, module in results:
-        # Extract data safely from joined tables
-        mod_code = getattr(timetable, 'module_code', 'UNKNOWN')
-        batch = getattr(timetable, 'batch_id', 'Unknown Batch')
-        
-        mod_name = getattr(module, 'module_name', 'Unknown Subject')
-        degree = getattr(module, 'degree', '')
-        
-        # Safely try to get 'semester', if it fails, try 'level'. 
-        raw_semester = getattr(module, 'semester', None)
+        mod_code    = getattr(timetable, "module_code", "UNKNOWN")
+        batch       = getattr(timetable, "batch_id", "Unknown Batch")
+        mod_name    = getattr(module, "module_name", "Unknown Subject") if module else "Unknown Subject"
+        degree      = getattr(module, "degree", "")                    if module else ""
+
+        raw_semester = getattr(module, "semester", None)               if module else None
         if not raw_semester:
-             raw_level = getattr(module, 'level', '')
-             semester_val = f"Level {raw_level}" if raw_level else ""
+            raw_level    = getattr(module, "level", "")                if module else ""
+            semester_val = f"Level {raw_level}" if raw_level else ""
         else:
-             semester_val = f"Semester {raw_semester}" if str(raw_semester).isdigit() else str(raw_semester)
-        
+            semester_val = (
+                f"Semester {raw_semester}"
+                if str(raw_semester).isdigit()
+                else str(raw_semester)
+            )
+
         group_key = f"{mod_code}_{batch}"
-        
+
         if group_key not in grouped_data:
             grouped_data[group_key] = {
-                "subject_id": mod_code, 
+                "subject_id":   mod_code,
                 "subject_code": mod_code,
                 "subject_name": mod_name,
-                "batch": str(batch),
-                "degree": str(degree),
-                "semester": semester_val,
+                "batch":        str(batch),
+                "degree":       str(degree),
+                "semester":     semester_val,
                 "pending_count": 0,
-                "requests": []
+                "requests":     [],
             }
-        
+
         if req.status == "Pending":
             grouped_data[group_key]["pending_count"] += 1
-            
-        # Fetch student name
-        student = db.query(models.Student).filter(models.Student.index_number == req.student_id).first()
+
+        # Fetch student name (index_number is used as student_id in correction_requests)
+        student      = db.query(models.Student).filter(
+            models.Student.index_number == req.student_id
+        ).first()
         student_name = student.name if student else "Unknown Student"
-        
-        # Session Details
-        session_date = getattr(timetable, 'date', 'Unknown Date')
-        start_t = getattr(timetable, 'start_time', '??')
-        end_t = getattr(timetable, 'end_time', '??')
+
+        session_date = getattr(timetable, "date", "Unknown Date")
+        start_t      = getattr(timetable, "start_time", "??")
+        end_t        = getattr(timetable, "end_time",   "??")
         session_time = f"{start_t} - {end_t}"
 
-        # Create a dictionary version of the request to add extra fields
         req_dict = {
-            "id": req.id,
-            "student_id": req.student_id,
-            "session_id": req.session_id,
-            "reason_type": req.reason_type,
-            "description": req.description,
-            "evidence_url": req.evidence_url,
-            "status": req.status,
+            "id":              req.id,
+            "student_id":      req.student_id,
+            "session_id":      req.session_id,
+            "reason_type":     req.reason_type,
+            "description":     req.description,
+            "evidence_url":    req.evidence_url,
+            "status":          req.status,
             "rejection_reason": req.rejection_reason,
-            "submitted_at": req.submitted_at,
-            "student_name": student_name,
-            "session_date": str(session_date),
-            "session_time": session_time,
-            "module_code": mod_code,
-            "module_name": mod_name
+            "submitted_at":    req.submitted_at,
+            "student_name":    student_name,
+            "session_date":    str(session_date),
+            "session_time":    session_time,
+            "module_code":     mod_code,
+            "module_name":     mod_name,
         }
-            
         grouped_data[group_key]["requests"].append(req_dict)
 
     return list(grouped_data.values())
+
+
 
 @router.get("/admin/attendance-requests", response_model=List[schemas.AdminCorrectionRequestResponse])
 def get_all_attendance_requests(
@@ -1388,11 +1429,12 @@ def get_student_dashboard(
         models.ClassSession.batch_id.in_(batch_ids)
     ).count()
 
+    # Count 'Present' AND 'Excused' (approved medical leave) as attended sessions
     present_count = db.query(models.AttendanceRecord).join(
         models.ClassSession, models.AttendanceRecord.session_id == models.ClassSession.id
     ).filter(
         models.AttendanceRecord.student_id == student.id,
-        models.AttendanceRecord.status == "Present",
+        models.AttendanceRecord.status.in_(["Present", "Excused"]),
         models.ClassSession.batch_id.in_(batch_ids)
     ).count()
 

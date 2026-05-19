@@ -313,8 +313,7 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
         ).scalar() or 0
         print(f"DEBUG: No batches found in timetable. Fallback total students: {total_students}")
 
-    # 2c. Average attendance percentage across all lecturer's records
-    # Formula: (Count of 'Present' records) / (Total attendance records) * 100
+    # Formula: (Count of 'Present' or 'Excused' records) / (Total attendance records) * 100
     avg_attendance = 0.0
     
     # Query all attendance records for this lecturer's sessions
@@ -326,7 +325,10 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
     
     total_records = attendance_query.count()
     if total_records > 0:
-        present_count = attendance_query.filter(models.AttendanceRecord.status == "Present").count()
+        # Count both 'Present' and 'Excused' (approved medical/correction requests) as attended
+        present_count = attendance_query.filter(
+            models.AttendanceRecord.status.in_(["Present", "Excused"])
+        ).count()
         avg_attendance = round((present_count / total_records) * 100, 1)
 
     # 3. Recent classes (last 5 closed sessions) 
@@ -422,7 +424,8 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
             if not stu_records:
                 pct = 0.0
             else:
-                present = len([r for r in stu_records if r.status == "Present"])
+                # Count both 'Present' and 'Excused' (approved medical leave) as attended
+                present = len([r for r in stu_records if r.status in ("Present", "Excused")])
                 pct = round((present / len(stu_records)) * 100, 1)
             
             if pct < 70:
@@ -434,7 +437,7 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
                         "name": stu.name,
                         "index_number": stu.index_number,
                         "attendance_percentage": pct,
-                        "sessions_attended": len([r for r in stu_records if r.status == "Present"]),
+                        "sessions_attended": len([r for r in stu_records if r.status in ("Present", "Excused")]),
                         "total_sessions": len(stu_records),
                     })
 
@@ -721,13 +724,13 @@ def get_subject_attendance(
                 local_out_time = out_log.timestamp.replace(tzinfo=timezone.utc).astimezone(tz_lk)
                 out_time_str = local_out_time.strftime("%I:%M %p")
 
-        # B. Longitudinal Attendance Percentage
+        # B. Longitudinal Attendance Percentage — count Present OR Excused as attended
         attended_count = 0
         if total_sessions_held > 0 and closed_session_ids:
             attended_count = db.query(models.AttendanceRecord).filter(
                 models.AttendanceRecord.student_id == student.id,
                 models.AttendanceRecord.session_id.in_(closed_session_ids),
-                models.AttendanceRecord.status == "Present"
+                models.AttendanceRecord.status.in_(["Present", "Excused"])
             ).distinct(models.AttendanceRecord.session_id).count()
 
         # Calculation logic: return 0.0 if no classes held yet

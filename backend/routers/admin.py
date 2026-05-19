@@ -471,7 +471,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         if not day_records:
             val = 0
         else:
-            present_count = len([r for r in day_records if r.status == "Present"])
+            # Count 'Present' AND 'Excused' (approved medical leave) as attended
+            present_count = len([r for r in day_records if r.status in ("Present", "Excused")])
             val = round((present_count / len(day_records)) * 100, 1)
         
         weekly_trend.append({
@@ -494,7 +495,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         if not records:
             avg_pct = 0
         else:
-            present = len([r for r in records if r.status == "Present"])
+            # Count 'Present' AND 'Excused' (approved medical leave) as attended
+            present = len([r for r in records if r.status in ("Present", "Excused")])
             avg_pct = round((present / len(records)) * 100, 1)
             
         dept_stats.append({

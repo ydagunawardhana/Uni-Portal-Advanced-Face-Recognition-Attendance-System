@@ -152,12 +152,19 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         description=f"{user.role} '{user.email}' logged into the portal.",
     )
 
-    # Check if password change is required (only for Lecturers here, Students handled in their own router)
+    # Check if password change is required
+    # Students: read from Student.requires_password_change
+    # Lecturers: read from Lecturer.requires_password_change
     requires_change = False
     if user.role == "Lecturer":
         lecturer = db.query(models.Lecturer).filter(models.Lecturer.email == user.email).first()
         if lecturer:
-            requires_change = lecturer.requires_password_change
+            requires_change = bool(lecturer.requires_password_change)
+    elif user.role == "Student":
+        # Student index_number is stored via the students table linked by email
+        student = db.query(models.Student).filter(models.Student.email == user.email).first()
+        if student:
+            requires_change = bool(student.requires_password_change)
 
     return LoginResponse(
         access_token=token,

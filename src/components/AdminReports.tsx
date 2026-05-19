@@ -1345,7 +1345,7 @@ export default function AdminReports({
                     const statusLower =
                       student.status?.toLowerCase() || "absent";
                     let statusBadge = (
-                      <span className="px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
+                      <span className="px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
                         {student.status || "No Session"}
                       </span>
                     );

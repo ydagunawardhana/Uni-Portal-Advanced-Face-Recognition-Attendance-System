@@ -151,26 +151,41 @@ export default function StudentDashboard({
     return () => clearInterval(interval);
   }, []);
 
-  // Password Warning Toast
+  // Password Warning — read flag from localStorage set by login handler.
   useEffect(() => {
-    const requiresPassChange =
-      localStorage.getItem("requiresPasswordChange") === "true";
-    if (requiresPassChange) {
-      setNeedsPasswordChange(true);
-      toast(
-        "⚠️ Security Alert: Please go to your Profile to change your auto-generated temporary password.",
-        {
-          duration: 10000,
-          style: {
-            background: "#fff3cd",
-            color: "#856404",
-            fontWeight: 500,
-            border: "1px solid #ffeeba",
+    const checkFlag = () => {
+      const requiresPassChange =
+        localStorage.getItem("requiresPasswordChange") === "true";
+      setNeedsPasswordChange(requiresPassChange);
+
+      if (requiresPassChange) {
+        toast(
+          "⚠️ Security Alert: Please go to your Profile to change your auto-generated temporary password.",
+          {
+            duration: 10000,
+            style: {
+              background: "#fff3cd",
+              color: "#856404",
+              fontWeight: 500,
+              border: "1px solid #ffeeba",
+            },
+            id: "password-warning-toast",
           },
-          id: "password-warning-toast",
-        },
-      );
-    }
+        );
+      }
+    };
+
+    // Check immediately on mount
+    checkFlag();
+
+    // Re-check whenever another tab/component removes the flag from localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "requiresPasswordChange") {
+        setNeedsPasswordChange(e.newValue === "true");
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Close notification dropdown when clicking outside
@@ -260,6 +275,13 @@ export default function StudentDashboard({
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
+        // Re-check flag each time the user returns to the dashboard tab
+        // (e.g., after they changed their password in the Profile tab)
+        const flagStillSet =
+          localStorage.getItem("requiresPasswordChange") === "true";
+        if (needsPasswordChange !== flagStillSet) {
+          setNeedsPasswordChange(flagStillSet);
+        }
         if (loading)
           return (
             <div className="p-8 text-center text-gray-500">
