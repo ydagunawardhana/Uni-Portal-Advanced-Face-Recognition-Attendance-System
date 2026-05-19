@@ -23,14 +23,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
-from fastapi import Query
+from fastapi import Query # type: ignore
 
-import cv2
-import numpy as np
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Header
+import cv2 # type: ignore
+import numpy as np # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Header # type: ignore
 from utils.email_utils import send_rejection_email
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from pydantic import BaseModel # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
 from auth import hash_password, get_current_user
 from database import get_db, check_db_connection
@@ -459,7 +459,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     # 5. Weekly Trend (Last 7 Days)
     weekly_trend = []
     from datetime import timedelta
-    from sqlalchemy import func
+    from sqlalchemy import func # type: ignore
     for i in range(6, -1, -1):
         target_date = (datetime.now() - timedelta(days=i)).date()
         day_records = db.query(models.AttendanceRecord).join(

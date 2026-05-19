@@ -3,9 +3,9 @@ import uuid
 import shutil
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File # type: ignore
+from pydantic import BaseModel # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
 import models
 from database import get_db
@@ -377,7 +377,7 @@ def get_student_timetable(
     if missing:
         # Return 206 Partial Content so the frontend can show a descriptive warning
         # instead of a blank timetable with no explanation.
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse # type: ignore
         return JSONResponse(
             status_code=206,
             content={

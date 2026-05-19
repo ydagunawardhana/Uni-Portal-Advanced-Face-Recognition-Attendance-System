@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore
 
-import cv2
-import numpy as np
+import cv2 # type: ignore
+import numpy as np # type: ignore
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy.orm import Session
-from sqlalchemy import cast, String, func, and_
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status # type: ignore
+from sqlalchemy.orm import Session # type: ignore
+from sqlalchemy import cast, String, func, and_ # type: ignore
 
 import crud
 import models
@@ -25,11 +25,11 @@ from auth import get_current_user
 from face_recognition_engine import (
     FaceResult, recognize_faces, annotate_frame
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse # type: ignore
 import base64
 import time
 import pickle
-import face_recognition
+import face_recognition # type: ignore
 
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
 

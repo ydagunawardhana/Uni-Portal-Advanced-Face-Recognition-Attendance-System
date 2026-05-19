@@ -8,7 +8,7 @@ Route handlers call these functions — they never touch the DB directly.
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 
 import models
 

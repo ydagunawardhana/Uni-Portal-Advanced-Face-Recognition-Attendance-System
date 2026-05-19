@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Boolean, Text
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Boolean, Text # type: ignore
+from sqlalchemy.sql import func # type: ignore
+from sqlalchemy.orm import relationship # type: ignore
 from database import Base
 
 

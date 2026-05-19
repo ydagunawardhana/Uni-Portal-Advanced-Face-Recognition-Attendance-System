@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status # type: ignore
+from pydantic import BaseModel, EmailStr # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 from typing import Optional
 from database import get_db
 import models

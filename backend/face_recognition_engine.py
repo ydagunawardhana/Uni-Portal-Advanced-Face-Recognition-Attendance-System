@@ -11,9 +11,9 @@ import os
 import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
-import face_recognition
-import numpy as np
-import cv2
+import face_recognition # type: ignore
+import numpy as np # type: ignore
+import cv2 # type: ignore
 
 _BASE_DIR = Path(__file__).parent
 ENCODINGS_PATH = str(_BASE_DIR / "encodings.pkl")

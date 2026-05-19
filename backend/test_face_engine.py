@@ -4,7 +4,7 @@ Run from the backend folder:
     python test_face_engine.py
 """
 import sys
-import numpy as np
+import numpy as np  # type: ignore
 
 #  Import engine 
 print("Importing face_recognition_engine ...")

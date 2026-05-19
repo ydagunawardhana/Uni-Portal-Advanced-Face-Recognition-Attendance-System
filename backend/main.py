@@ -2,11 +2,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 # auth system active
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI # type: ignore
+from fastapi.middleware.cors import CORSMiddleware # type: ignore
+from fastapi.staticfiles import StaticFiles # type: ignore
 import os
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 
 import config
 import models

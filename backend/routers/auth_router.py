@@ -4,9 +4,9 @@ routers/auth_router.py
 POST /api/login  – verify email + password + role, return JWT
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status # type: ignore
+from pydantic import BaseModel, EmailStr # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
 from auth import create_access_token, verify_password
 from database import get_db

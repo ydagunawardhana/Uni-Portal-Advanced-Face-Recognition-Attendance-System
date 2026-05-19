@@ -87,7 +87,7 @@ function nowTimeString(): string {
 function bboxToPercent(
   bbox: { x: number; y: number; w: number; h: number },
   frameW: number,
-  frameH: number,
+  frameH: number
 ): { left: string; top: string; width: string; height: string } {
   return {
     left: `${((bbox.x / frameW) * 100).toFixed(1)}%`,
@@ -127,10 +127,14 @@ const LiveTimer = ({
   return (
     <div className="flex items-center gap-2">
       <span
-        className={`w-2 h-2 rounded-full animate-pulse ${isOvertime ? "bg-orange-500" : "bg-red-600"}`}
+        className={`w-2 h-2 rounded-full animate-pulse ${
+          isOvertime ? "bg-orange-500" : "bg-red-600"
+        }`}
       ></span>
       <span
-        className={`font-bold ${isOvertime ? "text-orange-600" : "text-red-600"}`}
+        className={`font-bold ${
+          isOvertime ? "text-orange-600" : "text-red-600"
+        }`}
       >
         Live: {displayTime} {isOvertime ? "(Over Time)" : ""}
       </span>
@@ -180,7 +184,7 @@ export default function LecturerLiveClassMonitoring({
   const role = isAdminRoute ? "Admin" : "Lecturer";
 
   const [activeTab, setActiveTab] = useState<"camera" | "manual">(
-    isAdminRoute ? "manual" : "camera",
+    isAdminRoute ? "manual" : "camera"
   );
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
@@ -235,15 +239,15 @@ export default function LecturerLiveClassMonitoring({
   const [manualAction, setManualAction] = useState("IN");
 
   const inCamIndex = videoDevices.findIndex(
-    (cam) => cam.deviceId === inCameraId,
+    (cam) => cam.deviceId === inCameraId
   );
   const outCamIndex = videoDevices.findIndex(
-    (cam) => cam.deviceId === outCameraId,
+    (cam) => cam.deviceId === outCameraId
   );
 
   // Dynamic status logic
   const selectedSessionDetails = (todaySessions || []).find(
-    (s) => String(s.id) === String(selectedSession),
+    (s) => String(s.id) === String(selectedSession)
   );
 
   const isOwner =
@@ -392,7 +396,9 @@ export default function LecturerLiveClassMonitoring({
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
         setElapsedTime(
-          `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+          `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
         );
       }, 1000);
     } else {
@@ -415,7 +421,7 @@ export default function LecturerLiveClassMonitoring({
         // 2. Enumerate devices
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = devices.filter(
-          (device) => device.kind === "videoinput",
+          (device) => device.kind === "videoinput"
         );
         setVideoDevices(videoInputs);
 
@@ -448,7 +454,7 @@ export default function LecturerLiveClassMonitoring({
               color: "#991b1b",
               fontWeight: "bold",
             },
-          },
+          }
         );
       }
     };
@@ -468,7 +474,7 @@ export default function LecturerLiveClassMonitoring({
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
         window.dispatchEvent(
-          new CustomEvent("camera-status", { detail: "Offline" }),
+          new CustomEvent("camera-status", { detail: "Offline" })
         );
       }
 
@@ -522,7 +528,7 @@ export default function LecturerLiveClassMonitoring({
     if (!restoredFromMemory && navSessionData) {
       setSelectedSession(navSessionId || "");
       setSelectedSubject(
-        navSessionData.subject_id || navSessionData.moduleCode || "",
+        navSessionData.subject_id || navSessionData.moduleCode || ""
       );
       setSessionDetails(navSessionData);
     }
@@ -582,7 +588,7 @@ export default function LecturerLiveClassMonitoring({
               ? data
               : data?.sessions || [];
             setTodaySessions(
-              sessionsArray.filter((s: any) => s.date === today),
+              sessionsArray.filter((s: any) => s.date === today)
             );
           } else {
             // Admin endpoint returns { stats, sessions }
@@ -608,7 +614,7 @@ export default function LecturerLiveClassMonitoring({
       sessionIdParam
     ) {
       const sess = todaySessions.find(
-        (s) => s.id.toString() === sessionIdParam,
+        (s) => s.id.toString() === sessionIdParam
       );
       if (sess) {
         setSelectedSession(sessionIdParam);
@@ -649,7 +655,7 @@ export default function LecturerLiveClassMonitoring({
 
     if (!sessIdToUse) {
       toast.error(
-        "Error: Could not identify the current session ID. Please re-select the session.",
+        "Error: Could not identify the current session ID. Please re-select the session."
       );
       return;
     }
@@ -730,7 +736,7 @@ export default function LecturerLiveClassMonitoring({
 
         // 2. Fetch Stats
         const statsRes = await fetch(
-          `${API_BASE}/api/attendance/session_stats/${targetId}`,
+          `${API_BASE}/api/attendance/session_stats/${targetId}`
         );
 
         if (statsRes.ok) {
@@ -766,7 +772,7 @@ export default function LecturerLiveClassMonitoring({
                 "N/A",
               time: d.timestamp || d.time || new Date().toISOString(),
               status: d.status || "entered",
-            })),
+            }))
           );
         }
       } catch (error) {
@@ -883,8 +889,8 @@ export default function LecturerLiveClassMonitoring({
         canvas.toBlob(
           (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
           "image/jpeg",
-          0.85,
-        ),
+          0.85
+        )
       );
 
       const form = new FormData();
@@ -978,11 +984,11 @@ export default function LecturerLiveClassMonitoring({
       if (!extractedLecturerId) {
         console.error(
           "[START SESSION] Missing Lecturer ID in session details:",
-          selectedSessionDetails,
+          selectedSessionDetails
         );
         toast.error(
           "Cannot start session: Lecturer ID is missing from the timetable data.",
-          { duration: 5000 },
+          { duration: 5000 }
         );
         return; // Halt the function to prevent 500 Backend Error
       }
@@ -991,27 +997,27 @@ export default function LecturerLiveClassMonitoring({
       const payload = {
         lecturer_id: Number(extractedLecturerId),
         subject_id: String(
-          selectedSubject || selectedSessionDetails?.subject_id || "UNKNOWN",
+          selectedSubject || selectedSessionDetails?.subject_id || "UNKNOWN"
         ),
         batch_id: String(
-          selectedSession || selectedSessionDetails?.batch_id || "UNKNOWN",
+          selectedSession || selectedSessionDetails?.batch_id || "UNKNOWN"
         ),
         session_type: String(
           sessionDetails?.type ||
             selectedSessionDetails?.session_type ||
-            "Lecture",
+            "Lecture"
         ),
         location: String(
           sessionLocation ||
             sessionDetails?.location ||
             selectedSessionDetails?.location ||
-            "Hall A",
+            "Hall A"
         ),
       };
 
       console.log(
         "[START SESSION] Sending strictly validated payload:",
-        payload,
+        payload
       );
 
       // 3. Initialize session in backend
@@ -1035,7 +1041,7 @@ export default function LecturerLiveClassMonitoring({
           selectedSession,
           selectedSubject,
           sessionDetails: { ...sessionDetails, location: sessionLocation },
-        }),
+        })
       );
 
       localStorage.setItem("sessionStartTime", Date.now().toString());
@@ -1054,7 +1060,7 @@ export default function LecturerLiveClassMonitoring({
       setAttendanceToast(null);
 
       window.dispatchEvent(
-        new CustomEvent("camera-status", { detail: "Online" }),
+        new CustomEvent("camera-status", { detail: "Online" })
       );
 
       if (inCameraId) setIsEntranceActive(true);
@@ -1073,7 +1079,7 @@ export default function LecturerLiveClassMonitoring({
             color: "#991b1b",
             fontWeight: "bold",
           },
-        },
+        }
       );
       setCameraError(`Session Error: ${err.message}`);
     }
@@ -1112,7 +1118,7 @@ export default function LecturerLiveClassMonitoring({
 
     setIsEndingSession(true);
     const loadingToast = toast.loading(
-      "Calculating final attendance and processing logs...",
+      "Calculating final attendance and processing logs..."
     );
 
     try {
@@ -1136,7 +1142,7 @@ export default function LecturerLiveClassMonitoring({
           `${API_BASE}/api/attendance/end_session/${currentSessionId}`,
           {
             method: "POST",
-          },
+          }
         );
         if (!res.ok) throw new Error("Failed to end session");
       }
@@ -1173,7 +1179,7 @@ export default function LecturerLiveClassMonitoring({
             : "/lecturer/session-review",
           {
             state: { sessionId: targetSessionId },
-          },
+          }
         );
       }, 1000);
     } catch (err) {
@@ -1213,7 +1219,7 @@ export default function LecturerLiveClassMonitoring({
         time: editTime,
       };
       setLogEntries((prev) =>
-        prev.map((e) => (e.id === selectedEntry.id ? updated : e)),
+        prev.map((e) => (e.id === selectedEntry.id ? updated : e))
       );
       setShowEditModal(false);
     }
@@ -1332,7 +1338,7 @@ export default function LecturerLiveClassMonitoring({
                   const sessId = e.target.value;
                   setSelectedSession(sessId);
                   const sess = todaySessions.find(
-                    (s) => s.id.toString() === sessId,
+                    (s) => s.id.toString() === sessId
                   );
                   if (sess) {
                     setSelectedSubject(sess.module_name || sess.module_code);
@@ -1342,7 +1348,7 @@ export default function LecturerLiveClassMonitoring({
                     }));
                     setSessionLocation(sess.location || "");
                     setSessionTime(
-                      `${sess.start_time || ""} - ${sess.end_time || ""}`,
+                      `${sess.start_time || ""} - ${sess.end_time || ""}`
                     );
                   }
                 }}
@@ -1373,6 +1379,7 @@ export default function LecturerLiveClassMonitoring({
                 Session Type
               </label>
               <select
+                title="session type"
                 value={sessionDetails.type}
                 onChange={(e) =>
                   setSessionDetails({ ...sessionDetails, type: e.target.value })
@@ -1435,10 +1442,14 @@ export default function LecturerLiveClassMonitoring({
                     <div className="flex flex-col items-end justify-center min-h-[40px]">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`w-2 h-2 rounded-full animate-pulse ${isOvertime ? "bg-orange-500" : "bg-red-600"}`}
+                          className={`w-2 h-2 rounded-full animate-pulse ${
+                            isOvertime ? "bg-orange-500" : "bg-red-600"
+                          }`}
                         ></span>
                         <span
-                          className={`font-bold text-md ${isOvertime ? "text-orange-600" : "text-red-600"}`}
+                          className={`font-bold text-md ${
+                            isOvertime ? "text-orange-600" : "text-red-600"
+                          }`}
                         >
                           Live: {elapsedTime}
                         </span>
@@ -1535,6 +1546,7 @@ export default function LecturerLiveClassMonitoring({
 
                     {/* Styled Select Dropdown */}
                     <select
+                      title="select camera"
                       value={inCameraId}
                       onChange={(e) => setInCameraId(e.target.value)}
                       disabled={sessionActive || isViewOnly}
@@ -1614,7 +1626,9 @@ export default function LecturerLiveClassMonitoring({
                       <>
                         {/* Backend-Streamed Annotated Frame (Lecturer Only) */}
                         <img
-                          src={`${API_BASE}/api/attendance/video_feed/in?session_id=${currentSessionId || selectedSession}&cam_id=0`}
+                          src={`${API_BASE}/api/attendance/video_feed/in?session_id=${
+                            currentSessionId || selectedSession
+                          }&cam_id=0`}
                           className="w-full h-full object-cover rounded-b-lg block relative z-10"
                           alt="Live IN Feed"
                           onError={(e) =>
@@ -1677,6 +1691,7 @@ export default function LecturerLiveClassMonitoring({
 
                     {/* Styled Select Dropdown */}
                     <select
+                      title="select camera"
                       value={outCameraId}
                       onChange={(e) => setOutCameraId(e.target.value)}
                       disabled={sessionActive || isViewOnly}
@@ -1756,7 +1771,9 @@ export default function LecturerLiveClassMonitoring({
                       <>
                         {/* Backend-Streamed Annotated Frame (Lecturer Only) */}
                         <img
-                          src={`${API_BASE}/api/attendance/video_feed/out?session_id=${currentSessionId || selectedSession}&cam_id=0`}
+                          src={`${API_BASE}/api/attendance/video_feed/out?session_id=${
+                            currentSessionId || selectedSession
+                          }&cam_id=0`}
                           className="w-full h-full object-cover rounded-b-lg block relative z-10"
                           alt="Live OUT Feed"
                           onError={(e) =>
@@ -1809,6 +1826,7 @@ export default function LecturerLiveClassMonitoring({
                 </label>
                 <div className="flex gap-2">
                   <select
+                    title="select override camera"
                     value={manualAction}
                     onChange={(e) => setManualAction(e.target.value)}
                     className="px-2 py-1.5 text-sm cursor-pointer border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
@@ -1897,7 +1915,7 @@ export default function LecturerLiveClassMonitoring({
                                 // We must manually add 5.5 hours (330 mins) for local time
                                 if (t.match(/[AP]M/i) && !t.includes("-")) {
                                   const match = t.match(
-                                    /(\d+):(\d+)\s*([AP]M)/i,
+                                    /(\d+):(\d+)\s*([AP]M)/i
                                   );
                                   if (match) {
                                     let h = parseInt(match[1]);
@@ -1916,7 +1934,11 @@ export default function LecturerLiveClassMonitoring({
                                     newH = newH % 12;
                                     if (newH === 0) newH = 12;
 
-                                    return `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")} ${newAmPm}`;
+                                    return `${newH
+                                      .toString()
+                                      .padStart(2, "0")}:${newM
+                                      .toString()
+                                      .padStart(2, "0")} ${newAmPm}`;
                                   }
                                 }
 
@@ -2099,7 +2121,7 @@ export default function LecturerLiveClassMonitoring({
                           0,
                           (selectedSessionDetails?.enrolled_count ||
                             sessionDetails?.enrolled_count ||
-                            0) - (derivedStats.totalEntered || 0),
+                            0) - (derivedStats.totalEntered || 0)
                         )}
                       </p>
                     </div>

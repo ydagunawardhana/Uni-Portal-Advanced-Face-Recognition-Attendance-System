@@ -5,7 +5,7 @@ Centralized audit logging utility.
 Silently handles failures so logging never crashes API responses.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 import models
 
 

@@ -4,10 +4,10 @@ import shutil
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, String
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File # type: ignore
+from pydantic import BaseModel # type: ignore
+from sqlalchemy.orm import Session # type: ignore
+from sqlalchemy import func, cast, String # type: ignore
 
 import models
 import schemas
@@ -275,7 +275,7 @@ def get_dashboard_summary(lecturer_id: int, db: Session = Depends(get_db)):
     Returns a comprehensive JSON object containing all data needed
     to render the Lecturer Dashboard in a single network call.
     """
-    from sqlalchemy import func, distinct
+    from sqlalchemy import func, distinct # type: ignore
 
     # 1. Lecturer identity
     lecturer = db.query(models.Lecturer).filter(models.Lecturer.id == lecturer_id).first()
@@ -536,7 +536,7 @@ def get_lecturer_subjects(
     if not subject_codes:
         return []
 
-    from sqlalchemy import func
+    from sqlalchemy import func # type: ignore
     
     # 2. Get all distinct (module_code, batch_id) combinations from Timetable for this lecturer
     timetable_entries = db.query(
@@ -779,7 +779,7 @@ def get_lecturer_timetable(
         missing.append("Department")
 
     if missing:
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse # type: ignore
         return JSONResponse(
             status_code=206,
             content={

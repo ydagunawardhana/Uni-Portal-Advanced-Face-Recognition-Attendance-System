@@ -1,9 +1,9 @@
 import os
 import pickle
-import face_recognition
-import cv2
+import face_recognition # type: ignore
+import cv2 # type: ignore
 from pathlib import Path
-import numpy as np
+import numpy as np # type: ignore
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENCODINGS_PATH = str(BASE_DIR / "encodings.pkl")

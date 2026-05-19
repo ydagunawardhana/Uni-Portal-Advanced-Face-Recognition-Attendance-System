@@ -11,11 +11,11 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import bcrypt
-import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+import bcrypt # type: ignore
+import jwt # type: ignore
+from fastapi import Depends, HTTPException, status # type: ignore
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
 from database import get_db
 import models

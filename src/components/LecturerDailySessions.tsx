@@ -50,7 +50,7 @@ export default function LecturerDailySessions() {
   const [semesterFilter, setSemesterFilter] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
   const [startingSessionId, setStartingSessionId] = useState<number | null>(
-    null,
+    null
   );
   const [showCoverModal, setShowCoverModal] = useState(false);
   const [selectedCoverSession, setSelectedCoverSession] =
@@ -98,13 +98,19 @@ export default function LecturerDailySessions() {
 
   const getTodayStr = () => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
   const getNextWeekStr = () => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
   const getPrevWeekStr = () => {
@@ -112,7 +118,7 @@ export default function LecturerDailySessions() {
     d.setDate(d.getDate() - 7);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
       2,
-      "0",
+      "0"
     )}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
@@ -151,13 +157,13 @@ export default function LecturerDailySessions() {
 
   // Extract unique values for the dropdowns dynamically based on today's sessions
   const uniqueDegrees = Array.from(
-    new Set(sessions.map((s) => s.degree).filter(Boolean)),
+    new Set(sessions.map((s) => s.degree).filter(Boolean))
   ) as string[];
   const uniqueSemesters = Array.from(
-    new Set(sessions.map((s) => s.semester || s.level).filter(Boolean)),
+    new Set(sessions.map((s) => s.semester || s.level).filter(Boolean))
   ) as string[];
   const uniqueBatches = Array.from(
-    new Set(sessions.map((s) => s.batch).filter(Boolean)),
+    new Set(sessions.map((s) => s.batch).filter(Boolean))
   ) as string[];
 
   const filteredSessions = sessions.filter((s) => {
@@ -202,17 +208,17 @@ export default function LecturerDailySessions() {
   const activeCoverRequestsCount = sessions.filter(
     (s) =>
       s.cover_requested &&
-      !(s.status?.toLowerCase() === "completed" || s.is_completed),
+      !(s.status?.toLowerCase() === "completed" || s.is_completed)
   ).length;
 
   const liveCount = sessions.filter(
     (s) =>
-      s.date === todayStr && (s.is_live || s.status?.toLowerCase() === "live"),
+      s.date === todayStr && (s.is_live || s.status?.toLowerCase() === "live")
   ).length;
   const completedCount = sessions.filter(
     (s) =>
       s.date === todayStr &&
-      (s.status?.toLowerCase() === "completed" || s.is_completed),
+      (s.status?.toLowerCase() === "completed" || s.is_completed)
   ).length;
 
   const activeSessionStr =
@@ -234,7 +240,7 @@ export default function LecturerDailySessions() {
         "This session is scheduled for a future date. You cannot start it yet.",
         {
           style: { borderRadius: "10px", background: "#fff", color: "#333" },
-        },
+        }
       );
       return;
     }
@@ -278,7 +284,7 @@ export default function LecturerDailySessions() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ reason: coverReason }),
-        },
+        }
       );
 
       if (!res.ok) {
@@ -302,8 +308,8 @@ export default function LecturerDailySessions() {
         prev.map((s) =>
           s.id === selectedCoverSession.id
             ? { ...s, cover_requested: true, cover_reason: coverReason }
-            : s,
-        ),
+            : s
+        )
       );
       setShowCoverModal(false);
       setCoverReason("");
@@ -327,7 +333,7 @@ export default function LecturerDailySessions() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       if (!res.ok) {
@@ -351,8 +357,8 @@ export default function LecturerDailySessions() {
         prev.map((s) =>
           s.id === sessionId
             ? { ...s, cover_requested: false, cover_reason: "" }
-            : s,
-        ),
+            : s
+        )
       );
     } catch (err) {
       console.error("Cancel cover error:", err);
@@ -483,6 +489,7 @@ export default function LecturerDailySessions() {
             {/* 2. Degree Filter */}
             <div>
               <select
+                title="Filter by degree or program"
                 value={degreeFilter}
                 onChange={(e) => setDegreeFilter(e.target.value)}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
@@ -510,6 +517,7 @@ export default function LecturerDailySessions() {
             {/* 3. Semester Filter */}
             <div>
               <select
+                title="fliter by Semester"
                 value={semesterFilter}
                 onChange={(e) => setSemesterFilter(e.target.value)}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
@@ -540,6 +548,7 @@ export default function LecturerDailySessions() {
             {/* 4. Batch Filter */}
             <div>
               <select
+                title="filter by  batch"
                 value={batchFilter}
                 onChange={(e) => setBatchFilter(e.target.value)}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm text-gray-700 cursor-pointer"
@@ -581,11 +590,11 @@ export default function LecturerDailySessions() {
                     String(session.id) === activeSessionId
                       ? "border-green-200 bg-green-50/30"
                       : session.is_live && session.cover_requested
-                        ? "border-orange-200 bg-orange-50/20"
-                        : session.status?.toLowerCase() === "completed" ||
-                            session.is_completed
-                          ? "border-gray-200 bg-gray-50/50"
-                          : "bg-white border-gray-200"
+                      ? "border-orange-200 bg-orange-50/20"
+                      : session.status?.toLowerCase() === "completed" ||
+                        session.is_completed
+                      ? "border-gray-200 bg-gray-50/50"
+                      : "bg-white border-gray-200"
                   }`}
                 >
                   {/* Badge */}
@@ -814,8 +823,8 @@ export default function LecturerDailySessions() {
                                 startingSessionId === session.id
                                   ? "bg-blue-600 text-white cursor-wait"
                                   : isFutureSession
-                                    ? "bg-gray-50 text-gray-400 border-2 border-gray-200 cursor-not-allowed hover:bg-gray-100"
-                                    : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 cursor-pointer"
+                                  ? "bg-gray-50 text-gray-400 border-2 border-gray-200 cursor-not-allowed hover:bg-gray-100"
+                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200 border-2 border-blue-200 cursor-pointer"
                               }`}
                             >
                               {startingSessionId === session.id ? (

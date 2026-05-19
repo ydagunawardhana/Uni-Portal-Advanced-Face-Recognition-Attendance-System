@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore
 from datetime import datetime
 
 import models

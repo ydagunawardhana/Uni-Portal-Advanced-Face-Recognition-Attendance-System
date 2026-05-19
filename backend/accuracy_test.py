@@ -3,14 +3,14 @@ import io
 import os
 import pickle
 import time
-import numpy as np
+import numpy as np # type: ignore
 from pathlib import Path
 from datetime import datetime
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 try:
-    import face_recognition
+    import face_recognition # type: ignore
 except ImportError:
     print("ERROR: face_recognition not installed. Run: pip install face_recognition")
     sys.exit(1)

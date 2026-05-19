@@ -1,7 +1,7 @@
 import os
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from groq import Groq
+from fastapi import APIRouter, HTTPException # type: ignore
+from pydantic import BaseModel # type: ignore
+from groq import Groq # type: ignore
 import config
 
 router = APIRouter(prefix="/api/chatbot", tags=["Chatbot"])

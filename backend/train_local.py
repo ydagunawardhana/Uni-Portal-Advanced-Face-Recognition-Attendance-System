@@ -1,6 +1,6 @@
 import os
 import pickle
-import face_recognition
+import face_recognition # type: ignore
 
 dataset_path = 'dataset'
 encodings_save_path = 'encodings.pkl'

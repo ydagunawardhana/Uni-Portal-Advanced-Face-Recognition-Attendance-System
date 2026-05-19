@@ -1,18 +1,18 @@
 import re
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore
 from datetime import datetime, timedelta
 import io
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form, File
-from fastapi.responses import StreamingResponse
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-import pandas as pd
-import openpyxl
-from openpyxl.styles import (
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form, File # type: ignore
+from fastapi.responses import StreamingResponse # type: ignore
+from sqlalchemy import func # type: ignore
+from sqlalchemy.orm import Session # type: ignore
+import pandas as pd # type: ignore
+import openpyxl # type: ignore
+from openpyxl.styles import ( # type: ignore
     PatternFill, Font, Alignment, Border, Side, GradientFill
 )
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter # type: ignore
 from database import get_db
 import models
 from models import Timetable, Module, Lecturer, Student
