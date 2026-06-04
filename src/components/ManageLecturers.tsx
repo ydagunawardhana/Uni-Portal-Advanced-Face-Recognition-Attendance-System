@@ -83,7 +83,7 @@ export default function ManageLecturers() {
 
   const fetchAllModules = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/modules`);
+      const res = await fetch(`${API_BASE}/api/modules/`);
       if (res.ok) {
         setAllModules(await res.json());
       }
@@ -104,7 +104,7 @@ export default function ManageLecturers() {
   const fetchLecturers = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`${API_BASE}/api/admin/lecturers`, {
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -174,7 +174,7 @@ export default function ManageLecturers() {
         auto_generate_password: formData.autoGeneratePassword,
       };
 
-      const res = await fetch(`${API_BASE}/api/admin/lecturers`, {
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -212,7 +212,7 @@ export default function ManageLecturers() {
     const toastId = toast.loading("Adding visiting lecturer...");
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`${API_BASE}/api/admin/lecturers/visiting`, {
+      const res = await fetch(`${API_BASE}/api/admin/lecturers/visiting/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

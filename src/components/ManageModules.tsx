@@ -149,7 +149,7 @@ export default function ManageModules() {
   const fetchModules = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`${API_BASE}/api/admin/modules`, {
+      const res = await fetch(`${API_BASE}/api/admin/modules/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
