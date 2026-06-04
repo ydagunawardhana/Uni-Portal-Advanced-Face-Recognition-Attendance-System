@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { API_BASE_URL } from "../config";
 import {
   User,
   Mail,
@@ -20,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface OfficeHour {
   day: string;
@@ -88,9 +89,9 @@ export default function LecturerProfile() {
               element.classList.remove(
                 "ring-4",
                 "ring-yellow-500",
-                "ring-offset-4",
+                "ring-offset-4"
               ),
-            3000,
+            3000
           );
           // Clear hash after scroll to prevent re-scroll on other updates
           window.history.replaceState(null, "", window.location.pathname);
@@ -162,7 +163,7 @@ export default function LecturerProfile() {
             personal_email: personalEmail,
             office_hours: officeHours,
           }),
-        },
+        }
       );
 
       // 2. Update Password if fields are filled
@@ -238,14 +239,14 @@ export default function LecturerProfile() {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
-        },
+        }
       );
 
       if (res.ok) {
         const data = await res.json();
         toast.success("Photo updated successfully", { id: toastId });
         setLecturerData((prev) =>
-          prev ? { ...prev, profile_picture: data.profile_picture } : null,
+          prev ? { ...prev, profile_picture: data.profile_picture } : null
         );
         setImageTimestamp(Date.now());
       } else {
@@ -270,7 +271,9 @@ export default function LecturerProfile() {
 
   const profileImageUrl = lecturerData?.profile_picture
     ? `${API_BASE}${lecturerData.profile_picture}?t=${imageTimestamp}`
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(lecturerData?.name || "Lecturer")}&background=random&size=200`;
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        lecturerData?.name || "Lecturer"
+      )}&background=random&size=200`;
 
   return (
     <div className="w-full mx-auto flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -485,7 +488,7 @@ export default function LecturerProfile() {
                         </>
                       )}
                     </span>
-                  ),
+                  )
                 )
               ) : (
                 <span className="text-gray-500 text-sm italic">
@@ -559,7 +562,7 @@ export default function LecturerProfile() {
                 <button
                   onClick={() =>
                     setQualifications(
-                      qualifications.filter((_, i) => i !== index),
+                      qualifications.filter((_, i) => i !== index)
                     )
                   }
                   className="text-red-500 hover:text-red-700 p-2 transition-colors bg-red-100 cursor-pointer rounded-lg"

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, LogOut } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
 interface LecturerHeaderProps {
   onLogout?: () => void;
@@ -13,7 +14,7 @@ export default function LecturerHeader({ onLogout }: LecturerHeaderProps) {
       try {
         const token = localStorage.getItem("lecturerToken");
         if (!token) return;
-        const res = await fetch("http://localhost:8000/api/lecturer/profile", {
+        const res = await fetch(API_BASE_URL + "/api/lecturer/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

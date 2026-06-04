@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 import {
   Video,
   ArrowUp,
@@ -24,7 +25,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 const CAPTURE_INTERVAL_MS = 3000;
 
 interface LecturerLiveClassMonitoringProps {

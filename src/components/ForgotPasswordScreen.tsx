@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../config";
 import {
   MessageCircle,
   GraduationCap,
@@ -14,7 +15,7 @@ import {
 import toast from "react-hot-toast";
 import ChatbotWidget from "./ChatbotWidget";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface ForgotPasswordScreenProps {
   onBackToLogin: () => void;

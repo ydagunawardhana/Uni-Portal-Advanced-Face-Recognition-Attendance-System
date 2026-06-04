@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   CheckCircle,
   XCircle,
@@ -24,7 +25,7 @@ import {
 import toast from "react-hot-toast";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 const MIN_ATTENDANCE_PERCENTAGE = 75;
 
 const getInitials = (name: string) => {
@@ -159,11 +160,11 @@ export default function AdminSessionReview() {
 
   const presentPercentage = calculatePercentage(
     summaryStats.presentCount,
-    sessionInfo.enrolled_count,
+    sessionInfo.enrolled_count
   );
   const absentPercentage = calculatePercentage(
     summaryStats.absentCount,
-    sessionInfo.enrolled_count,
+    sessionInfo.enrolled_count
   );
 
   const filteredRecords = useMemo(() => {
@@ -234,7 +235,7 @@ export default function AdminSessionReview() {
 
   const handleStatusChange = (
     indexNumber: string,
-    status: "Present" | "Absent",
+    status: "Present" | "Absent"
   ) => {
     setAttendanceDecisions((prev) => ({
       ...prev,
@@ -526,7 +527,7 @@ export default function AdminSessionReview() {
 
           {/* Warning Note */}
           {records.some(
-            (r) => evaluateStudentStatus(r, dynamicTotalMinutes) === "Flagged",
+            (r) => evaluateStudentStatus(r, dynamicTotalMinutes) === "Flagged"
           ) && (
             <div className="mb-6 bg-red-50 border border-orange-300 rounded-xl p-3 flex items-start space-x-3">
               <AlertCircle className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" />
@@ -625,7 +626,7 @@ export default function AdminSessionReview() {
                   filteredRecords.map((record, index) => {
                     const calculatedStatus = evaluateStudentStatus(
                       record,
-                      dynamicTotalMinutes,
+                      dynamicTotalMinutes
                     );
 
                     return (
@@ -644,14 +645,18 @@ export default function AdminSessionReview() {
                               <img
                                 src={
                                   record.avatar ||
-                                  `https://ui-avatars.com/api/?name=${encodeURIComponent(record.name)}&background=f3f4f6&color=374151`
+                                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                    record.name
+                                  )}&background=f3f4f6&color=374151`
                                 }
                                 alt={record.name}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.onerror = null;
-                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(record.name)}&background=f3f4f6&color=374151`;
+                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                    record.name
+                                  )}&background=f3f4f6&color=374151`;
                                 }}
                               />
                             </div>
@@ -695,7 +700,7 @@ export default function AdminSessionReview() {
                             <span className="text-sm font-bold text-gray-700">
                               (
                               {Math.round(
-                                (record.duration / dynamicTotalMinutes) * 100,
+                                (record.duration / dynamicTotalMinutes) * 100
                               )}
                               % Presence)
                             </span>
@@ -735,7 +740,7 @@ export default function AdminSessionReview() {
                               onClick={() =>
                                 handleStatusChange(
                                   record.indexNumber,
-                                  "Present",
+                                  "Present"
                                 )
                               }
                               className={`px-3 py-1.5 rounded-lg text-sm font-bold flex items-center transition-colors cursor-pointer border ${

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config";
 import {
   Search,
   User,
@@ -15,7 +16,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface OfficeHour {
   id: number | string;
@@ -39,7 +40,7 @@ export default function BookAppointments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(
-    null,
+    null
   );
   const [selectedSlot, setSelectedSlot] = useState<OfficeHour | null>(null);
   const [reason, setReason] = useState("");
@@ -126,7 +127,7 @@ export default function BookAppointments() {
         `${API_BASE}/api/appointments/student/${studentId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       if (res.ok) {
         const data = await res.json();
@@ -154,7 +155,7 @@ export default function BookAppointments() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (res.ok) {
@@ -173,7 +174,7 @@ export default function BookAppointments() {
   const filteredLecturers = lecturers.filter(
     (l) =>
       l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.department.toLowerCase().includes(searchQuery.toLowerCase()),
+      l.department.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSendRequest = async (e?: React.FormEvent) => {
@@ -276,8 +277,8 @@ export default function BookAppointments() {
                       lecturer.is_visiting
                         ? "opacity-60 bg-gray-50 dark:bg-gray-700 cursor-not-allowed border-gray-100 dark:border-gray-700"
                         : selectedLecturer?.id === lecturer.id
-                          ? "bg-red-50 dark:bg-red-900/20 border-red-300 ring-1 ring-red-300 shadow-sm cursor-pointer"
-                          : "border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-700 hover:border-gray-200 dark:border-gray-700 cursor-pointer"
+                        ? "bg-red-50 dark:bg-red-900/20 border-red-300 ring-1 ring-red-300 shadow-sm cursor-pointer"
+                        : "border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-700 hover:border-gray-200 dark:border-gray-700 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -441,8 +442,8 @@ export default function BookAppointments() {
                       isSuccess
                         ? "bg-green-600 text-white cursor-default"
                         : isSubmitting
-                          ? "bg-red-400 cursor-not-allowed text-white"
-                          : "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20 active:scale-95"
+                        ? "bg-red-400 cursor-not-allowed text-white"
+                        : "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20 active:scale-95"
                     }`}
                   >
                     {isSubmitting ? (
@@ -532,8 +533,8 @@ export default function BookAppointments() {
                           req.status === "Pending"
                             ? "bg-yellow-100 text-yellow-600 border-yellow-200 animate-pulse"
                             : req.status === "Approved"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-800 border-green-200"
-                              : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-800 border-green-200"
+                            : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200"
                         }`}
                       >
                         {req.status}
@@ -617,7 +618,7 @@ export default function BookAppointments() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </>
   );

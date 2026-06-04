@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config";
 import {
   Users,
   Video,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 const FACULTY_DEPARTMENTS: Record<string, string[]> = {
   "Faculty of Computing": [
@@ -83,10 +84,13 @@ export default function LiveSessionsDashboard() {
   const [showCoverRequestsOnly, setShowCoverRequestsOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
   });
   const [viewMode, setViewMode] = useState<"daily" | "upcoming_covers">(
-    "daily",
+    "daily"
   );
   const [upcomingCovers, setUpcomingCovers] = useState<Session[]>([]);
 
@@ -108,7 +112,7 @@ export default function LiveSessionsDashboard() {
         `${API_BASE}/api/admin/timetable/today?date=${selectedDate}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       if (res.ok) {
         const json = await res.json();
@@ -376,7 +380,11 @@ export default function LiveSessionsDashboard() {
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
               disabled={!facultyFilter}
-              className={`w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold text-gray-700 ${!facultyFilter ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+              className={`w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-semibold text-gray-700 ${
+                !facultyFilter
+                  ? "opacity-70 cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
             >
               <option value="">
                 {facultyFilter ? "All Departments" : "Select Faculty First"}
@@ -424,8 +432,8 @@ export default function LiveSessionsDashboard() {
                 String(session.id) === hostedSessionId
                   ? "bg-yellow-50/30 border-2 border-yellow-400"
                   : session.status === "Live"
-                    ? "bg-white border-2 border-green-200 shadow-md"
-                    : "bg-white border-2 border-gray-200 hover:shadow-lg"
+                  ? "bg-white border-2 border-green-200 shadow-md"
+                  : "bg-white border-2 border-gray-200 hover:shadow-lg"
               }`}
             >
               <div className="p-6">
@@ -436,10 +444,10 @@ export default function LiveSessionsDashboard() {
                         session.status === "Live"
                           ? "bg-green-100 text-green-600 animate-pulse border-2 border-green-200"
                           : session.status === "Completed"
-                            ? "bg-green-100 text-green-600"
-                            : session.status === "Missed"
-                              ? "bg-red-100 text-red-600 font-bold border border-red-200 shadow-sm"
-                              : "bg-blue-100 text-blue-700"
+                          ? "bg-green-100 text-green-600"
+                          : session.status === "Missed"
+                          ? "bg-red-100 text-red-600 font-bold border border-red-200 shadow-sm"
+                          : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {session.status === "Live"
@@ -515,7 +523,7 @@ export default function LiveSessionsDashboard() {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
-                      },
+                      }
                     )}
                   </div>
                 </div>
@@ -570,10 +578,10 @@ export default function LiveSessionsDashboard() {
 
                 {(() => {
                   const sessionId = String(
-                    (session as any).batch_id || session.id,
+                    (session as any).batch_id || session.id
                   );
                   const activeAdminSession = localStorage.getItem(
-                    "admin_activeSession",
+                    "admin_activeSession"
                   );
                   const isMyHostedSession = activeAdminSession === sessionId;
 
@@ -614,7 +622,7 @@ export default function LiveSessionsDashboard() {
                                 isLive: true,
                                 viewOnly: false,
                               },
-                            },
+                            }
                           )
                         }
                         className="w-full bg-yellow-100 hover:bg-yellow-50 cursor-pointer text-yellow-600 border-2 border-yellow-700 font-bold py-2 px-4 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm"
@@ -644,7 +652,7 @@ export default function LiveSessionsDashboard() {
                                 isLive: true,
                                 viewOnly: true,
                               },
-                            },
+                            }
                           )
                         }
                         className="w-full bg-green-100 text-sm hover:bg-green-200 cursor-pointer text-green-600 border-2 border-green-200 font-bold py-2 px-4 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm"
@@ -671,7 +679,7 @@ export default function LiveSessionsDashboard() {
                                 isLive: false,
                                 viewOnly: false,
                               },
-                            },
+                            }
                           )
                         }
                         className="w-full bg-blue-100 hover:bg-blue-200 cursor-pointer text-blue-700 border-2 border-blue-200 font-bold py-2 px-4 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm"

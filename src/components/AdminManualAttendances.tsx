@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   Calendar,
   ArrowLeft,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 const universityData: Record<string, string[]> = {
   "Faculty of Computing": [
@@ -169,28 +170,28 @@ export default function AdminManualAttendances() {
   const navigate = useNavigate();
 
   const [filterFaculty, setFilterFaculty] = useState(
-    () => sessionStorage.getItem("admin_filterFaculty") || "all",
+    () => sessionStorage.getItem("admin_filterFaculty") || "all"
   );
   const [filterDepartment, setFilterDepartment] = useState(
-    () => sessionStorage.getItem("admin_filterDepartment") || "all",
+    () => sessionStorage.getItem("admin_filterDepartment") || "all"
   );
   const [filterDegree, setFilterDegree] = useState(
-    () => sessionStorage.getItem("admin_filterDegree") || "all",
+    () => sessionStorage.getItem("admin_filterDegree") || "all"
   );
   const [lecturerType, setLecturerType] = useState(
-    () => sessionStorage.getItem("admin_lecturerType") || "all",
+    () => sessionStorage.getItem("admin_lecturerType") || "all"
   );
   const [filterLecturerName, setFilterLecturerName] = useState(
-    () => sessionStorage.getItem("admin_filterLecturerName") || "all",
+    () => sessionStorage.getItem("admin_filterLecturerName") || "all"
   );
   const [selectedBatch, setSelectedBatch] = useState(
-    () => sessionStorage.getItem("admin_selectedBatch") || "all",
+    () => sessionStorage.getItem("admin_selectedBatch") || "all"
   );
   const [filterSemester, setFilterSemester] = useState(
-    () => sessionStorage.getItem("admin_filterSemester") || "all",
+    () => sessionStorage.getItem("admin_filterSemester") || "all"
   );
   const [selectedModule, setSelectedModule] = useState(
-    () => sessionStorage.getItem("admin_selectedModule") || "all",
+    () => sessionStorage.getItem("admin_selectedModule") || "all"
   );
 
   const [availableModules, setAvailableModules] = useState<any[]>([]);
@@ -204,7 +205,7 @@ export default function AdminManualAttendances() {
 
   const availableBatches = useMemo(() => {
     return allBatches.filter(
-      (batch) => filterDegree === "all" || batch.degree === filterDegree,
+      (batch) => filterDegree === "all" || batch.degree === filterDegree
     );
   }, [allBatches, filterDegree]);
 
@@ -234,11 +235,11 @@ export default function AdminManualAttendances() {
       let matchesLecturer = true;
       if (filterLecturerName !== "all") {
         const selectedLec = allLecturers.find(
-          (l) => l.name === filterLecturerName,
+          (l) => l.name === filterLecturerName
         );
         if (selectedLec && selectedLec.assigned_subjects) {
           matchesLecturer = selectedLec.assigned_subjects.includes(
-            module.module_code,
+            module.module_code
           );
         } else {
           matchesLecturer = false;
@@ -308,7 +309,7 @@ export default function AdminManualAttendances() {
 
   const fetchSessions = async (
     moduleCodeOverride?: string,
-    batchOverride?: string,
+    batchOverride?: string
   ) => {
     const activeModule = moduleCodeOverride || selectedModule;
     const activeBatch = batchOverride || selectedBatch;
@@ -326,7 +327,7 @@ export default function AdminManualAttendances() {
         `${API_BASE}/api/attendance/sessions?module_code=${moduleCode}${batchParam}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (response.ok) {
@@ -553,7 +554,11 @@ export default function AdminManualAttendances() {
                 }
               }}
               disabled={filterDegree === "all"}
-              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${filterDegree === "all" ? "border-gray-200" : "border-gray-300 cursor-pointer"}`}
+              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+                filterDegree === "all"
+                  ? "border-gray-200"
+                  : "border-gray-300 cursor-pointer"
+              }`}
             >
               <option value="all">All Batches</option>
               {availableBatches.map((batch) => (
@@ -616,7 +621,11 @@ export default function AdminManualAttendances() {
                 }
               }}
               disabled={filterDegree === "all" && filterLecturerName === "all"}
-              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${filterDegree === "all" && filterLecturerName === "all" ? "border-gray-200" : "border-gray-300 cursor-pointer"}`}
+              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+                filterDegree === "all" && filterLecturerName === "all"
+                  ? "border-gray-200"
+                  : "border-gray-300 cursor-pointer"
+              }`}
             >
               <option value="all">Select a Module</option>
               {filteredModules.map((m) => (
@@ -645,7 +654,11 @@ export default function AdminManualAttendances() {
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl shadow-sm hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer"
           >
             <RefreshCw
-              className={`w-4 h-4 ${isLoadingSessions ? "animate-spin text-blue-600" : "text-gray-500"}`}
+              className={`w-4 h-4 ${
+                isLoadingSessions
+                  ? "animate-spin text-blue-600"
+                  : "text-gray-500"
+              }`}
             />
             Refresh
           </button>
@@ -734,10 +747,12 @@ export default function AdminManualAttendances() {
                       <div className="text-xs font-semibold text-gray-500 mt-1">
                         {/* Format and display Start Time - End Time */}
                         {session.start_time && session.end_time
-                          ? `${formatTime(session.start_time)} - ${formatTime(session.end_time)}`
+                          ? `${formatTime(session.start_time)} - ${formatTime(
+                              session.end_time
+                            )}`
                           : session.start_time
-                            ? formatTime(session.start_time)
-                            : "Time N/A"}
+                          ? formatTime(session.start_time)
+                          : "Time N/A"}
                       </div>
                     </div>
                   </div>
@@ -775,7 +790,7 @@ export default function AdminManualAttendances() {
                         const currentLecName =
                           session.lecturer || session._snap_lecturer;
                         const matchedLec = allLecturers.find(
-                          (l) => l.name === currentLecName,
+                          (l) => l.name === currentLecName
                         );
                         // Check if employee_id exists and contains 'VIS'
                         const isVis = matchedLec?.employee_id

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../config";
 import {
   MessageCircle,
   GraduationCap,
@@ -14,7 +15,7 @@ import {
 import toast from "react-hot-toast";
 import ChatbotWidget from "./ChatbotWidget";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface LoginScreenProps {
   onLogin: (role: "Admin" | "Lecturer" | "Student") => void;
@@ -69,7 +70,7 @@ export default function LoginScreen({
         localStorage.setItem("studentToken", data.access_token);
         localStorage.setItem(
           "requiresPasswordChange",
-          String(data.requires_password_change),
+          String(data.requires_password_change)
         );
         localStorage.setItem("student_role", assignedRole);
         localStorage.setItem("student_email", email);
@@ -78,7 +79,7 @@ export default function LoginScreen({
         if (assignedRole === "Lecturer") {
           localStorage.setItem(
             "lecturerRequiresPasswordChange",
-            String(data.requires_password_change),
+            String(data.requires_password_change)
           );
         }
         localStorage.setItem("lecturer_role", assignedRole);

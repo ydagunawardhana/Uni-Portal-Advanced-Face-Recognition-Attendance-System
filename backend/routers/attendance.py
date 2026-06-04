@@ -1499,7 +1499,8 @@ def get_student_dashboard_summary(
     
     profile_pic = student_profile.profile_picture if student_profile else None
     if profile_pic and profile_pic.startswith("/uploads"):
-        profile_pic = f"http://localhost:8000{profile_pic}"
+        BASE_URL = os.getenv("API_URL", "http://localhost:8000")
+        profile_pic = f"{BASE_URL}{profile_pic}"
 
     # 2. Get ALL Attendance Records for this student (using integer ID!)
     records = db.query(models.AttendanceRecord).filter(

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config";
 import {
   Search,
   Calendar,
@@ -14,7 +15,7 @@ import {
 import { toast } from "react-hot-toast";
 import AttendanceReports from "./AttendanceReports";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Subject {
   id: string | number;
@@ -147,7 +148,9 @@ export default function LecturerMySubjects() {
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 text-gray-700 font-medium transition-colors cursor-pointer disabled:opacity-50"
         >
           <RefreshCw
-            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"}`}
+            className={`w-4 h-4 ${
+              isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"
+            }`}
           />
           Refresh
         </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "../config";
 import {
   Users,
   Check,
@@ -16,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Student {
   id: number;
@@ -75,7 +76,7 @@ export default function ManualAttendanceMarking() {
     CompletedSession[]
   >([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
-    null,
+    null
   );
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
@@ -141,7 +142,11 @@ export default function ManualAttendanceMarking() {
       try {
         const lecturerToken = localStorage.getItem("lecturerToken");
         // Use the specialized subject attendance endpoint
-        const apiUrl = `${API_BASE}/api/lecturer/attendance/${encodeURIComponent(session.module_code)}?date=${encodeURIComponent(session.date)}&batch=${encodeURIComponent(session.batch)}&session_id=${selectedSessionId}`;
+        const apiUrl = `${API_BASE}/api/lecturer/attendance/${encodeURIComponent(
+          session.module_code
+        )}?date=${encodeURIComponent(session.date)}&batch=${encodeURIComponent(
+          session.batch
+        )}&session_id=${selectedSessionId}`;
 
         const res = await fetch(apiUrl, {
           headers: { Authorization: `Bearer ${lecturerToken}` },
@@ -267,7 +272,7 @@ export default function ManualAttendanceMarking() {
         const errorData = await res.json().catch(() => ({}));
         console.error(
           "FastAPI Validation Error Details:",
-          JSON.stringify(errorData, null, 2),
+          JSON.stringify(errorData, null, 2)
         );
         throw new Error("Failed to save overrides");
       }
@@ -386,7 +391,7 @@ export default function ManualAttendanceMarking() {
                     <button
                       onClick={() => {
                         filteredStudents.forEach((s) =>
-                          handleStatusChange(s.id, "Present"),
+                          handleStatusChange(s.id, "Present")
                         );
                       }}
                       className="px-2 py-1 bg-green-100 cursor-pointer text-green-700 rounded-lg text-sm font-bold border-2 border-green-100 hover:bg-green-200 transition-colors"
@@ -567,7 +572,11 @@ export default function ManualAttendanceMarking() {
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                 <div className="text-sm font-bold text-gray-400 tracking-widest flex items-center gap-2">
                   <div
-                    className={`w-3 h-3 rounded-full ${Object.keys(edits).length > 0 ? "bg-red-500 animate-pulse" : "bg-gray-400"}`}
+                    className={`w-3 h-3 rounded-full ${
+                      Object.keys(edits).length > 0
+                        ? "bg-red-500 animate-pulse"
+                        : "bg-gray-400"
+                    }`}
                   />
                   {Object.keys(edits).length} pending changes to be saved
                 </div>

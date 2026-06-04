@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config";
 import {
   Search,
   Plus,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 const TOTAL_FRAMES = 50;
 const FRAME_INTERVAL_MS = 300;
 
@@ -158,7 +159,7 @@ export default function ManageStudents({
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentData | null>(
-    null,
+    null
   );
   const [editForm, setEditForm] = useState({
     name: "",
@@ -180,12 +181,12 @@ export default function ManageStudents({
 
   // Delete Modal State
   const [studentToDelete, setStudentToDelete] = useState<StudentData | null>(
-    null,
+    null
   );
 
   // Recapture Modal State
   const [studentToCapture, setStudentToCapture] = useState<StudentData | null>(
-    null,
+    null
   );
   const [camActive, setCamActive] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -227,7 +228,7 @@ export default function ManageStudents({
         console.error(
           "Fetch students failed:",
           studentsRes.status,
-          pendingRes.status,
+          pendingRes.status
         );
         toast.error("Failed to fetch student data from server.");
       }
@@ -242,7 +243,7 @@ export default function ManageStudents({
   const getImageUrl = (path?: string | null, name?: string) => {
     if (path) return `${API_BASE}${path}?t=${Date.now()}`;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      name || "Unknown",
+      name || "Unknown"
     )}&background=random`;
   };
 
@@ -338,7 +339,7 @@ export default function ManageStudents({
               setFaceStatus({ isError: false, message: "Face Detected" });
               toast.loading(
                 `Capturing face… (${currentFrames.length}/${TOTAL_FRAMES})`,
-                { id: toastId },
+                { id: toastId }
               );
             } else {
               setFaceStatus({
@@ -378,7 +379,7 @@ export default function ManageStudents({
 
     const token = localStorage.getItem("adminToken");
     const toastId = toast.loading(
-      `Uploading dataset for ${studentToCapture.name}...`,
+      `Uploading dataset for ${studentToCapture.name}...`
     );
 
     try {
@@ -391,7 +392,7 @@ export default function ManageStudents({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ images: capturedFrames }),
-        },
+        }
       );
 
       if (res.ok) {
@@ -399,14 +400,14 @@ export default function ManageStudents({
 
         // Update states
         setPendingRetrains((prev) =>
-          prev.filter((s) => s.id !== studentToCapture.id),
+          prev.filter((s) => s.id !== studentToCapture.id)
         );
         setStudents((prev) =>
           prev.map((s) =>
             s.id === studentToCapture.id
               ? { ...s, retrain_requested: false }
-              : s,
-          ),
+              : s
+          )
         );
 
         setStudentToCapture(null);
@@ -523,7 +524,7 @@ export default function ManageStudents({
             gender: editForm.gender,
             is_active: isActive,
           }),
-        },
+        }
       );
 
       if (res.ok) {
@@ -641,14 +642,14 @@ export default function ManageStudents({
                       <option key={dept} value={dept}>
                         {dept}
                       </option>
-                    )),
+                    ))
                   )
                 : Object.keys(universityData[selectedFacultyFilter] || {}).map(
                     (dept) => (
                       <option key={dept} value={dept}>
                         {dept}
                       </option>
-                    ),
+                    )
                   )}
             </select>
 
@@ -1026,7 +1027,7 @@ export default function ManageStudents({
                                 <option key={dept} value={dept}>
                                   {dept}
                                 </option>
-                              ),
+                              )
                             )}
                         </select>
                       </div>
@@ -1056,7 +1057,7 @@ export default function ManageStudents({
                               <option key={degree} value={degree}>
                                 {degree}
                               </option>
-                            ),
+                            )
                           )}
                       </select>
                     </div>
@@ -1181,7 +1182,7 @@ export default function ManageStudents({
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* Recapture Modal - PORTED STRICT LOGIC */}
@@ -1226,7 +1227,7 @@ export default function ManageStudents({
                       autoPlay
                       muted
                       playsInline
-                      style={{ transform: 'scaleX(-1)' }}
+                      style={{ transform: "scaleX(-1)" }}
                       className="w-full h-full object-cover absolute inset-0"
                     />
 
@@ -1409,7 +1410,7 @@ export default function ManageStudents({
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* Custom Delete Confirmation Modal */}
@@ -1459,7 +1460,7 @@ export default function ManageStudents({
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );

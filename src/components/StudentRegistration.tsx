@@ -14,8 +14,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 const TOTAL_FRAMES = 50;
 const HALFWAY = 25;
 const FRAME_INTERVAL_MS = 300;
@@ -146,7 +147,7 @@ export default function StudentRegistration() {
   const capturedFramesRef = useRef<string[]>([]);
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
-    [],
+    []
   );
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
@@ -232,18 +233,18 @@ export default function StudentRegistration() {
         setCamActive(true);
         // Notify Header
         window.dispatchEvent(
-          new CustomEvent("camera-status", { detail: "Online" }),
+          new CustomEvent("camera-status", { detail: "Online" })
         );
       } catch {
         toast.error(
-          "Could not access webcam. Please allow camera permissions.",
+          "Could not access webcam. Please allow camera permissions."
         );
         window.dispatchEvent(
-          new CustomEvent("camera-status", { detail: "Offline" }),
+          new CustomEvent("camera-status", { detail: "Offline" })
         );
       }
     },
-    [selectedCameraId],
+    [selectedCameraId]
   );
 
   const stopCamera = useCallback(() => {
@@ -256,7 +257,7 @@ export default function StudentRegistration() {
     setCapturing(false);
     // Notify Header
     window.dispatchEvent(
-      new CustomEvent("camera-status", { detail: "Offline" }),
+      new CustomEvent("camera-status", { detail: "Offline" })
     );
   }, []);
 
@@ -266,7 +267,7 @@ export default function StudentRegistration() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         window.dispatchEvent(
-          new CustomEvent("camera-status", { detail: "Offline" }),
+          new CustomEvent("camera-status", { detail: "Offline" })
         );
       }
     };
@@ -295,7 +296,7 @@ export default function StudentRegistration() {
       0,
       0,
       canvasRef.current.width,
-      canvasRef.current.height,
+      canvasRef.current.height
     );
     const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.85);
     return dataUrl.split(",")[1];
@@ -344,7 +345,7 @@ export default function StudentRegistration() {
               setFaceStatus({ isError: false, message: "Face Detected" });
               toast.loading(
                 `Capturing face images… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`,
-                { id: toastId },
+                { id: toastId }
               );
             } else {
               setFaceStatus({ isError: true, message: `${data.reason}` });
@@ -397,7 +398,7 @@ export default function StudentRegistration() {
     captureActiveRef.current = true;
     setCapturing(true);
     const toastId = toast.loading(
-      `Resuming capture… (${imagesCaptured}/${TOTAL_FRAMES})`,
+      `Resuming capture… (${imagesCaptured}/${TOTAL_FRAMES})`
     );
 
     const resumeLoop = async () => {
@@ -421,7 +422,7 @@ export default function StudentRegistration() {
               setFaceStatus({ isError: false, message: "Face Detected" });
               toast.loading(
                 `Capturing face images… (${capturedFramesRef.current.length}/${TOTAL_FRAMES})`,
-                { id: toastId },
+                { id: toastId }
               );
             } else {
               setFaceStatus({ isError: true, message: `${data.reason}` });
@@ -749,7 +750,7 @@ export default function StudentRegistration() {
                           <option key={dept} value={dept}>
                             {dept}
                           </option>
-                        ),
+                        )
                       )}
                   </select>
                 </div>
@@ -778,7 +779,7 @@ export default function StudentRegistration() {
                         <option key={degree} value={degree}>
                           {degree}
                         </option>
-                      ),
+                      )
                     )}
                 </select>
               </div>
@@ -949,8 +950,10 @@ export default function StudentRegistration() {
               autoPlay
               playsInline
               muted
-              style={{ transform: 'scaleX(-1)' }}
-              className={`absolute inset-0 w-full h-full object-cover ${camActive ? "opacity-100" : "opacity-0"}`}
+              style={{ transform: "scaleX(-1)" }}
+              className={`absolute inset-0 w-full h-full object-cover ${
+                camActive ? "opacity-100" : "opacity-0"
+              }`}
             />
 
             {/* Placeholder shown when camera isn't active */}
@@ -1086,22 +1089,24 @@ export default function StudentRegistration() {
                       imagesCaptured < HALFWAY
                         ? "bg-gray-200 text-gray-700"
                         : imagesCaptured < TOTAL_FRAMES
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-green-100 text-green-700"
                     }`}
                   >
                     {imagesCaptured < HALFWAY
                       ? "Phase 1 - With Glasses"
                       : imagesCaptured < TOTAL_FRAMES
-                        ? "Phase 2 - Without Glasses"
-                        : "Complete"}
+                      ? "Phase 2 - Without Glasses"
+                      : "Complete"}
                   </span>
                 )}
               </label>
 
               {faceStatus && (
                 <span
-                  className={`text-sm font-semibold truncate max-w-[50%] text-right ${faceStatus.isError ? "text-red-500" : "text-green-600"}`}
+                  className={`text-sm font-semibold truncate max-w-[50%] text-right ${
+                    faceStatus.isError ? "text-red-500" : "text-green-600"
+                  }`}
                 >
                   {faceStatus.message}
                 </span>
@@ -1124,8 +1129,8 @@ export default function StudentRegistration() {
                   captureComplete
                     ? "bg-green-500"
                     : awaitingGlassesRemoval
-                      ? "bg-amber-500"
-                      : "bg-blue-600"
+                    ? "bg-amber-500"
+                    : "bg-blue-600"
                 }`}
                 style={{
                   width: `${(imagesCaptured / TOTAL_FRAMES) * 100}%`,

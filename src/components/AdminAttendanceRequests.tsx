@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 import {
   CheckCircle,
   XCircle,
@@ -65,10 +66,10 @@ const AdminAttendanceRequests = () => {
     try {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(
-        "http://localhost:8000/api/attendance/admin/attendance-requests",
+        API_BASE_URL + "/api/attendance/admin/attendance-requests",
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) throw new Error("Failed to fetch requests");
@@ -120,7 +121,7 @@ const AdminAttendanceRequests = () => {
       }
 
       const response = await fetch(
-        `http://localhost:8000/api/attendance/admin/attendance-requests/${activeRequestId}/${endpoint}`,
+        `${API_BASE_URL}/api/attendance/admin/attendance-requests/${activeRequestId}/${endpoint}`,
         {
           method,
           headers: {
@@ -128,7 +129,7 @@ const AdminAttendanceRequests = () => {
             Authorization: `Bearer ${token}`,
           },
           body,
-        },
+        }
       );
 
       if (!response.ok) {
@@ -143,10 +144,12 @@ const AdminAttendanceRequests = () => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       toast.success(
-        `Request ${modalType === "Approve" ? "approved" : "rejected"} successfully!`,
+        `Request ${
+          modalType === "Approve" ? "approved" : "rejected"
+        } successfully!`,
         {
           id: toastId,
-        },
+        }
       );
 
       closeModal();
@@ -457,7 +460,9 @@ const AdminAttendanceRequests = () => {
                           href={
                             req.evidence_url.startsWith("http")
                               ? req.evidence_url
-                              : `http://localhost:8000${req.evidence_url.startsWith("/") ? "" : "/"}${req.evidence_url}`
+                              : `${API_BASE_URL}${
+                                  req.evidence_url.startsWith("/") ? "" : "/"
+                                }${req.evidence_url}`
                           }
                           target="_blank"
                           rel="noopener noreferrer"
@@ -475,8 +480,8 @@ const AdminAttendanceRequests = () => {
                           req.status === "Pending"
                             ? "bg-yellow-100 text-yellow-700 border-2 border-yellow-200 animate-pulse"
                             : req.status === "Approved"
-                              ? "bg-green-100 border-2 border-green-200 text-green-700"
-                              : "bg-red-100 border-2 border-red-200 text-red-700"
+                            ? "bg-green-100 border-2 border-green-200 text-green-700"
+                            : "bg-red-100 border-2 border-red-200 text-red-700"
                         }`}
                       >
                         {req.status}
@@ -525,7 +530,11 @@ const AdminAttendanceRequests = () => {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${modalType === "Approve" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    modalType === "Approve"
+                      ? "bg-green-100 text-green-600"
+                      : "bg-red-100 text-red-600"
+                  }`}
                 >
                   {modalType === "Approve" ? (
                     <CheckCircle className="w-7 h-7" />
@@ -561,10 +570,16 @@ const AdminAttendanceRequests = () => {
               )}
 
               <div
-                className={`p-4 mb-6 rounded-xl border-l-4 border-2 ${modalType === "Approve" ? "bg-blue-50 border-blue-200" : "bg-red-100 border-red-300"}`}
+                className={`p-4 mb-6 rounded-xl border-l-4 border-2 ${
+                  modalType === "Approve"
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-red-100 border-red-300"
+                }`}
               >
                 <p
-                  className={`text-xs leading-relaxed font-semibold ${modalType === "Approve" ? "text-blue-800" : "text-red-700"}`}
+                  className={`text-xs leading-relaxed font-semibold ${
+                    modalType === "Approve" ? "text-blue-800" : "text-red-700"
+                  }`}
                 >
                   <strong className="font-bold flex items-center gap-1 mb-1 text-sm">
                     <Info className="w-5 h-5" /> Important Note:

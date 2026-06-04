@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config";
 import {
   Search,
   Plus,
@@ -15,7 +16,7 @@ import AddLecturerModal from "./AddLecturerModal";
 import EditLecturerModal from "./EditLecturerModal";
 import AddVisitingLecturerModal from "./AddVisitingLecturerModal";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Lecturer {
   id: number;
@@ -70,7 +71,7 @@ export default function ManageLecturers() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedLecturer, setSelectedLecturer] = useState<Lecturer | null>(
-    null,
+    null
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isVisitingSaving, setIsVisitingSaving] = useState(false);
@@ -151,7 +152,7 @@ export default function ManageLecturers() {
 
     if (!formData.autoGeneratePassword) {
       toast.error(
-        "You must check the auto-generate password option to proceed.",
+        "You must check the auto-generate password option to proceed."
       );
       return;
     }
@@ -188,7 +189,7 @@ export default function ManageLecturers() {
           {
             id: toastId,
             duration: 6000,
-          },
+          }
         );
         setIsModalOpen(false);
         fetchLecturers();
@@ -262,7 +263,7 @@ export default function ManageLecturers() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
 
       if (res.ok) {
@@ -294,13 +295,13 @@ export default function ManageLecturers() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (res.ok) {
         toast.success("Lecturer deleted successfully!", { id: toastId });
         setLecturers((prev) =>
-          prev.filter((l) => l.id !== selectedLecturer.id),
+          prev.filter((l) => l.id !== selectedLecturer.id)
         );
         setIsDeleteModalOpen(false);
       } else {
@@ -482,7 +483,7 @@ export default function ManageLecturers() {
                       <option key={code} value={code}>
                         {code}
                       </option>
-                    ),
+                    )
                   )
                 : allModules
                     .filter((m) => m.department === departmentFilter)
@@ -769,7 +770,7 @@ export default function ManageLecturers() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );

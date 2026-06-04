@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Lock, Mail, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface AdminLoginProps {
   onLogin: (role: "Admin") => void;
@@ -38,7 +39,7 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
       if (!res.ok) {
         toast.error(
           data?.detail || "Invalid admin credentials or unauthorized.",
-          { id: toastId },
+          { id: toastId }
         );
         return;
       }
@@ -56,7 +57,7 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
     } catch (error: any) {
       toast.error(
         error.message || "Network error while connecting to server.",
-        { id: toastId },
+        { id: toastId }
       );
     } finally {
       setLoading(false);
@@ -136,8 +137,8 @@ export default function AdminLogin({ onLogin, onBackToHome }: AdminLoginProps) {
               {isRedirecting
                 ? "Authenticating..."
                 : loading
-                  ? "Verifying..."
-                  : "Secure Sign In"}
+                ? "Verifying..."
+                : "Secure Sign In"}
             </span>
           </button>
           <p className="text-xs text-gray-400 text-center font-semibold">

@@ -11,6 +11,7 @@ import {
   Clock,
   Send,
 } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
 interface AccordionItem {
   question: string;
@@ -76,7 +77,7 @@ export default function StudentHelpSupport() {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/chatbot/ask", {
+      const response = await fetch(API_BASE_URL + "/api/chatbot/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText }),
@@ -209,7 +210,7 @@ export default function StudentHelpSupport() {
                     <button
                       onClick={() =>
                         setInputValue(
-                          "How do I request an attendance correction?",
+                          "How do I request an attendance correction?"
                         )
                       }
                       className="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-600 dark:text-gray-400 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600 transition-all shadow-sm cursor-pointer"
@@ -219,7 +220,7 @@ export default function StudentHelpSupport() {
                     <button
                       onClick={() =>
                         setInputValue(
-                          "My camera is not working, what should I do?",
+                          "My camera is not working, what should I do?"
                         )
                       }
                       className="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-600 dark:text-gray-400 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600 transition-all shadow-sm cursor-pointer"

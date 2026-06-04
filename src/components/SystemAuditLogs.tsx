@@ -16,8 +16,9 @@ import {
 import toast from "react-hot-toast";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface AuditLog {
   id: number;
@@ -173,7 +174,7 @@ export default function SystemAuditLogs() {
         `${API_BASE}/api/admin/audit-logs?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (res.ok) {
@@ -248,7 +249,12 @@ export default function SystemAuditLogs() {
         minute: "2-digit",
         hour12: true,
       })}`;
-      subtitleCell.font = { name: "Calibri", size: 11, italic: true, color: { argb: "FF666666" } };
+      subtitleCell.font = {
+        name: "Calibri",
+        size: 11,
+        italic: true,
+        color: { argb: "FF666666" },
+      };
       subtitleCell.alignment = { horizontal: "center", vertical: "middle" };
       worksheet.getRow(2).height = 25;
 
@@ -257,9 +263,15 @@ export default function SystemAuditLogs() {
       // 3. Applied Filters Section
       const filterMetadata = [
         ["Search Query:", searchQuery || "None"],
-        ["Date Range:", startDate && endDate ? `${startDate} to ${endDate}` : "All Time"],
+        [
+          "Date Range:",
+          startDate && endDate ? `${startDate} to ${endDate}` : "All Time",
+        ],
         ["Filter by Role:", roleFilter === "All" ? "All Roles" : roleFilter],
-        ["Action Type:", actionTypeFilter === "All" ? "All Actions" : actionTypeFilter],
+        [
+          "Action Type:",
+          actionTypeFilter === "All" ? "All Actions" : actionTypeFilter,
+        ],
       ];
 
       filterMetadata.forEach((meta) => {
@@ -282,7 +294,11 @@ export default function SystemAuditLogs() {
       const headerRow = worksheet.addRow(headers);
       headerRow.height = 25;
       headerRow.eachCell((cell) => {
-        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Calibri" };
+        cell.font = {
+          bold: true,
+          color: { argb: "FFFFFFFF" },
+          name: "Calibri",
+        };
         cell.fill = {
           type: "pattern",
           pattern: "solid",
@@ -537,7 +553,9 @@ export default function SystemAuditLogs() {
                         </div>
                         {role && (
                           <span
-                            className={`inline-block px-2 py-0.5 text-sm font-medium rounded border ${getRoleBadgeColor(role)}`}
+                            className={`inline-block px-2 py-0.5 text-sm font-medium rounded border ${getRoleBadgeColor(
+                              role
+                            )}`}
                           >
                             {role}
                           </span>
@@ -630,7 +648,7 @@ export default function SystemAuditLogs() {
               <div className="flex items-center space-x-1">
                 {Array.from(
                   { length: Math.min(totalPages, 7) },
-                  (_, i) => i + 1,
+                  (_, i) => i + 1
                 ).map((page) => (
                   <button
                     key={page}

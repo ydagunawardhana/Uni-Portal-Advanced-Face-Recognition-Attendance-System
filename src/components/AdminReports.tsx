@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { API_BASE_URL } from "../config";
 import {
   FileSpreadsheet,
   FileText,
@@ -178,14 +179,14 @@ export default function AdminReports({
   const [allBatches, setAllBatches] = useState<any[]>([]);
   const availableBatches = useMemo(() => {
     return allBatches.filter(
-      (batch) => filterDegree === "all" || batch.degree === filterDegree,
+      (batch) => filterDegree === "all" || batch.degree === filterDegree
     );
   }, [allBatches, filterDegree]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<StudentRecord[]>(
-    [],
+    []
   );
   const [subjectDetails, setSubjectDetails] = useState({
     total_students: 0,
@@ -220,10 +221,10 @@ export default function AdminReports({
       }
 
       const res = await fetch(
-        `http://localhost:8000/api/lecturer/attendance/${moduleCode}?${params.toString()}`,
+        `${API_BASE_URL}/api/lecturer/attendance/${moduleCode}?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       const data = await res.json();
 
@@ -235,7 +236,7 @@ export default function AdminReports({
 
       setAttendanceRecords(formattedRecords);
       setSubjectDetails(
-        data.subject_details || { total_students: 0, total_sessions_held: 0 },
+        data.subject_details || { total_students: 0, total_sessions_held: 0 }
       );
     } catch (err) {
       console.error(err);
@@ -253,7 +254,7 @@ export default function AdminReports({
           localStorage.getItem("lecturerToken");
 
         // Fetch Modules
-        const modRes = await fetch(`http://localhost:8000/api/admin/modules`, {
+        const modRes = await fetch(`${API_BASE_URL}/api/admin/modules`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (modRes.ok) {
@@ -262,23 +263,17 @@ export default function AdminReports({
         }
 
         // Fetch Lecturers
-        const lecRes = await fetch(
-          `http://localhost:8000/api/admin/lecturers`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const lecRes = await fetch(`${API_BASE_URL}/api/admin/lecturers`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (lecRes.ok) {
           const data = await lecRes.json();
           setAllLecturers(data);
         }
         // Fetch Batches
-        const batchRes = await fetch(
-          `http://localhost:8000/api/admin/batches`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const batchRes = await fetch(`${API_BASE_URL}/api/admin/batches`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (batchRes.ok) {
           const data = await batchRes.json();
           setAllBatches(data);
@@ -346,10 +341,12 @@ export default function AdminReports({
         const batch = subject?.batch || selectedBatch;
 
         const response = await fetch(
-          `http://localhost:8000/api/attendance/sessions?module_code=${moduleCode || ""}&batch_id=${batch !== "all" ? batch : ""}`,
+          `${API_BASE_URL}/api/attendance/sessions?module_code=${
+            moduleCode || ""
+          }&batch_id=${batch !== "all" ? batch : ""}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
 
         if (response.ok) {
@@ -375,7 +372,7 @@ export default function AdminReports({
 
     if (sessionId !== "" && sessionId !== "Overall") {
       const selectedSession = sessions.find(
-        (s) => s.session_id.toString() === sessionId,
+        (s) => s.session_id.toString() === sessionId
       );
       if (selectedSession && selectedSession.date) {
         // Force strict YYYY-MM-DD format for the input field
@@ -467,14 +464,14 @@ export default function AdminReports({
     if (enrolled > 0) {
       if (selectedSessionId !== "Overall") {
         const presentCount = attendanceRecords.filter(
-          (r) => r.status?.toLowerCase() === "present",
+          (r) => r.status?.toLowerCase() === "present"
         ).length;
         attendanceVal = Math.round((presentCount / enrolled) * 100) + "%";
       } else {
         const avg =
           attendanceRecords.reduce(
             (acc, s) => acc + (s.attendance_percentage || 0),
-            0,
+            0
           ) / enrolled;
         attendanceVal = Math.round(avg) + "%";
       }
@@ -493,7 +490,7 @@ export default function AdminReports({
   const handleExportExcel = async () => {
     if (filterDegree === "all") {
       toast.error(
-        "Please filter down to at least a specific Degree before exporting data.",
+        "Please filter down to at least a specific Degree before exporting data."
       );
       return;
     }
@@ -536,7 +533,7 @@ export default function AdminReports({
             .length;
 
       const safeCount = displayedStudents.filter(
-        (r) => (parseFloat(String(r.attendance_percentage)) || 0) >= 70,
+        (r) => (parseFloat(String(r.attendance_percentage)) || 0) >= 70
       ).length;
       const warningCount = displayedStudents.filter((r) => {
         const a = parseFloat(String(r.attendance_percentage)) || 0;
@@ -547,12 +544,12 @@ export default function AdminReports({
         return a >= 20 && a < 50;
       }).length;
       const failCount = displayedStudents.filter(
-        (r) => (parseFloat(String(r.attendance_percentage)) || 0) < 20,
+        (r) => (parseFloat(String(r.attendance_percentage)) || 0) < 20
       ).length;
 
       // --- Section 1: Main Titles ---
       const selectedModuleObj = availableModules.find(
-        (m) => m.module_code === (subject?.module_code || selectedModule),
+        (m) => m.module_code === (subject?.module_code || selectedModule)
       );
       const moduleDisplayName =
         subject?.module_name ||
@@ -582,8 +579,11 @@ export default function AdminReports({
       titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
       worksheet.mergeCells("A2", `${maxCol}2`);
-      worksheet.getCell("A2").value =
-        `Generated on: ${new Date().toLocaleDateString()} | View: ${isOverall ? "Overall Summary" : `Session on ${fromDate}`}`;
+      worksheet.getCell(
+        "A2"
+      ).value = `Generated on: ${new Date().toLocaleDateString()} | View: ${
+        isOverall ? "Overall Summary" : `Session on ${fromDate}`
+      }`;
       worksheet.getCell("A2").font = { italic: true };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
 
@@ -601,14 +601,14 @@ export default function AdminReports({
       setInfo(
         "B5",
         subject?.degree ||
-          (filterDegree !== "all" ? filterDegree : "All Degrees"),
+          (filterDegree !== "all" ? filterDegree : "All Degrees")
       );
       setInfo("A6", "Semester:", true);
       setInfo("B6", subject?.semester || selectedModuleObj?.level || "N/A");
       setInfo("A7", "Lecturer:", true);
       setInfo(
         "B7",
-        filterLecturerName !== "all" ? filterLecturerName : "All Lecturers",
+        filterLecturerName !== "all" ? filterLecturerName : "All Lecturers"
       );
       setInfo("A8", "Total Enrolled:", true);
       setInfo("B8", enrolledCount);
@@ -621,14 +621,14 @@ export default function AdminReports({
       setInfo("A12", "Department:", true);
       setInfo(
         "B12",
-        filterDepartment !== "all" ? filterDepartment : "All Departments",
+        filterDepartment !== "all" ? filterDepartment : "All Departments"
       );
       setInfo("A13", "Risk Filter:", true);
       setInfo(
         "B13",
         riskFilter === "all"
           ? "All Students"
-          : riskFilter.charAt(0).toUpperCase() + riskFilter.slice(1),
+          : riskFilter.charAt(0).toUpperCase() + riskFilter.slice(1)
       );
       setInfo("A14", "Search Query:", true);
       setInfo("B14", searchQuery || "None");
@@ -651,7 +651,7 @@ export default function AdminReports({
         rowNum: number,
         label: string,
         count: number,
-        colorHex: string,
+        colorHex: string
       ) => {
         worksheet.getCell(`E${rowNum}`).value = label;
         worksheet.getCell(`E${rowNum}`).font = {
@@ -741,7 +741,9 @@ export default function AdminReports({
               record.total_sessions || 0,
               "",
               record.attended_sessions || 0,
-              `${parseFloat(String(record.attendance_percentage || 0)).toFixed(1)}%`,
+              `${parseFloat(String(record.attendance_percentage || 0)).toFixed(
+                1
+              )}%`,
             ]
           : [
               record.index_number || record.student_id || "N/A",
@@ -787,14 +789,26 @@ export default function AdminReports({
             if (colNumber === 6) {
               // Percentage Column — 4-tier colour coding
               const percentage = parseFloat(
-                cell.value?.toString().replace("%", "") || "0",
+                cell.value?.toString().replace("%", "") || "0"
               );
               if (percentage >= 70)
-                cell.font = { color: { argb: "FF16A34A" }, bold: true }; // green
+                cell.font = {
+                  color: { argb: "FF16A34A" },
+                  bold: true,
+                };
+              // green
               else if (percentage >= 50)
-                cell.font = { color: { argb: "FFEAB308" }, bold: true }; // yellow
+                cell.font = {
+                  color: { argb: "FFEAB308" },
+                  bold: true,
+                };
+              // yellow
               else if (percentage >= 20)
-                cell.font = { color: { argb: "FFF97316" }, bold: true }; // orange
+                cell.font = {
+                  color: { argb: "FFF97316" },
+                  bold: true,
+                };
+              // orange
               else cell.font = { color: { argb: "FFDC2626" }, bold: true }; // red
             }
           }
@@ -818,12 +832,12 @@ export default function AdminReports({
 
       saveAs(
         blob,
-        `Attendance_${safeModuleCode}_Batch${safeBatch}_${viewType}_${datePart}.xlsx`,
+        `Attendance_${safeModuleCode}_Batch${safeBatch}_${viewType}_${datePart}.xlsx`
       );
 
       if (toast.dismiss) toast.dismiss(toastId);
       toast.success(
-        `Report downloaded: ${displayedStudents.length} record(s) exported.`,
+        `Report downloaded: ${displayedStudents.length} record(s) exported.`
       );
     } catch (error) {
       console.error(error);
@@ -1055,7 +1069,7 @@ export default function AdminReports({
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
                   toast.error(
-                    "Please select a Degree first to view its batches.",
+                    "Please select a Degree first to view its batches."
                   )
                 }
               ></div>
@@ -1064,7 +1078,11 @@ export default function AdminReports({
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
               disabled={filterDegree === "all"}
-              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${filterDegree === "all" ? "border-gray-200" : "border-gray-300 cursor-pointer"}`}
+              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+                filterDegree === "all"
+                  ? "border-gray-200"
+                  : "border-gray-300 cursor-pointer"
+              }`}
             >
               <option value="all">
                 {filterDegree === "all" ? "Select Degree First" : "All Batches"}
@@ -1087,7 +1105,7 @@ export default function AdminReports({
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
                   toast.error(
-                    "Please select a Degree or a Lecturer first to view modules.",
+                    "Please select a Degree or a Lecturer first to view modules."
                   )
                 }
               ></div>
@@ -1096,7 +1114,11 @@ export default function AdminReports({
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
               disabled={isModuleLocked}
-              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${isModuleLocked ? "border-gray-200" : "border-gray-300 cursor-pointer"}`}
+              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+                isModuleLocked
+                  ? "border-gray-200"
+                  : "border-gray-300 cursor-pointer"
+              }`}
             >
               {isModuleLocked ? (
                 <option value="all">Select Degree/Lecturer First</option>
@@ -1121,7 +1143,7 @@ export default function AdminReports({
                       let matchesLecturer = true;
                       if (filterLecturerName !== "all") {
                         const selectedLecturer = allLecturers.find(
-                          (l) => l.name === filterLecturerName,
+                          (l) => l.name === filterLecturerName
                         );
                         if (
                           selectedLecturer &&
@@ -1130,7 +1152,7 @@ export default function AdminReports({
                           // Check if this module's code is in the lecturer's assigned_subjects string
                           matchesLecturer =
                             selectedLecturer.assigned_subjects.includes(
-                              mod.module_code,
+                              mod.module_code
                             );
                         } else {
                           matchesLecturer = false; // Lecturer has no subjects
@@ -1164,7 +1186,7 @@ export default function AdminReports({
                 className="absolute inset-0 top-6 z-10 cursor-not-allowed"
                 onClick={() =>
                   toast.error(
-                    "Please select a Module first to view its sessions.",
+                    "Please select a Module first to view its sessions."
                   )
                 }
               ></div>
@@ -1173,7 +1195,11 @@ export default function AdminReports({
               value={selectedSessionId}
               onChange={handleSessionChange}
               disabled={selectedModule === "all"}
-              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${selectedModule === "all" ? "border-gray-200" : "border-gray-300 cursor-pointer"}`}
+              className={`w-full h-[42px] px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+                selectedModule === "all"
+                  ? "border-gray-200"
+                  : "border-gray-300 cursor-pointer"
+              }`}
             >
               {selectedModule === "all" ? (
                 <option value="">Select a Module First</option>
@@ -1240,7 +1266,9 @@ export default function AdminReports({
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className={`w-full h-[42px] px-3 py-2 border cursor-pointer rounded-xl text-sm font-bold outline-none transition-colors duration-200 ${getRiskDropdownColor(riskFilter)}`}
+              className={`w-full h-[42px] px-3 py-2 border cursor-pointer rounded-xl text-sm font-bold outline-none transition-colors duration-200 ${getRiskDropdownColor(
+                riskFilter
+              )}`}
             >
               <option value="all">⚠️ All Students</option>
               <option value="safe">🟢 Exam Eligible - (≥ 70%)</option>
@@ -1268,7 +1296,9 @@ export default function AdminReports({
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl shadow-sm hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"}`}
+                className={`w-4 h-4 ${
+                  isRefreshing ? "animate-spin text-blue-600" : "text-gray-500"
+                }`}
               />
               Refresh
             </button>
@@ -1428,7 +1458,11 @@ export default function AdminReports({
                                       : "bg-red-500"
                                   }`}
                                   style={{
-                                    width: `${subjectDetails.total_sessions_held === 0 ? 0 : student.attendance_percentage}%`,
+                                    width: `${
+                                      subjectDetails.total_sessions_held === 0
+                                        ? 0
+                                        : student.attendance_percentage
+                                    }%`,
                                   }}
                                 ></div>
                               </div>
@@ -1472,10 +1506,10 @@ export default function AdminReports({
                                       .includes("manual")
                                       ? "bg-purple-100 text-purple-700 border border-purple-200 rounded-xl"
                                       : student.reason
-                                            .toLowerCase()
-                                            .includes("insufficient")
-                                        ? "bg-orange-100 text-orange-700 border border-orange-200 rounded-xl"
-                                        : "bg-red-100 text-red-600 border border-red-200 rounded-xl"
+                                          .toLowerCase()
+                                          .includes("insufficient")
+                                      ? "bg-orange-100 text-orange-700 border border-orange-200 rounded-xl"
+                                      : "bg-red-100 text-red-600 border border-red-200 rounded-xl"
                                   }`}
                                 >
                                   {student.reason}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 import {
   FileText,
   Upload,
@@ -85,7 +86,7 @@ export default function AttendanceCorrectionRequest({
     setIsLoadingSessions(true);
     try {
       const studentToken = localStorage.getItem("studentToken");
-      const res = await fetch("http://localhost:8000/api/student/timetable", {
+      const res = await fetch(API_BASE_URL + "/api/student/timetable", {
         headers: { Authorization: `Bearer ${studentToken}` },
       });
       if (!res.ok) throw new Error("Failed to fetch sessions");
@@ -105,10 +106,10 @@ export default function AttendanceCorrectionRequest({
       const studentToken = localStorage.getItem("studentToken");
 
       const res = await fetch(
-        "http://localhost:8000/api/attendance/student/requests",
+        API_BASE_URL + "/api/attendance/student/requests",
         {
           headers: { Authorization: `Bearer ${studentToken}` },
-        },
+        }
       );
       if (!res.ok) throw new Error("Failed to fetch history");
       const data = await res.json();
@@ -125,13 +126,13 @@ export default function AttendanceCorrectionRequest({
 
     if (!sessionId || !reasonType || !description.trim() || !evidenceFile) {
       toast.error(
-        "Please fill in all required fields and upload the evidence document.",
+        "Please fill in all required fields and upload the evidence document."
       );
       return;
     }
 
     const existingRequests = pastRequests.filter(
-      (req) => req.session_id.toString() === sessionId.toString(),
+      (req) => req.session_id.toString() === sessionId.toString()
     );
 
     if (existingRequests.length > 0) {
@@ -142,7 +143,7 @@ export default function AttendanceCorrectionRequest({
           "You already have a Pending request for this session. Please wait for the lecturer to review it.",
           {
             duration: 5000,
-          },
+          }
         );
         return;
       }
@@ -152,7 +153,7 @@ export default function AttendanceCorrectionRequest({
           "Your attendance for this session has already been Approved. You cannot submit another request.",
           {
             duration: 5000,
-          },
+          }
         );
         return;
       }
@@ -173,14 +174,14 @@ export default function AttendanceCorrectionRequest({
       }
 
       const response = await fetch(
-        "http://localhost:8000/api/attendance/student/requests",
+        API_BASE_URL + "/api/attendance/student/requests",
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${studentToken}`,
           },
           body: formData,
-        },
+        }
       );
 
       if (!response.ok) throw new Error("Failed to submit");
@@ -242,11 +243,11 @@ export default function AttendanceCorrectionRequest({
     try {
       const token = localStorage.getItem("studentToken");
       const response = await fetch(
-        `http://localhost:8000/api/attendance/student/requests/${requestToDelete}`,
+        `${API_BASE_URL}/api/attendance/student/requests/${requestToDelete}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) throw new Error("Failed to delete request");
@@ -493,7 +494,9 @@ export default function AttendanceCorrectionRequest({
                 title="Refresh History"
               >
                 <RefreshCw
-                  className={`w-4 h-4 ${isHistoryLoading ? "animate-spin text-red-600" : ""}`}
+                  className={`w-4 h-4 ${
+                    isHistoryLoading ? "animate-spin text-red-600" : ""
+                  }`}
                 />
               </button>
             </div>
@@ -509,7 +512,7 @@ export default function AttendanceCorrectionRequest({
               ) : (
                 pastRequests.map((request) => {
                   const sessionInfo = sessions.find(
-                    (s) => s.id === request.session_id,
+                    (s) => s.id === request.session_id
                   );
                   return (
                     <div
@@ -531,8 +534,8 @@ export default function AttendanceCorrectionRequest({
                               request.status === "Pending"
                                 ? "bg-yellow-100 text-yellow-600 animate-pulse"
                                 : request.status === "Approved"
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-600"
-                                  : "bg-red-100 dark:bg-red-900/30 text-red-600"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-600"
+                                : "bg-red-100 dark:bg-red-900/30 text-red-600"
                             }`}
                           >
                             {request.status}
@@ -588,7 +591,7 @@ export default function AttendanceCorrectionRequest({
                             Submitted :{" "}
                             <span className="font-bold">
                               {new Date(
-                                request.submitted_at,
+                                request.submitted_at
                               ).toLocaleDateString()}
                             </span>
                           </span>

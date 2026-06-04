@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Send, Bot } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
 interface ChatbotWidgetProps {
   onClose: () => void;
@@ -54,7 +55,7 @@ export default function ChatbotWidget({ onClose }: ChatbotWidgetProps) {
       setIsTyping(true);
 
       try {
-        const response = await fetch("http://localhost:8000/api/chatbot/ask", {
+        const response = await fetch(API_BASE_URL + "/api/chatbot/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: userText }),
@@ -100,7 +101,7 @@ export default function ChatbotWidget({ onClose }: ChatbotWidgetProps) {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/chatbot/ask", {
+      const response = await fetch(API_BASE_URL + "/api/chatbot/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: action }),

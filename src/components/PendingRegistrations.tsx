@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { API_BASE_URL } from "../config";
 import {
   Users,
   Search,
@@ -17,7 +18,7 @@ import {
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface PreRegistration {
   id: number;
@@ -163,15 +164,15 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
                 reason.trim().length === 0
                   ? "text-gray-400"
                   : reason.trim().length < 5
-                    ? "text-amber-500"
-                    : "text-green-600"
+                  ? "text-amber-500"
+                  : "text-green-600"
               }`}
             >
               {reason.trim().length === 0
                 ? "A reason is required to proceed."
                 : reason.trim().length < 5
-                  ? "Please provide a more descriptive reason."
-                  : `${reason.trim().length} characters — looks good.`}
+                ? "Please provide a more descriptive reason."
+                : `${reason.trim().length} characters — looks good.`}
             </p>
           </div>
         </div>
@@ -205,7 +206,7 @@ function RejectModal({ student, onClose, onConfirm }: RejectModalProps) {
         </div>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }
 
@@ -219,7 +220,7 @@ export default function PendingRegistrations({
 
   // Rejection modal state
   const [rejectTarget, setRejectTarget] = useState<PreRegistration | null>(
-    null,
+    null
   );
 
   const getToken = () => {
@@ -275,7 +276,7 @@ export default function PendingRegistrations({
 
     // Show loading toast immediately
     const loadingToast = toast.loading(
-      "Rejecting application and sending email...",
+      "Rejecting application and sending email..."
     );
 
     try {
@@ -316,7 +317,7 @@ export default function PendingRegistrations({
     (item) =>
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.personal_email.toLowerCase().includes(search.toLowerCase()) ||
-      item.nic_number.toLowerCase().includes(search.toLowerCase()),
+      item.nic_number.toLowerCase().includes(search.toLowerCase())
   );
 
   const formatDate = (dateStr: string) =>

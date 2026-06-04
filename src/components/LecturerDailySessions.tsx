@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   Calendar,
   Video,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Session {
   id: number;

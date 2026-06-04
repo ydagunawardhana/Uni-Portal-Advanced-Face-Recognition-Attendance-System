@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Camera, Bell, Clock, Info, Shield } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 export default function SettingsScreen() {
   const [faceThreshold, setFaceThreshold] = useState(75);
@@ -14,7 +15,7 @@ export default function SettingsScreen() {
   const handlePurgeData = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to purge biometric data for all inactive students? This action cannot be undone.",
+        "Are you sure you want to purge biometric data for all inactive students? This action cannot be undone."
       )
     ) {
       return;

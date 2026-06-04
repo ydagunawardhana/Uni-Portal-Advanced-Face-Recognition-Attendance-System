@@ -7,6 +7,7 @@ import AttendanceCorrectionRequest from "./AttendanceCorrectionRequest";
 import StudentProfileSecurity from "./StudentProfileSecurity";
 import StudentHelpSupport from "./StudentHelpSupport";
 import BookAppointments from "./BookAppointments";
+import { API_BASE_URL } from "../config";
 import StudentMyAttendance from "./StudentMyAttendance";
 import {
   Bell,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface StudentDashboardProps {
   onLogout: () => void;
@@ -45,7 +46,7 @@ export default function StudentDashboard({
         `${API_BASE}/api/attendance/student/dashboard-summary`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       if (response.ok) {
         const data = await response.json();
@@ -104,7 +105,7 @@ export default function StudentDashboard({
         // Check for new unread notifications compared to local state
         setNotifications((prev) => {
           const prevUnreadIds = new Set(
-            prev.filter((n) => !n.is_read).map((n) => n.id),
+            prev.filter((n) => !n.is_read).map((n) => n.id)
           );
           newData.forEach((notif: any) => {
             if (!notif.is_read && !prevUnreadIds.has(notif.id)) {
@@ -170,7 +171,7 @@ export default function StudentDashboard({
               border: "1px solid #ffeeba",
             },
             id: "password-warning-toast",
-          },
+          }
         );
       }
     };
@@ -244,7 +245,7 @@ export default function StudentDashboard({
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (response.ok) {
@@ -380,7 +381,9 @@ export default function StudentDashboard({
                 className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 mr-4"
               >
                 <RefreshCw
-                  className={`w-4 h-4 ${refreshing ? "animate-spin text-blue-600" : ""}`}
+                  className={`w-4 h-4 ${
+                    refreshing ? "animate-spin text-blue-600" : ""
+                  }`}
                 />
                 {refreshing ? "Refreshing..." : "Refresh"}
               </button>
@@ -427,14 +430,20 @@ export default function StudentDashboard({
                         {notifications.map((notif) => (
                           <li
                             key={notif.id}
-                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer flex gap-4 ${!notif.is_read ? "bg-blue-50/50" : ""}`}
+                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer flex gap-4 ${
+                              !notif.is_read ? "bg-blue-50/50" : ""
+                            }`}
                           >
                             <div className="flex-shrink-0 mt-1">
                               {getNotificationIcon(notif.type)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p
-                                className={`text-sm font-semibold truncate ${!notif.is_read ? "text-gray-900" : "text-gray-700"}`}
+                                className={`text-sm font-semibold truncate ${
+                                  !notif.is_read
+                                    ? "text-gray-900"
+                                    : "text-gray-700"
+                                }`}
                               >
                                 {notif.title}
                               </p>

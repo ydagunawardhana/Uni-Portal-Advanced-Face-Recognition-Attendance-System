@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config";
 import {
   User,
   Loader2,
@@ -16,7 +17,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface DashboardData {
   profile: {
@@ -72,7 +73,7 @@ export default function DashboardOverview({
 }: DashboardOverviewProps) {
   const [data, setData] = useState<DashboardData | null>(propData || null);
   const [isLoading, setIsLoading] = useState(
-    propLoading !== undefined ? propLoading : true,
+    propLoading !== undefined ? propLoading : true
   );
   const [error, setError] = useState<string | null>(null);
   const [animatedChartData, setAnimatedChartData] = useState<any[]>([]);
@@ -120,7 +121,7 @@ export default function DashboardOverview({
           `${API_BASE}/api/attendance/student/dashboard-summary`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
 
         if (!res.ok) throw new Error("Failed to load dashboard data");
@@ -178,7 +179,7 @@ export default function DashboardOverview({
 
   // Calculate Low Attendance Alerts (< 80%)
   const lowAttendanceModules = Object.entries(moduleStats).filter(
-    ([code, stats]: any) => stats.percentage < 80 && stats.total > 0,
+    ([code, stats]: any) => stats.percentage < 80 && stats.total > 0
   );
 
   // Prepare chart variables safely
@@ -213,7 +214,7 @@ export default function DashboardOverview({
                 src={
                   profile.profile_picture.startsWith("http")
                     ? profile.profile_picture
-                    : `http://localhost:8000${profile.profile_picture}`
+                    : `${API_BASE_URL}${profile.profile_picture}`
                 }
                 alt="Profile"
                 className="w-full h-full object-cover"
@@ -245,7 +246,11 @@ export default function DashboardOverview({
                 Overall Status :
               </span>
               <span
-                className={`font-bold ${(stats.overall_percentage || 0) >= 70 ? "text-green-600" : "text-red-600"}`}
+                className={`font-bold ${
+                  (stats.overall_percentage || 0) >= 70
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
               >
                 {stats.overall_percentage || 0}%
               </span>
@@ -427,7 +432,11 @@ export default function DashboardOverview({
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 p-6 flex flex-col relative">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 pb-2 flex items-center gap-2 shrink-0">
             <AlertTriangle
-              className={`w-6 h-6 ${lowAttendanceModules.length > 0 ? "text-red-500" : "text-green-500"}`}
+              className={`w-6 h-6 ${
+                lowAttendanceModules.length > 0
+                  ? "text-red-500"
+                  : "text-green-500"
+              }`}
             />
             Attendance Alerts
           </h2>
@@ -643,8 +652,8 @@ export default function DashboardOverview({
                           req.status === "Approved"
                             ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                             : req.status === "Rejected"
-                              ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                              : "bg-yellow-100 text-yellow-700"
+                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                            : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
                         {req.status}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
 interface EditLecturerModalProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export default function EditLecturerModal({
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean)
-          : [],
+          : []
       );
     }
   }, [isOpen, lecturer]);
@@ -93,7 +94,9 @@ export default function EditLecturerModal({
         setIsLoadingModules(true);
         try {
           const res = await fetch(
-            `http://localhost:8000/api/modules?department=${encodeURIComponent(department)}`,
+            `${API_BASE_URL}/api/modules?department=${encodeURIComponent(
+              department
+            )}`
           );
           if (res.ok) {
             const data = await res.json();
@@ -117,7 +120,7 @@ export default function EditLecturerModal({
     setAssignedSubjects((prev) =>
       prev.includes(subject)
         ? prev.filter((s) => s !== subject)
-        : [...prev, subject],
+        : [...prev, subject]
     );
   };
 
@@ -322,7 +325,7 @@ export default function EditLecturerModal({
                     type="button"
                     onClick={() =>
                       setAssignedSubjects((prev) =>
-                        prev.filter((s) => s !== subject),
+                        prev.filter((s) => s !== subject)
                       )
                     }
                     className="p-0.5 hover:bg-blue-200 rounded-full transition-colors text-blue-400 hover:text-blue-600"
@@ -427,6 +430,6 @@ export default function EditLecturerModal({
         </div>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }

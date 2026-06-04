@@ -14,6 +14,7 @@ import LecturerTimetable from "./LecturerTimetable";
 import LecturerDailySessions from "./LecturerDailySessions";
 import PostSessionReview from "./PostSessionReview";
 import LecturerAttendanceRequests from "./LecturerAttendanceRequests";
+import { API_BASE_URL } from "../config";
 
 interface AttendanceRecord {
   id: number;
@@ -214,12 +215,9 @@ export default function LecturerDashboard({
       if (!token) return;
 
       try {
-        const profRes = await fetch(
-          "http://localhost:8000/api/lecturer/profile",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const profRes = await fetch(API_BASE_URL + "/api/lecturer/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!profRes.ok) return;
         const profile = await profRes.json();
 
@@ -227,10 +225,10 @@ export default function LecturerDashboard({
         if (profile.name) setLecturerName(profile.name);
 
         const appRes = await fetch(
-          `http://localhost:8000/api/appointments/lecturer/${profile.id}`,
+          `${API_BASE_URL}/api/appointments/lecturer/${profile.id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
         if (appRes.ok) {
           const data = await appRes.json();
@@ -371,7 +369,9 @@ export default function LecturerDashboard({
         />
 
         <div
-          className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"}`}
+          className={`flex-1 transition-all duration-300 ${
+            isSidebarCollapsed ? "ml-[80px]" : "ml-[280px]"
+          }`}
         >
           {/* Header */}
           <header className="bg-white shadow-sm border-b border-gray-200">

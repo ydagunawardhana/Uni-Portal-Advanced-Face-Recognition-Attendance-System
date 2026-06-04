@@ -7,6 +7,7 @@ import {
   Filter,
   FileSpreadsheet,
 } from "lucide-react";
+import { API_BASE_URL } from "../config";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useLocation } from "react-router-dom";
@@ -31,16 +32,16 @@ export default function LecturerAttendanceHistory() {
 
   // New Filter States - initialized from passedState if available
   const [selectedDegree, setSelectedDegree] = useState(
-    passedState?.degree?.trim() || "all",
+    passedState?.degree?.trim() || "all"
   );
   const [selectedSemester, setSelectedSemester] = useState(
-    passedState?.semester?.trim() || "all",
+    passedState?.semester?.trim() || "all"
   );
   const [selectedModule, setSelectedModule] = useState(
-    passedState?.module?.trim() || "all",
+    passedState?.module?.trim() || "all"
   );
   const [selectedBatch, setSelectedBatch] = useState(
-    passedState?.batch?.trim() || "all",
+    passedState?.batch?.trim() || "all"
   );
   const [selectedDate, setSelectedDate] = useState(passedState?.date || "");
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,12 +79,12 @@ export default function LecturerAttendanceHistory() {
       try {
         const lecturerToken = localStorage.getItem("lecturerToken");
         const response = await fetch(
-          "http://localhost:8000/api/lecturer/filter-options",
+          API_BASE_URL + "/api/lecturer/filter-options",
           {
             headers: {
               Authorization: `Bearer ${lecturerToken}`,
             },
-          },
+          }
         );
         if (response.ok) {
           const data = await response.json();
@@ -150,12 +151,12 @@ export default function LecturerAttendanceHistory() {
 
         const lecturerToken = localStorage.getItem("lecturerToken");
         const response = await fetch(
-          `http://localhost:8000/api/attendance/history?${queryParams.toString()}`,
+          `${API_BASE_URL}/api/attendance/history?${queryParams.toString()}`,
           {
             headers: {
               Authorization: `Bearer ${lecturerToken}`,
             },
-          },
+          }
         );
         if (!response.ok) throw new Error("Failed to fetch attendance history");
 
@@ -188,7 +189,7 @@ export default function LecturerAttendanceHistory() {
     }
 
     const toastId = toast.loading(
-      "Preparing your professional Excel report...",
+      "Preparing your professional Excel report..."
     );
 
     try {
@@ -349,8 +350,8 @@ export default function LecturerAttendanceHistory() {
               record.status === "Present"
                 ? "FF15803D"
                 : record.status === "Absent"
-                  ? "FFDC2626"
-                  : "FFD97706",
+                ? "FFDC2626"
+                : "FFD97706",
           },
         };
       });
@@ -617,13 +618,13 @@ export default function LecturerAttendanceHistory() {
                           ) : (
                             <div
                               className={`w-10 h-10 ${getAvatarColor(
-                                index,
+                                index
                               )} rounded-full flex items-center justify-center text-white font-medium text-sm`}
                             >
                               {getInitials(
                                 record.studentName ||
                                   record.student_name ||
-                                  "Unknown",
+                                  "Unknown"
                               )}
                             </div>
                           )}
@@ -654,10 +655,10 @@ export default function LecturerAttendanceHistory() {
                             record.status === "Present"
                               ? "bg-green-100 text-green-700"
                               : record.status === "Late"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : record.status === "Left Early"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-red-100 text-red-600"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : record.status === "Left Early"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-red-100 text-red-600"
                           }`}
                         >
                           {record.status}
@@ -701,8 +702,8 @@ export default function LecturerAttendanceHistory() {
                       page === currentPage
                         ? "bg-blue-600 text-white"
                         : page === "..."
-                          ? "text-gray-400 cursor-default"
-                          : "text-gray-700 hover:bg-gray-100"
+                        ? "text-gray-400 cursor-default"
+                        : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     {page}

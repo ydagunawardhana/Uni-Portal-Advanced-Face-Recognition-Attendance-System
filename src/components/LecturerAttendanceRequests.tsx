@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 import {
   CheckCircle,
   XCircle,
@@ -61,10 +62,10 @@ const LecturerAttendanceRequests = () => {
     try {
       const token = localStorage.getItem("lecturerToken");
       const response = await fetch(
-        "http://localhost:8000/api/attendance/lecturer/requests",
+        API_BASE_URL + "/api/attendance/lecturer/requests",
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) throw new Error("Failed to fetch requests");
@@ -77,7 +78,7 @@ const LecturerAttendanceRequests = () => {
         const updatedGroup = data.find(
           (g) =>
             g.subject_code === selectedGroup.subject_code &&
-            g.batch === selectedGroup.batch,
+            g.batch === selectedGroup.batch
         );
         setSelectedGroup(updatedGroup || null);
       }
@@ -142,7 +143,9 @@ const LecturerAttendanceRequests = () => {
               className="flex items-center gap-2 px-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-md text-sm font-semibold active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw
-                className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : ""}`}
+                className={`w-4 h-4 ${
+                  isLoading ? "animate-spin text-blue-600" : ""
+                }`}
               />
               Refresh Data
             </button>
@@ -186,7 +189,7 @@ const LecturerAttendanceRequests = () => {
               >
                 <option value="">All Batches</option>
                 {Array.from(
-                  new Set(subjectGroups.map((g) => g.batch).filter(Boolean)),
+                  new Set(subjectGroups.map((g) => g.batch).filter(Boolean))
                 ).map((b) => (
                   <option key={b} value={b}>
                     Batch {b}
@@ -220,7 +223,7 @@ const LecturerAttendanceRequests = () => {
               >
                 <option value="">All Degrees</option>
                 {Array.from(
-                  new Set(subjectGroups.map((g) => g.degree).filter(Boolean)),
+                  new Set(subjectGroups.map((g) => g.degree).filter(Boolean))
                 ).map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -372,7 +375,7 @@ const LecturerAttendanceRequests = () => {
                 {(selectedGroup.requests || []).filter((req) =>
                   req.student_id
                     .toLowerCase()
-                    .includes(studentSearch.toLowerCase()),
+                    .includes(studentSearch.toLowerCase())
                 ).length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-500">
@@ -384,7 +387,7 @@ const LecturerAttendanceRequests = () => {
                     .filter((req) =>
                       req.student_id
                         .toLowerCase()
-                        .includes(studentSearch.toLowerCase()),
+                        .includes(studentSearch.toLowerCase())
                     )
                     .map((req) => (
                       <tr
@@ -434,7 +437,11 @@ const LecturerAttendanceRequests = () => {
                               href={
                                 req.evidence_url.startsWith("http")
                                   ? req.evidence_url
-                                  : `http://localhost:8000${req.evidence_url.startsWith("/") ? "" : "/"}${req.evidence_url}`
+                                  : `${API_BASE_URL}${
+                                      req.evidence_url.startsWith("/")
+                                        ? ""
+                                        : "/"
+                                    }${req.evidence_url}`
                               }
                               target="_blank"
                               rel="noopener noreferrer"
@@ -452,8 +459,8 @@ const LecturerAttendanceRequests = () => {
                               req.status === "Pending"
                                 ? "bg-yellow-100 text-yellow-700 border-2 border-yellow-200 animate-pulse"
                                 : req.status === "Approved"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-red-100 text-red-800 border border-red-200"
+                                ? "bg-green-100 text-green-800 border border-green-200"
+                                : "bg-red-100 text-red-800 border border-red-200"
                             }`}
                           >
                             {req.status}

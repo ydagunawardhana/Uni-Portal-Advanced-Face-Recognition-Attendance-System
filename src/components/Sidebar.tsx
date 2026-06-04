@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +19,7 @@ import {
   Edit,
 } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface SidebarProps {
   activeTab: string;
@@ -222,15 +223,17 @@ export default function Sidebar({
               ? "bg-white text-blue-600"
               : "bg-white text-blue-600"
             : isAmber
-              ? "bg-blue-600 text-white"
-              : "bg-blue-600 text-white";
+            ? "bg-blue-600 text-white"
+            : "bg-blue-600 text-white";
 
           return (
             <NavLink
               key={item.id}
               to={item.path}
               className={({ isActive }) =>
-                `w-full flex items-center cursor-pointer ${isCollapsed ? "justify-center px-0 py-3" : "px-4 py-2.5"} rounded-lg transition-all duration-200 group ${
+                `w-full flex items-center cursor-pointer ${
+                  isCollapsed ? "justify-center px-0 py-3" : "px-4 py-2.5"
+                } rounded-lg transition-all duration-200 group ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/50"
                     : "text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -239,7 +242,9 @@ export default function Sidebar({
               title={isCollapsed ? item.label : ""}
             >
               <Icon
-                className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-5 h-5 mx-auto" : "w-6 h-6"}`}
+                className={`min-w-[20px] shrink-0 transition-transform ${
+                  isCollapsed ? "w-5 h-5 mx-auto" : "w-6 h-6"
+                }`}
               />
 
               {!isCollapsed && (
@@ -280,7 +285,9 @@ export default function Sidebar({
             }`}
           >
             <LogOut
-              className={`min-w-[20px] shrink-0 transition-transform ${isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"}`}
+              className={`min-w-[20px] shrink-0 transition-transform ${
+                isCollapsed ? "w-6 h-6 mx-auto" : "w-5 h-5"
+              }`}
             />
             {!isCollapsed && (
               <span className="text-sm font-medium">Logout</span>

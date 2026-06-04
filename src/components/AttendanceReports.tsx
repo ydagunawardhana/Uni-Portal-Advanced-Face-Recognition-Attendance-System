@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config";
 import {
   FileSpreadsheet,
   FileText,
@@ -90,7 +91,7 @@ export default function AttendanceReports({
       }
 
       const res = await fetch(
-        `http://localhost:8000/api/lecturer/attendance/${
+        `${API_BASE_URL}/api/lecturer/attendance/${
           subject.module_code
         }?${params.toString()}`,
         {
@@ -140,7 +141,7 @@ export default function AttendanceReports({
         );
 
         const response = await fetch(
-          `http://localhost:8000/api/attendance/sessions?module_code=${
+          `${API_BASE_URL}/api/attendance/sessions?module_code=${
             subject?.module_code
           }&batch_id=${subject?.batch || ""}`,
           {

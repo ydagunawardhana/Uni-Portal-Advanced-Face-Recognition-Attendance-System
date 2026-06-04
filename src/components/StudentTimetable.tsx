@@ -8,6 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
 // Safe-listed Tailwind classes to prevent compilation drops
 const colorPalette = [
@@ -95,7 +96,7 @@ export default function StudentTimetable() {
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/student/timetable", {
+      const res = await fetch(API_BASE_URL + "/api/student/timetable", {
         headers: { Authorization: `Bearer ${studentToken}` },
       });
 
@@ -103,7 +104,7 @@ export default function StudentTimetable() {
         const warn = await res.json();
         setWarningMessage(
           warn.message ||
-            "Your timetable cannot be displayed. Please update your profile.",
+            "Your timetable cannot be displayed. Please update your profile."
         );
         setMissingFields(warn.missing_fields || []);
         setSchedule([]);
@@ -146,7 +147,7 @@ export default function StudentTimetable() {
 
   // Get unique subject names for the legend
   const uniqueSubjects = Array.from(
-    new Set(schedule.map((s) => s.module_name || s.module_code)),
+    new Set(schedule.map((s) => s.module_name || s.module_code))
   ).filter(Boolean);
 
   if (isLoading) {
@@ -197,7 +198,11 @@ export default function StudentTimetable() {
           className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold transition-all cursor-pointer disabled:opacity-50 active:scale-95"
         >
           <RefreshCw
-            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600" : "text-gray-500 dark:text-gray-400"}`}
+            className={`w-4 h-4 ${
+              isRefreshing
+                ? "animate-spin text-blue-600"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
           />
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
@@ -255,7 +260,11 @@ export default function StudentTimetable() {
             className="mt-8 px-6 py-3 bg-white dark:bg-gray-800  cursor-pointer border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-100 dark:bg-gray-700 transition-all flex items-center gap-2 shadow-sm"
           >
             <RefreshCw
-              className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : "text-gray-500 dark:text-gray-400"}`}
+              className={`w-4 h-4 ${
+                isLoading
+                  ? "animate-spin text-blue-600"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
             />
             Refresh Schedule
           </button>
@@ -270,17 +279,29 @@ export default function StudentTimetable() {
               return (
                 <div
                   key={dayName}
-                  className={`flex-none w-[280px] lg:w-[320px] flex flex-col rounded-2xl overflow-hidden snap-start transition-all ${isToday ? "border-2 border-red-500 bg-white dark:bg-gray-800 shadow-md transform -translate-y-1" : "border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md"}`}
+                  className={`flex-none w-[280px] lg:w-[320px] flex flex-col rounded-2xl overflow-hidden snap-start transition-all ${
+                    isToday
+                      ? "border-2 border-red-500 bg-white dark:bg-gray-800 shadow-md transform -translate-y-1"
+                      : "border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md"
+                  }`}
                 >
                   {/* Day Header */}
                   <div
-                    className={`py-4 flex flex-col items-center justify-center border-b ${isToday ? "bg-red-600 text-white border-red-600" : "bg-gray-200 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-gray-700"}`}
+                    className={`py-4 flex flex-col items-center justify-center border-b ${
+                      isToday
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-gray-200 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-gray-700"
+                    }`}
                   >
                     <h3 className="font-bold text-lg tracking-wide">
                       {dayName}
                     </h3>
                     <p
-                      className={`text-sm mt-0.5 font-bold ${isToday ? "text-red-100" : "text-gray-500 dark:text-gray-400"}`}
+                      className={`text-sm mt-0.5 font-bold ${
+                        isToday
+                          ? "text-red-100"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
                     >
                       {displayDates[dayName]}
                     </p>
@@ -293,14 +314,18 @@ export default function StudentTimetable() {
 
                   {/* Cards Container */}
                   <div
-                    className={`p-3 flex-1 flex flex-col gap-3 ${isToday ? "bg-white dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-700/30"}`}
+                    className={`p-3 flex-1 flex flex-col gap-3 ${
+                      isToday
+                        ? "bg-white dark:bg-gray-800"
+                        : "bg-gray-50 dark:bg-gray-700/30"
+                    }`}
                   >
                     {groupedSchedule[dayName].length > 0 ? (
                       groupedSchedule[dayName].map((cls, idx) => (
                         <div
                           key={idx}
                           className={`${getCardColor(
-                            cls.module_name,
+                            cls.module_name
                           )} text-white p-4 rounded-xl shadow-sm border border-white/30 flex flex-col gap-2 transition-transform hover:-translate-y-0.5`}
                         >
                           <h4 className="font-bold text-sm leading-snug">
@@ -354,7 +379,9 @@ export default function StudentTimetable() {
                 {uniqueSubjects.map((subj, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <span
-                      className={`w-4 h-4 rounded-full shadow-sm ${getCardColor(subj)} border border-gray-200 dark:border-gray-700/50`}
+                      className={`w-4 h-4 rounded-full shadow-sm ${getCardColor(
+                        subj
+                      )} border border-gray-200 dark:border-gray-700/50`}
                     ></span>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {subj}

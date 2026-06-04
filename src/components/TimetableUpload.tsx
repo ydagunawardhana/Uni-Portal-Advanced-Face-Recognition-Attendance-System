@@ -22,6 +22,7 @@ import {
   Save,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
 export default function TimetableUpload() {
   const [selectedFaculty, setSelectedFaculty] = useState("");
@@ -86,7 +87,7 @@ export default function TimetableUpload() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/admin/timetable/${editingSession.id}`,
+        `${API_BASE_URL}/api/admin/timetable/${editingSession.id}`,
         {
           method: "PUT",
           headers: {
@@ -101,7 +102,7 @@ export default function TimetableUpload() {
             module_code: editingSession.module_code,
             module_name: editingSession.module_name,
           }),
-        },
+        }
       );
 
       const errorData = await response.json().catch(() => ({}));
@@ -112,8 +113,8 @@ export default function TimetableUpload() {
           id: loadingToastId,
         });
         setIsEditModalOpen(false);
-        setViewBatchId(null); 
-        setIsViewModalHidden(false); 
+        setViewBatchId(null);
+        setIsViewModalHidden(false);
 
         // Refresh the table data silently
         if (viewBatchId) handleViewBatch(viewBatchId, false);
@@ -128,13 +129,13 @@ export default function TimetableUpload() {
             style: {
               fontWeight: "bold",
             },
-          },
+          }
         );
       }
     } catch (error) {
       toast.error("Network error. Please try again.", { id: loadingToastId });
     } finally {
-      setIsSaving(false); 
+      setIsSaving(false);
     }
   };
 
@@ -145,9 +146,7 @@ export default function TimetableUpload() {
 
   const fetchRecentUploads = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:8000/api/timetable/recent",
-      );
+      const response = await fetch(API_BASE_URL + "/api/timetable/recent");
       if (response.ok) {
         const data = await response.json();
         setRecentUploads(data);
@@ -273,7 +272,7 @@ export default function TimetableUpload() {
 
   const handleDownloadTemplate = () => {
     toast.success("Preparing your template...");
-    window.location.href = "http://localhost:8000/api/timetable/template";
+    window.location.href = API_BASE_URL + "/api/timetable/template";
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -290,7 +289,7 @@ export default function TimetableUpload() {
 
     setIsDeleting(true);
     const deleteToast = toast.loading(
-      `Removing schedule for ${deleteBatchId}...`,
+      `Removing schedule for ${deleteBatchId}...`
     );
 
     try {
@@ -298,10 +297,10 @@ export default function TimetableUpload() {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       const response = await fetch(
-        `http://localhost:8000/api/timetable/batch/${deleteBatchId}`,
+        `${API_BASE_URL}/api/timetable/batch/${deleteBatchId}`,
         {
           method: "DELETE",
-        },
+        }
       );
 
       if (response.ok) {
@@ -366,7 +365,7 @@ export default function TimetableUpload() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/timetable/batch/${batchId}`,
+        `${API_BASE_URL}/api/timetable/batch/${batchId}`
       );
       if (!response.ok) throw new Error("Failed to load records");
       const data = await response.json();
@@ -392,16 +391,17 @@ export default function TimetableUpload() {
     const TOAST_ID = "excel-export-toast";
     toast.loading("Generating Report, Please wait...", {
       id: TOAST_ID,
-      duration: Infinity, 
+      duration: Infinity,
     });
 
-    
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       // Fetch the Excel blob — await so loading toast stays visible
       const response = await fetch(
-        `http://localhost:8000/api/timetable/export/${encodeURIComponent(viewBatchId)}`,
+        `${API_BASE_URL}/api/timetable/export/${encodeURIComponent(
+          viewBatchId
+        )}`
       );
 
       if (!response.ok) {
@@ -414,7 +414,7 @@ export default function TimetableUpload() {
       const url = window.URL.createObjectURL(
         new Blob([blob], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }),
+        })
       );
 
       // Trigger download via hidden anchor, then clean up
@@ -458,7 +458,11 @@ export default function TimetableUpload() {
       ];
       const csvRows = viewData.map(
         (row) =>
-          `"${row.date}","${row.start_time}","${row.end_time}","${row.module_code}","${row.module_name || ""}","${row.lecturer || ""}","${row.faculty || ""}","${row.department || ""}","${row.semester || ""}"`,
+          `"${row.date}","${row.start_time}","${row.end_time}","${
+            row.module_code
+          }","${row.module_name || ""}","${row.lecturer || ""}","${
+            row.faculty || ""
+          }","${row.department || ""}","${row.semester || ""}"`
       );
       const csvString = [headers, ...csvRows].join("\n");
       const blob = new Blob([csvString], { type: "text/csv" });
@@ -506,7 +510,7 @@ export default function TimetableUpload() {
       // UX Delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const response = await fetch("http://localhost:8000/api/timetable/sync", {
+      const response = await fetch(API_BASE_URL + "/api/timetable/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -565,7 +569,7 @@ export default function TimetableUpload() {
       !startDate
     ) {
       toast.error(
-        "Please complete all academic fields, start date, and select a file.",
+        "Please complete all academic fields, start date, and select a file."
       );
       return;
     }
@@ -587,13 +591,10 @@ export default function TimetableUpload() {
       formData.append("semester", selectedSemester);
 
       // 3. API Call
-      const response = await fetch(
-        "http://localhost:8000/api/timetable/extract",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      const response = await fetch(API_BASE_URL + "/api/timetable/extract", {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -613,7 +614,7 @@ export default function TimetableUpload() {
           errorData.detail.includes("|")
         ) {
           setValidationErrors(
-            errorData.detail.split("|").map((e: string) => e.trim()),
+            errorData.detail.split("|").map((e: string) => e.trim())
           );
           setIsErrorModalOpen(true);
           toast.dismiss(loadingToast);
@@ -622,7 +623,7 @@ export default function TimetableUpload() {
         }
 
         throw new Error(
-          errorData.detail?.message || errorData.detail || "Extraction failed",
+          errorData.detail?.message || errorData.detail || "Extraction failed"
         );
       }
 
@@ -638,9 +639,7 @@ export default function TimetableUpload() {
     } catch (error: any) {
       console.error("Extraction Error:", error);
 
-     
       try {
-        
         if (error.response?.data?.detail?.errors) {
           setValidationErrors(error.response.data.detail.errors);
           setIsErrorModalOpen(true);
@@ -665,8 +664,8 @@ export default function TimetableUpload() {
       {isErrorModalOpen &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out" 
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 ease-out"
               onClick={() => setIsErrorModalOpen(false)}
             />
             <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 ease-out">
@@ -702,7 +701,7 @@ export default function TimetableUpload() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* Container matching standard admin grid */}
@@ -755,7 +754,9 @@ export default function TimetableUpload() {
               {/* Department Dropdown */}
               <div className="space-y-2">
                 <label
-                  className={`block text-md font-bold tracking-wider flex items-center gap-3 ${!selectedFaculty ? "text-gray-400" : "text-gray-600"}`}
+                  className={`block text-md font-bold tracking-wider flex items-center gap-3 ${
+                    !selectedFaculty ? "text-gray-400" : "text-gray-600"
+                  }`}
                 >
                   Select Department
                 </label>
@@ -848,8 +849,8 @@ export default function TimetableUpload() {
               isDragActive
                 ? "border-blue-500 bg-blue-50"
                 : file
-                  ? "border-green-400 bg-green-50"
-                  : "border-gray-300 border-dashed bg-gray-50 hover:bg-gray-100"
+                ? "border-green-400 bg-green-50"
+                : "border-gray-300 border-dashed bg-gray-50 hover:bg-gray-100"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -1244,7 +1245,7 @@ export default function TimetableUpload() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* 5. View Full Timetable Modal */}
@@ -1388,7 +1389,7 @@ export default function TimetableUpload() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* 6. Edit Session Modal */}
@@ -1556,7 +1557,7 @@ export default function TimetableUpload() {
               </form>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );

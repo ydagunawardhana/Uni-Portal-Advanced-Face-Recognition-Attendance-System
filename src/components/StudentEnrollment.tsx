@@ -22,8 +22,9 @@ import {
   ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 const universityData: Record<string, Record<string, string[]>> = {
   "Faculty of Computing": {
@@ -139,7 +140,7 @@ export default function StudentEnrollment({
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     if (name === "faculty") {
@@ -516,8 +517,8 @@ export default function StudentEnrollment({
                             isActive
                               ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
                               : isCompleted
-                                ? "bg-blue-600 border-blue-600 text-white"
-                                : "bg-white border-gray-300 text-gray-400"
+                              ? "bg-blue-600 border-blue-600 text-white"
+                              : "bg-white border-gray-300 text-gray-400"
                           }`}
                         >
                           {isCompleted ? (
@@ -722,7 +723,7 @@ export default function StudentEnrollment({
                               <option key={d} value={d}>
                                 {d}
                               </option>
-                            ),
+                            )
                           )}
                       </select>
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">

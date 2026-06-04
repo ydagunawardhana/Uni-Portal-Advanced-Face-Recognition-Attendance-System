@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config";
 import {
   User,
   Calendar,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface AppointmentRequest {
   id: number;
@@ -58,7 +59,7 @@ export default function Appointments() {
         `${API_BASE}/api/appointments/lecturer/${profile.id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       if (appRes.ok) {
         const data = await appRes.json();
@@ -88,13 +89,13 @@ export default function Appointments() {
   const updateStatus = async (
     id: number,
     newStatus: "Approved" | "Rejected",
-    reason?: string,
+    reason?: string
   ) => {
     const token = localStorage.getItem("lecturerToken");
     if (!token) return;
 
     const toastId = toast.loading(
-      `${newStatus === "Approved" ? "Approving" : "Rejecting"} appointment...`,
+      `${newStatus === "Approved" ? "Approving" : "Rejecting"} appointment...`
     );
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -118,8 +119,8 @@ export default function Appointments() {
         // Refresh local state
         setAppointments((prev) =>
           prev.map((app) =>
-            app.id === id ? { ...app, status: newStatus } : app,
-          ),
+            app.id === id ? { ...app, status: newStatus } : app
+          )
         );
         return true;
       } else {
@@ -142,7 +143,7 @@ export default function Appointments() {
     const success = await updateStatus(
       requestToDecline,
       "Rejected",
-      declineReason,
+      declineReason
     );
     if (success) {
       setIsDeclineModalOpen(false);
@@ -174,13 +175,13 @@ export default function Appointments() {
   };
 
   const pendingRequests = appointments.filter(
-    (app) => app.status === "Pending",
+    (app) => app.status === "Pending"
   );
   const approvedAppointments = appointments.filter(
-    (app) => app.status === "Approved",
+    (app) => app.status === "Approved"
   );
   const declinedRequests = appointments.filter(
-    (app) => app.status === "Rejected",
+    (app) => app.status === "Rejected"
   );
 
   if (isLoading) {
@@ -471,7 +472,7 @@ export default function Appointments() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );

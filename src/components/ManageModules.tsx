@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { API_BASE_URL } from "../config";
 import {
   Search,
   Plus,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Module {
   id: number;
@@ -168,7 +169,7 @@ export default function ManageModules() {
   const handleSaveModule = async (payload: any, isEdit: boolean) => {
     setIsSaving(true);
     const toastId = toast.loading(
-      isEdit ? "Updating module..." : "Registering modules...",
+      isEdit ? "Updating module..." : "Registering modules..."
     );
     try {
       // Artificial delay for UX feedback
@@ -195,7 +196,7 @@ export default function ManageModules() {
           isEdit
             ? "Module updated successfully!"
             : data.message || "Modules registered successfully!",
-          { id: toastId },
+          { id: toastId }
         );
         setIsModalOpen(false);
         setIsEditModalOpen(false);
@@ -224,7 +225,7 @@ export default function ManageModules() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (res.ok) {
@@ -485,7 +486,7 @@ export default function ManageModules() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </div>
   );
@@ -513,7 +514,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
   const handleRowChange = (
     index: number,
     field: "code" | "name",
-    value: string,
+    value: string
   ) => {
     const updatedList = [...modulesList];
     updatedList[index][field] = value;
@@ -528,7 +529,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
     }
 
     const validModules = modulesList.filter(
-      (m) => m.code.trim() && m.name.trim(),
+      (m) => m.code.trim() && m.name.trim()
     );
     if (validModules.length === 0) {
       toast.error("Please add at least one valid module (Code + Name).");
@@ -644,7 +645,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
                                 setSelectedDegrees([...selectedDegrees, deg]);
                               else
                                 setSelectedDegrees(
-                                  selectedDegrees.filter((d) => d !== deg),
+                                  selectedDegrees.filter((d) => d !== deg)
                                 );
                             }}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -787,7 +788,7 @@ function AddModuleModal({ isOpen, onClose, onSave, isSaving }: any) {
         </form>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }
 
@@ -795,7 +796,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
   const [faculty, setFaculty] = useState(module?.faculty || "");
   const [department, setDepartment] = useState(module?.department || "");
   const [selectedDegrees, setSelectedDegrees] = useState<string[]>(
-    module?.degree ? module.degree.split(", ") : [],
+    module?.degree ? module.degree.split(", ") : []
   );
   const [level, setLevel] = useState(module?.level || "");
   const [moduleCode, setModuleCode] = useState(module?.module_code || "");
@@ -921,7 +922,7 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
                                 setSelectedDegrees([...selectedDegrees, deg]);
                               else
                                 setSelectedDegrees(
-                                  selectedDegrees.filter((d) => d !== deg),
+                                  selectedDegrees.filter((d) => d !== deg)
                                 );
                             }}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -1027,6 +1028,6 @@ function EditModuleModal({ isOpen, module, onClose, onSave, isSaving }: any) {
         </form>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }

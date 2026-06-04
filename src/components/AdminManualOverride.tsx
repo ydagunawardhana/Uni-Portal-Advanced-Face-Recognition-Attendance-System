@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   Users,
   Check,
@@ -15,7 +16,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface Student {
   id: number;
@@ -69,7 +70,7 @@ export default function AdminManualOverride() {
         `${API_BASE}/api/lecturer/recent-sessions`,
         {
           headers: { Authorization: `Bearer ${adminToken}` },
-        },
+        }
       );
 
       if (!sessionsRes.ok) throw new Error("Failed to load session details");
@@ -91,7 +92,11 @@ export default function AdminManualOverride() {
 
       // 2. Load Student List for this session
       if (session) {
-        const apiUrl = `${API_BASE}/api/lecturer/attendance/${encodeURIComponent(session.module_code)}?date=${encodeURIComponent(session.date)}&batch=${encodeURIComponent(session.batch)}&session_id=${sessionId}`;
+        const apiUrl = `${API_BASE}/api/lecturer/attendance/${encodeURIComponent(
+          session.module_code
+        )}?date=${encodeURIComponent(session.date)}&batch=${encodeURIComponent(
+          session.batch
+        )}&session_id=${sessionId}`;
 
         const res = await fetch(apiUrl, {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -216,7 +221,7 @@ export default function AdminManualOverride() {
     return students.filter(
       (s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.indexNumber.toLowerCase().includes(searchQuery.toLowerCase()),
+        s.indexNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [students, searchQuery]);
 
@@ -305,7 +310,7 @@ export default function AdminManualOverride() {
               <button
                 onClick={() => {
                   filteredStudents.forEach((s) =>
-                    handleStatusChange(s.id, "Present"),
+                    handleStatusChange(s.id, "Present")
                   );
                 }}
                 className="px-2 py-1 bg-green-100 cursor-pointer text-green-700 rounded-lg text-sm font-bold border-2 border-green-100 hover:bg-green-200 transition-colors"
@@ -476,7 +481,11 @@ export default function AdminManualOverride() {
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
           <div className="text-sm font-bold text-gray-400 tracking-widest flex items-center gap-2">
             <div
-              className={`w-3 h-3 rounded-full ${Object.keys(edits).length > 0 ? "bg-red-500 animate-pulse" : "bg-gray-400"}`}
+              className={`w-3 h-3 rounded-full ${
+                Object.keys(edits).length > 0
+                  ? "bg-red-500 animate-pulse"
+                  : "bg-gray-400"
+              }`}
             />
             {Object.keys(edits).length} pending changes to be saved
           </div>

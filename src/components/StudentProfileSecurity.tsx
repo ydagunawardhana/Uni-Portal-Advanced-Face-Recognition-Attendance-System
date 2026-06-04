@@ -18,8 +18,9 @@ import {
   Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface StudentData {
   name: string;
@@ -71,7 +72,9 @@ export default function StudentProfileSecurity({
   // Dynamic profile image resolution with Cache Busting
   const profileImage = studentData?.profile_picture
     ? `${API_BASE}${studentData.profile_picture}?t=${imageTimestamp}`
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(studentData?.name || "Student")}&background=random&size=200`;
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        studentData?.name || "Student"
+      )}&background=random&size=200`;
 
   const lastTrained = studentData?.last_trained_date || "Not available";
 
@@ -119,9 +122,9 @@ export default function StudentProfileSecurity({
               element.classList.remove(
                 "ring-2",
                 "ring-yellow-500",
-                "ring-offset-4",
+                "ring-offset-4"
               ),
-            2000,
+            2000
           );
           // Clear hash after scroll
           window.history.replaceState(null, "", window.location.pathname);
@@ -176,7 +179,7 @@ export default function StudentProfileSecurity({
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        },
+        }
       );
 
       const data = await res.json();
@@ -185,7 +188,7 @@ export default function StudentProfileSecurity({
           id: toastId,
         });
         setStudentData((prev) =>
-          prev ? { ...prev, profile_picture: data.profile_picture } : null,
+          prev ? { ...prev, profile_picture: data.profile_picture } : null
         );
         setImageTimestamp(Date.now());
       } else {
@@ -224,7 +227,7 @@ export default function StudentProfileSecurity({
           id: toastId,
         });
         setStudentData((prev) =>
-          prev ? { ...prev, retrain_requested: true } : null,
+          prev ? { ...prev, retrain_requested: true } : null
         );
       } else {
         toast.error(data.detail || "Failed to submit request.", {
@@ -256,7 +259,7 @@ export default function StudentProfileSecurity({
           id: toastId,
         });
         setStudentData((prev) =>
-          prev ? { ...prev, retrain_requested: false } : null,
+          prev ? { ...prev, retrain_requested: false } : null
         );
       } else {
         toast.error(data.detail || "Failed to cancel request.", {
@@ -400,7 +403,9 @@ export default function StudentProfileSecurity({
                   key={imageTimestamp}
                   src={profileImage}
                   alt="Profile"
-                  className={`w-full h-full rounded-full object-cover ${isUploading ? "opacity-50" : ""}`}
+                  className={`w-full h-full rounded-full object-cover ${
+                    isUploading ? "opacity-50" : ""
+                  }`}
                 />
 
                 {/* Verified check badge - FIXED POSITION */}

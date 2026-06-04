@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   BookOpen,
   Users,
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface DashboardData {
   lecturer_name: string;
@@ -92,7 +93,7 @@ interface DashboardData {
 export default function LecturerDashboardHome() {
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    null,
+    null
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +142,7 @@ export default function LecturerDashboardHome() {
 
         // Step 2: Fetch dashboard summary using lecturer ID
         const dashRes = await fetch(
-          `${API_BASE}/api/lecturer/dashboard_summary/${profile.id}`,
+          `${API_BASE}/api/lecturer/dashboard_summary/${profile.id}`
         );
         if (!dashRes.ok) throw new Error("Failed to fetch dashboard data");
         const data: DashboardData = await dashRes.json();
@@ -518,8 +519,8 @@ export default function LecturerDashboardHome() {
                           slot.status === "Active"
                             ? "bg-green-500 border-green-300 animate-pulse"
                             : slot.status === "Closed"
-                              ? "bg-gray-400 border-gray-300"
-                              : "bg-blue-500 border-blue-300"
+                            ? "bg-gray-400 border-gray-300"
+                            : "bg-blue-500 border-blue-300"
                         }`}
                       />
                       {idx < todays_schedule.length - 1 && (
@@ -537,8 +538,8 @@ export default function LecturerDashboardHome() {
                             slot.status === "Active"
                               ? "bg-green-100 text-green-700"
                               : slot.status === "Closed"
-                                ? "bg-gray-100 text-gray-500"
-                                : "bg-blue-100 text-blue-700"
+                              ? "bg-gray-100 text-gray-500"
+                              : "bg-blue-100 text-blue-700"
                           }`}
                         >
                           {slot.status}
@@ -744,8 +745,8 @@ export default function LecturerDashboardHome() {
                                   classItem.attendance_percentage >= 90
                                     ? "bg-green-500"
                                     : classItem.attendance_percentage >= 75
-                                      ? "bg-blue-500"
-                                      : "bg-orange-500"
+                                    ? "bg-blue-500"
+                                    : "bg-orange-500"
                                 }`}
                                 style={{
                                   width: `${classItem.attendance_percentage}%`,

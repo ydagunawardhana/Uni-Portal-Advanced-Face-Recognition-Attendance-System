@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
 // Interfaces based on the new backend schemas
 interface SubjectSummary {
@@ -37,7 +38,7 @@ const StudentMyAttendance = () => {
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<SubjectSummary | null>(
-    null,
+    null
   );
   const [sessions, setSessions] = useState<SessionDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,10 +53,10 @@ const StudentMyAttendance = () => {
     try {
       const studentToken = localStorage.getItem("studentToken");
       const response = await fetch(
-        "http://localhost:8000/api/attendance/student/my-subjects",
+        API_BASE_URL + "/api/attendance/student/my-subjects",
         {
           headers: { Authorization: `Bearer ${studentToken}` },
-        },
+        }
       );
       if (response.ok) {
         const data = await response.json();
@@ -82,10 +83,10 @@ const StudentMyAttendance = () => {
     try {
       const token = localStorage.getItem("studentToken");
       const response = await fetch(
-        `http://localhost:8000/api/attendance/student/my-subjects/${subject.module_code}/sessions`,
+        `${API_BASE_URL}/api/attendance/student/my-subjects/${subject.module_code}/sessions`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
       if (response.ok) {
         const data = await response.json();
@@ -184,7 +185,13 @@ const StudentMyAttendance = () => {
 
                     <div className="text-right">
                       <span
-                        className={`text-xl font-bold ${sub.attendance_percentage >= 70 ? "text-green-600" : sub.attendance_percentage >= 50 ? "text-yellow-600" : "text-red-600"}`}
+                        className={`text-xl font-bold ${
+                          sub.attendance_percentage >= 70
+                            ? "text-green-600"
+                            : sub.attendance_percentage >= 50
+                            ? "text-yellow-600"
+                            : "text-red-600"
+                        }`}
                       >
                         {sub.attendance_percentage}%
                       </span>

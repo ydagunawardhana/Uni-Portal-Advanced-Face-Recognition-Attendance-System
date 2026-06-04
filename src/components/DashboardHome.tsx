@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 import {
   Users,
   GraduationCap,
@@ -35,7 +36,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 interface DashboardHomeProps {
   onTabChange?: (tab: string) => void;
@@ -665,7 +666,7 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                 setIsCameraActive(newState);
                 if (newState) {
                   toast.success(
-                    "Camera System Started: Face recognition is now active.",
+                    "Camera System Started: Face recognition is now active."
                   );
                 } else {
                   toast.success("Camera System Stopped.");
@@ -678,7 +679,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
               }`}
             >
               <div
-                className={`flex items-center gap-2 font-medium ${isCameraActive ? "text-red-700" : "text-gray-900"}`}
+                className={`flex items-center gap-2 font-medium ${
+                  isCameraActive ? "text-red-700" : "text-gray-900"
+                }`}
               >
                 <Power
                   size={18}
@@ -689,7 +692,9 @@ export default function DashboardHome({ onTabChange }: DashboardHomeProps) {
                 {isCameraActive ? "Stop Camera System" : "Start Camera System"}
               </div>
               <p
-                className={`text-xs mt-1 ${isCameraActive ? "text-red-600" : "text-emerald-600"}`}
+                className={`text-xs mt-1 ${
+                  isCameraActive ? "text-red-600" : "text-emerald-600"
+                }`}
               >
                 {isCameraActive
                   ? "Face recognition is currently running. Click to halt."

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronDown, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../config";
 
 interface AddLecturerModalProps {
   isOpen: boolean;
@@ -58,7 +59,9 @@ export default function AddLecturerModal({
         setIsLoadingModules(true);
         try {
           const res = await fetch(
-            `http://localhost:8000/api/modules?department=${encodeURIComponent(department)}`,
+            `${API_BASE_URL}/api/modules?department=${encodeURIComponent(
+              department
+            )}`
           );
           if (res.ok) {
             const data = await res.json();
@@ -388,6 +391,6 @@ export default function AddLecturerModal({
         </div>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }
