@@ -458,7 +458,7 @@ const AdminAttendanceRequests = () => {
                       {req.evidence_url ? (
                         <a
                           href={
-                            req.evidence_url.startsWith("http")
+                            req.evidence_url.startsWith("https")
                               ? req.evidence_url
                               : `${API_BASE_URL}${
                                   req.evidence_url.startsWith("/") ? "" : "/"

@@ -212,7 +212,7 @@ export default function DashboardOverview({
             {profile.profile_picture && !imageError ? (
               <img
                 src={
-                  profile.profile_picture.startsWith("http")
+                  profile.profile_picture.startsWith("https")
                     ? profile.profile_picture
                     : `${API_BASE_URL}${profile.profile_picture}`
                 }
