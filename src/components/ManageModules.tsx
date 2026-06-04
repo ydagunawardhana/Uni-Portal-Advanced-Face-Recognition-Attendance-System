@@ -178,7 +178,7 @@ export default function ManageModules() {
       const token = localStorage.getItem("adminToken");
       const url = isEdit
         ? `${API_BASE}/api/admin/modules/${selectedModule?.id}`
-        : `${API_BASE}/api/admin/modules`;
+        : `${API_BASE}/api/admin/modules/`;
       const method = isEdit ? "PUT" : "POST";
 
       const res = await fetch(url, {
