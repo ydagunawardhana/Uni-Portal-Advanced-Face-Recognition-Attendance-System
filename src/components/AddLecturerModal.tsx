@@ -59,7 +59,7 @@ export default function AddLecturerModal({
         setIsLoadingModules(true);
         try {
           const res = await fetch(
-            `${API_BASE_URL}/api/modules?department=${encodeURIComponent(
+            `${API_BASE_URL}/api/modules/?department=${encodeURIComponent(
               department
             )}`
           );
