@@ -178,7 +178,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 def send_otp_email(to_email: str, otp: str):
     """Sends a real email with the 6-digit OTP using a beautiful HTML template."""
     SENDER_EMAIL = "ydmaxx43@gmail.com"
-    SENDER_PASSWORD = "zucytjngeujifxgl"
+    SENDER_PASSWORD = "ywgz uycf jlcn xnno"
 
     msg = EmailMessage()
     msg['Subject'] = "University Portal - Password Reset Verification Code"

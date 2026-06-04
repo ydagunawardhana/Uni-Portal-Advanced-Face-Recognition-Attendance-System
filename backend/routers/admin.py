@@ -207,7 +207,7 @@ admin_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_
 
 def send_student_credentials_email(personal_email: str, official_email: str, name: str, password: str):
     SENDER_EMAIL = "ydmaxx43@gmail.com"
-    SENDER_PASSWORD = "zucytjngeujifxgl"
+    SENDER_PASSWORD = "ywgz uycf jlcn xnno"
     
     msg = EmailMessage()
     msg['Subject'] = "Welcome to University Portal - Student Account Credentials"
@@ -273,7 +273,7 @@ def send_student_credentials_email(personal_email: str, official_email: str, nam
 
 def send_lecturer_credentials_email(personal_email: str, official_email: str, name: str, password: str):
     SENDER_EMAIL = "ydmaxx43@gmail.com"
-    SENDER_PASSWORD = "zucytjngeujifxgl"
+    SENDER_PASSWORD = "ywgz uycf jlcn xnno"
     
     msg = EmailMessage()
     msg['Subject'] = "Welcome to University Portal - Lecturer Account Credentials"

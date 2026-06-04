@@ -5,7 +5,7 @@ from email.message import EmailMessage
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
 SMTP_USER = "ydmaxx43@gmail.com" 
-SMTP_PASSWORD = "zucytjngeujifxgl"
+SMTP_PASSWORD = "ywgz uycf jlcn xnno"
 
 
 def send_rejection_email(student_email: str, student_name: str, reason: str):
