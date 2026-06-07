@@ -211,5 +211,10 @@ Contributions are welcome! Please follow these steps:
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
+
+<img width="2000" height="1414" alt="Final Project Poster" src="https://github.com/user-attachments/assets/089aa3eb-b164-4be0-a7b1-3e961f382675" />
+
+---
+
 Developed with ❤️ by the **UniPortal Engineering Team**.
 
